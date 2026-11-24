@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=31">
+<link rel="stylesheet" href="css/app.css?v=32">
 </head>
 <body>
 <div id="app">
@@ -23,7 +23,7 @@
   <button data-view="backlog" data-drop="backlog" title="Backlog — dépose une tâche ici pour l’y renvoyer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="ll">Backlog</span><span class="sl">Backlog</span></button>
   <button data-view="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><span class="ll">Revue</span><span class="sl">Revue</span></button>
   <button data-view="tree" class="navtree"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><circle cx="5" cy="5" r="1.6"/><circle cx="19" cy="5" r="1.6"/><circle cx="5" cy="19" r="1.6"/><circle cx="19" cy="19" r="1.6"/><path d="M10.6 10.6 6.2 6.2M13.4 10.6l4.4-4.4M10.6 13.4l-4.4 4.4M13.4 13.4l4.4 4.4"/></svg><span class="ll">Arbre</span><span class="sl">Arbre</span></button>
-  <div class="navver" title="Dernière mise à jour"><b>v1.0 · 24/11 · 19 h 20</b>Nouveau nom Diem, couleur d’accent et mode clair/sombre dans Réglages, rituels repensés.</div>
+  <div class="navver" title="Dernière mise à jour"><b>v1.0.1 · 24/11 · 19 h 25</b>Affiner avec Claude réparé ; ce qu’il ne sait pas ranger se range à la main.</div>
   <button class="navrefresh" data-act="hardrefresh" title="Actualiser : dernière version de l’appli et dernières données" aria-label="Actualiser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span class="ll">Actualiser</span><span class="sl">Actualiser</span></button>
   <button data-view="settings" class="navset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="ll">Réglages</span><span class="sl">Réglages</span></button>
   <button data-view="side" id="sidebtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg><span class="ll">Agenda</span><span class="sl">Plus</span></button>
@@ -41,21 +41,21 @@
 <div id="focus" class="focus hidden"></div>
 <div id="toast" role="status"></div>
 
-<script src="js/core.js?v=31"></script>
-<script src="js/tree.js?v=31"></script>
-<script src="js/icons.js?v=31"></script>
-<script src="js/quotes.js?v=31"></script>
-<script src="js/treeview.js?v=31"></script>
-<script src="js/google.js?v=31"></script>
-<script src="js/flow.js?v=31"></script>
-<script src="js/sync.js?v=31"></script>
-<script src="js/microsoft.js?v=31"></script>
-<script src="js/auth.js?v=31"></script>
-<script src="js/ai.js?v=31"></script>
-<script src="js/import.js?v=31"></script>
-<script src="js/views.js?v=31"></script>
-<script src="js/render.js?v=31"></script>
-<script src="js/events.js?v=31"></script>
-<script src="js/main.js?v=31"></script>
+<script src="js/core.js?v=32"></script>
+<script src="js/tree.js?v=32"></script>
+<script src="js/icons.js?v=32"></script>
+<script src="js/quotes.js?v=32"></script>
+<script src="js/treeview.js?v=32"></script>
+<script src="js/google.js?v=32"></script>
+<script src="js/flow.js?v=32"></script>
+<script src="js/sync.js?v=32"></script>
+<script src="js/microsoft.js?v=32"></script>
+<script src="js/auth.js?v=32"></script>
+<script src="js/ai.js?v=32"></script>
+<script src="js/import.js?v=32"></script>
+<script src="js/views.js?v=32"></script>
+<script src="js/render.js?v=32"></script>
+<script src="js/events.js?v=32"></script>
+<script src="js/main.js?v=32"></script>
 </body>
 </html>

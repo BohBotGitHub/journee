@@ -76,6 +76,8 @@ class Google:
 
 def claude_route(route):
     body = json.loads(route.request.post_data); txt = json.dumps(body['messages'])
+    if (body.get('tool_choice') or {}).get('type') in ('tool', 'any'):
+        return route.fulfill(status=400, content_type='application/json', body=json.dumps({'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'tool_choice: type "tool" and "any" are not supported for this model.'}}))
     if 'tools' not in body:
         # affinage en lot : 1re catégorie du domaine imposé, ou 1re catégorie tout court si « libre »
         prompt = body['messages'][0]['content']
@@ -83,7 +85,7 @@ def claude_route(route):
         out = {}
         for n, dom, _t in re.findall(r'^(\d+) \| ([^|]+) \| (.+)$', prompt, re.M):
             dom = dom.strip(); pick = next((d + ' › ' + c for d, c in cats if dom == 'libre' or d.strip() == dom), None)
-            out[n] = pick
+            out[n] = None if 'Inclassable' in _t else pick
         return route.fulfill(status=200, content_type='application/json',
                              body=json.dumps({'content': [{'type': 'text', 'text': json.dumps(out)}], 'usage': {'input_tokens': 900, 'output_tokens': 120}}))
     ids = re.findall(r'\[([a-z0-9-]{8,})\]', txt)
@@ -700,6 +702,24 @@ def _(c):
     pg.evaluate("()=>startRitual('shutdown',window.journee.fn.today())"); tick(pg, 150); pg.click('[data-act="ritnext"]'); tick(pg, 150)
     pg.locator('#sheet .rrow', has_text='Reste ce soir').locator('.chk').click(); tick(pg, 300)
     assert st(pg, "S.tasks.find(t=>t.id==='y2').done") is True
+    assert not errs, errs; ctx.close()
+
+@test('Affiner : ce que Claude ne sait pas ranger se range à la main, et il recommence sans erreur')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], claude=True, storage=OLD)
+    pg.wait_for_selector('[data-act="treego"]'); pg.click('[data-act="treego"]'); pg.wait_for_timeout(200)
+    pg.evaluate("()=>{const S=window.journee.state;S.tasks.push(Object.assign({},S.tasks[0],{id:'inc',title:'Truc Inclassable',channel:null,mig:1,done:false,block:null}));window.journee.save()}")
+    pg.click('#nav [data-view="settings"]'); pg.wait_for_timeout(200)
+    pg.click('[data-act="refine"]'); pg.wait_for_selector('[data-act="refineok"]')
+    assert 'À ranger toi-même' in pg.inner_text('#sheet') and 'Truc Inclassable' in pg.inner_text('#sheet')
+    pg.click('[data-act="refineok"]'); pg.wait_for_timeout(200)
+    assert st(pg, "S.tasks.find(t=>t.id==='inc').channel") is None
+    pg.click('[data-act="refine"]'); pg.wait_for_selector('[data-act="refineok"]')
+    assert 'Claude a déjà rangé' in pg.inner_text('#sheet'), pg.inner_text('#sheet')[:300]
+    pg.select_option('[data-refsel="0"]', 'c-demarches'); pg.click('[data-act="refineok"]'); pg.wait_for_timeout(200)
+    assert st(pg, "S.tasks.find(t=>t.id==='inc').channel") == 'c-demarches'
+    # l'assistant (outil « proposer ») n'impose plus tool_choice
+    pg.evaluate("()=>startRitual('plan',window.journee.fn.today())"); pg.wait_for_timeout(200)
     assert not errs, errs; ctx.close()
 
 def main():

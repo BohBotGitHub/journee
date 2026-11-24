@@ -49,7 +49,7 @@ function costTxt(){const u=usageNow(),b=+S.settings.aiBudget||0;return `Ce mois-
 async function callClaude(messages,force){
  {const b=+S.settings.aiBudget||0;if(b&&usageNow().usd>=b)throw new Error(`plafond mensuel atteint (${usd(b)}) — modifiable dans Réglages`)}
  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':S.settings.aiKey.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-  body:JSON.stringify({model:S.settings.aiModel||'claude-haiku-5-5',max_tokens:1600,system:AI_SYS,tools:[AI_TOOL],tool_choice:force?{type:'tool',name:'proposer'}:{type:'auto'},messages})});
+  body:JSON.stringify({model:S.settings.aiModel||'claude-haiku-5-5',max_tokens:1600,system:AI_SYS+(force?'\n\nPour cette demande, réponds obligatoirement en appelant l’outil « proposer ».':''),tools:[AI_TOOL],tool_choice:{type:'auto'},messages})});
  const j=await r.json().catch(()=>({}));
  if(!r.ok)throw new Error(r.status===401?'clé API refusée':(j.error&&j.error.message)||('erreur '+r.status));
  trackUsage(j.usage,S.settings.aiModel||'claude-haiku-5-5');

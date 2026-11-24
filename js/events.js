@@ -78,7 +78,7 @@ document.addEventListener('click',async e=>{
   case'nodeup':nodeShift(id,-1);render();break;
   case'nodedown':nodeShift(id,1);render();break;
   case'projadd':S.projects=S.projects||[];S.projects.push({id:uid(),name:'Nouveau projet',end:null,done:false});save();render();break;
-  case'refine':{if(!aiOn())break;b.disabled=true;b.textContent='Claude range…';try{refineProp=await aiRefine((a,n)=>{b.textContent=`Claude range… ${a}/${n}`});if(!refineProp.length){toast('Claude n’a rien trouvé à affiner');render()}else showModal(refineHtml())}catch(err){toast('Claude : '+err.message);render()}break}
+  case'refine':{if(!aiOn())break;b.disabled=true;b.textContent='Claude range…';try{refineProp=await aiRefine((a,n)=>{b.textContent=`Claude range… ${a}/${n}`});if(!refineProp.length&&!refineLeft.length){toast('Plus rien à ranger');render()}else showModal(refineHtml())}catch(err){toast('Claude : '+err.message);render()}break}
   case'refineok':{const skip=new Set([...document.querySelectorAll('[data-refine]')].filter(x=>!x.checked).map(x=>x.dataset.refine));const n=applyRefine(skip);closeModal();render();toast(n+' tâches rangées');break}
   case'chadd':S.channels.push({id:uid(),name:'Nouveau catégorie',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;

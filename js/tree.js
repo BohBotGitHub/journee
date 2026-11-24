@@ -147,10 +147,10 @@ function treeMigrationHtml(){
  <div class="row" style="margin-top:14px"><button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="treego">Ranger mes tâches</button></div></div>`;
 }
 /* ---------- affinage par Claude des tâches restées au niveau domaine ---------- */
-let refineProp=null;
+let refineProp=null,refineLeft=[];
 const refineCands=()=>[...S.tasks.filter(t=>t.channel?(node(t.channel)||{}).lvl===1:t.mig&&!t.done).map(t=>({id:t.id,t:t.title,c:t.channel||null,k:'t'})),...(S.archive||[]).filter(a=>a.c?(node(a.c)||{}).lvl===1:a.mig).map(a=>({id:a.id,t:a.t,c:a.c||null,k:'a'}))];
 async function aiRefine(onProg){
- const all=refineCands();if(!all.length)return[];
+ const all=refineCands();refineLeft=[];if(!all.length)return[];
  const out=[];
  // regrouper les titres identiques (routines répétées) pour économiser des jetons
  const uniq={};for(const x of all){const k=norm(x.t).trim()+'|'+(x.c||'');(uniq[k]=uniq[k]||{t:x.t,c:x.c,ids:[]}).ids.push(x)}
@@ -163,19 +163,23 @@ async function aiRefine(onProg){
   for(const [k,v] of Object.entries(j||{})){const x=chunk[+k];if(!x||!v)continue;const c=nodeByName(v);if(c&&c.lvl===2&&(!x.c||c.parent===x.c))out.push({x,to:c.id})}
   if(onProg)onProg(Math.min(list.length,i+120),list.length);
  }
+ const placed=new Set(out.map(r=>r.x));refineLeft=list.filter(x=>!placed.has(x));
  return out;
 }
 function refineHtml(){
- if(!refineProp)return '';
+ if(!refineProp&&!refineLeft.length)return '';refineProp=refineProp||[];
  const by={};for(const r of refineProp){const k=r.to;(by[k]=by[k]||[]).push(r)}
  const n=refineProp.reduce((a,r)=>a+r.x.ids.length,0);
- return `<div class="rit"><h2>Proposition de Claude</h2><p class="lead">${n} tâches rangées dans ${Object.keys(by).length} catégories. Décoche ce qui ne va pas.</p>
- <div class="migl">${Object.entries(by).map(([to,rs])=>`<div class="migp"><b>${esc(nodeLabel(to))}</b>${rs.slice(0,40).map(r=>`<label class="migr"><span><input type="checkbox" data-refine="${esc(r.x.ids[0].id)}" checked style="width:auto;min-height:0"> ${esc(r.x.t)}</span><span class="mute">${r.x.ids.length>1?'×'+r.x.ids.length:''}</span></label>`).join('')}${rs.length>40?`<small class="mute">… et ${rs.length-40} autres</small>`:''}</div>`).join('')}</div>
+ const opts=x=>'<option value="">Laisser à classer</option>'+S.channels.filter(c=>c.lvl===2&&(!x.c||c.parent===x.c)).map(c=>`<option value="${esc(c.id)}">${esc(nodeLabel(c.id))}</option>`).join('');
+ const left=refineLeft.length?`<div class="migp"><b>À ranger toi-même (${refineLeft.length})</b><p class="mute" style="margin:2px 0 8px">Claude n’a pas trouvé de catégorie sûre pour celles-ci.</p>${refineLeft.slice(0,60).map((x,i)=>`<label class="migr"><span>${esc(x.t)}${x.ids.length>1?' <span class="mute">×'+x.ids.length+'</span>':''}</span><select data-refsel="${i}" style="max-width:260px;min-height:32px;font-size:14px">${opts(x)}</select></label>`).join('')}${refineLeft.length>60?`<small class="mute">… et ${refineLeft.length-60} autres</small>`:''}</div>`:'';
+ return `<div class="rit"><h2>${n?'Proposition de Claude':'À ranger toi-même'}</h2><p class="lead">${n?`${n} tâches rangées dans ${Object.keys(by).length} catégories. Décoche ce qui ne va pas.`:'Claude a déjà rangé tout ce qu’il pouvait. Choisis une catégorie pour les tâches restantes.'}</p>
+ <div class="migl">${Object.entries(by).map(([to,rs])=>`<div class="migp"><b>${esc(nodeLabel(to))}</b>${rs.slice(0,40).map(r=>`<label class="migr"><span><input type="checkbox" data-refine="${esc(r.x.ids[0].id)}" checked style="width:auto;min-height:0"> ${esc(r.x.t)}</span><span class="mute">${r.x.ids.length>1?'×'+r.x.ids.length:''}</span></label>`).join('')}${rs.length>40?`<small class="mute">… et ${rs.length-40} autres</small>`:''}</div>`).join('')}${left}</div>
  <div class="row" style="margin-top:14px"><button class="ghost" data-act="close">Annuler</button><span class="sp"></span><button class="pri" data-act="refineok">Appliquer</button></div></div>`;
 }
 function applyRefine(skip){
  let n=0;for(const r of refineProp||[]){if(skip.has(r.x.ids[0].id))continue;for(const it of r.x.ids){if(it.k==='t'){const t=T(it.id);if(t){t.channel=r.to;t.mig=0;if(t.block)pushBlock(t)}}else{const a=(S.archive||[]).find(a=>a.id===it.id);if(a){a.c=r.to;a.mig=0}}n++}}
- refineProp=null;save();return n;
+ document.querySelectorAll('[data-refsel]').forEach(el=>{const x=refineLeft[+el.dataset.refsel];if(!x||!el.value)return;for(const it of x.ids){if(it.k==='t'){const t=T(it.id);if(t){t.channel=el.value;t.mig=0;if(t.block)pushBlock(t)}}else{const a=(S.archive||[]).find(a=>a.id===it.id);if(a){a.c=el.value;a.mig=0}}n++}});
+ refineProp=null;refineLeft=[];save();return n;
 }
 /* ---------- projets : étiquettes transversales ---------- */
 const proj=id=>(S.projects||[]).find(p=>p.id===id);
