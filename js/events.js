@@ -112,6 +112,10 @@ document.addEventListener('click',async e=>{
   case'timerreset':{const t=T(id);if(!t)break;const prev={a:t.actual,s:S.running&&S.running.taskId===id?S.running.start:null};t.actual=0;if(prev.s)S.running.start=Date.now();save();renderFocus();render();timerUndo={id,...prev,at:Date.now()};toast('Minuteur remis à zéro · Ctrl+Z (⌘Z) pour annuler');break}
   case'toastact':{const f=toastFn;toastFn=null;$('#toast').classList.remove('show');if(f){f();save();render();if(modalTask)openTask(modalTask)}break}
   case'setprio':{const t=T(id);if(t){t.prio=b.dataset.p;save();render();if(modalTask===id)openTask(id);else if(!$('#modal').classList.contains('hidden'))taskSheet(id)}break}
+  case'hardrefresh':{b.classList.add('spin');try{save();await Promise.race([driveSync(),new Promise(r=>setTimeout(r,4000))])}catch(err){}
+   try{const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg){await reg.update().catch(()=>{});if(reg.waiting)reg.waiting.postMessage('skip')}}catch(err){}
+   try{if(window.caches){for(const k of await caches.keys())await caches.delete(k)}}catch(err){}
+   location.reload();break}
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
   case'mvup':closeModal();swapTask(id,-1);break;
