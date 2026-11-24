@@ -48,6 +48,6 @@ function iconize(root){
  (root||document).querySelectorAll('.menu button[data-act],.btns button[data-act],.mfoot button[data-act],.head .acts button[data-act],.tvacts button[data-act],.set button[data-act],.rit>button[data-act],.rit .row button[data-act],.dayrow button[data-act],.aibox button[data-act]').forEach(b=>{
   if(b.querySelector('svg')||b.classList.contains('more')||b.classList.contains('mvico')||b.classList.contains('layoutbtn'))return;
   let n=icoFor(b);if(!n&&b.dataset.act==='close'&&b.textContent.trim()==='Plus tard')n='clock';
-  if(n){b.insertAdjacentHTML('afterbegin',ico(n));b.classList.add('hasic')}
+  if(n){const f=b.firstChild;if(f&&f.nodeType===3)f.nodeValue=f.nodeValue.replace(/^\s*[✓✔+★▶↻×→←⋯]\s*/,'');b.insertAdjacentHTML('afterbegin',ico(n));b.classList.add('hasic')}
  });
 }

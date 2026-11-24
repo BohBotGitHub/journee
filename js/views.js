@@ -44,11 +44,11 @@ function taskSheet(id){
  showModal(`<div class="rit"><h2>${esc(t.title)}</h2><div class="menu">
   ${i>=0&&ts.length>1?`<div class="mvrow"><button class="mvico" data-act="mvup" data-id="${t.id}" aria-label="Monter d’un cran" title="Monter d’un cran" ${i>0?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><button class="mvico" data-act="mvdown" data-id="${t.id}" aria-label="Descendre d’un cran" title="Descendre d’un cran" ${i<ts.length-1?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button></div>`:''}
   <div class="mvrow">${PRIOS.map(([v,l])=>`<button class="mvico pbtn${(t.prio||'')===v?' on':''}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="Priorité ${l.toLowerCase()}" title="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</div>
-  <button data-act="play" data-id="${t.id}">Démarrer le focus</button>
-  <button data-act="sheetmv" data-id="${t.id}" data-to="${addDays(today(),1)}">Reporter à demain</button>
+  <button data-act="play" data-id="${t.id}">Focus</button>
+  <button data-act="sheetmv" data-id="${t.id}" data-to="${addDays(today(),1)}">Demain</button>
   <button data-act="sheetmv" data-id="${t.id}" data-to="backlog">Backlog</button>
   <label class="full">Fixer l’heure<input type="time" step="900" data-sheettime="${t.id}" value="${t.block?hm(new Date(t.block.start)):''}"></label>
-  <button data-act="open" data-id="${t.id}">Ouvrir le détail</button>
+  <button data-act="open" data-id="${t.id}">Détail</button>
  </div></div>`);
 }
 function swapTask(id,dir){const t=T(id);if(!t)return;const d=t.day,ts=dayTasks(d).filter(x=>!x.done),i=ts.indexOf(t),j=i+dir;if(j<0||j>=ts.length)return;const o=ts[j].order;ts[j].order=t.order;t.order=o;renorm(d);if(!flowOn())reflow(d);save();render()}
@@ -72,7 +72,7 @@ function summaryHtml(d,isT){
  let det='';
  if(open==='load')det=loadBar(d);
  else if(open==='ev')det=eventsHtml(d);
- else if(open==='late'&&past.length)det=`<div class="row" style="flex-wrap:wrap"><span>${past.length} tâche${past.length>1?'s':''} non terminée${past.length>1?'s':''} des jours précédents.</span><span class="sp"></span><button class="sm pri" data-act="rollover">Tout reporter ici</button><button class="sm" data-act="plan">Trier une à une</button></div>`;
+ else if(open==='late'&&past.length)det=`<div class="row" style="flex-wrap:wrap"><span>${past.length} tâche${past.length>1?'s':''} non terminée${past.length>1?'s':''} des jours précédents.</span><span class="sp"></span><button class="sm pri" data-act="rollover">Tout ici</button><button class="sm" data-act="plan">Trier une à une</button></div>`;
  else if(open==='due')det=`<div class="row" style="flex-wrap:wrap">${soon.map(t=>`<button class="sm ghost" data-act="open" data-id="${t.id}">${esc(t.title)} · ${dueLabel(t).replace(/<[^>]+>/g,'').replace('⏰ ','')}</button>`).join('')}</div>`;
  else if(open==='obj')det=objChips(monday(d))||'';
  return `<div class="summary">${chips}</div>${det?`<div class="sumdet">${det}</div>`:''}`;
@@ -87,7 +87,7 @@ function viewToday(){
  const planLbl=r&&r.type==='plan'&&r.day===d?'Reprendre ('+(r.step+1)+'/5)':info.planned?'Replanifier':'Planifier ma journée';
  // une seule action mise en avant, selon le moment ; les autres sont dans •••
  const h=new Date().getHours(),past=d<today();
- const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus sur la suivante','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
+ const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
  return `<div class="head tight"><div class="htitle"><h1>${title}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
  <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}
@@ -102,8 +102,8 @@ function viewToday(){
 function rollMenu(id){
  const t=T(id);if(!t)return;
  showModal(`<div class="rit"><h2>${esc(t.title)}</h2><p class="lead">Reportée ${t.roll} fois.</p><div class="menu">
-  <button data-act="play" data-id="${t.id}">Focus : m’y mettre maintenant</button>
-  <button data-act="rolltomorrow" data-id="${t.id}">Reporter à demain</button>
+  <button data-act="play" data-id="${t.id}">Focus</button>
+  <button data-act="rolltomorrow" data-id="${t.id}">Demain</button>
   <button data-act="sheetmv" data-id="${t.id}" data-to="backlog">Backlog</button>
   <button class="danger" data-act="rolldrop" data-id="${t.id}">Supprimer</button>
  </div></div>`);
@@ -112,11 +112,11 @@ function dayMenu(){
  const d=cur,info=S.days[d]||{};
  showModal(`<div class="rit"><h2>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}</h2><div class="menu">
   <button data-act="plan">${info.planned?'Replanifier la journée':'Planifier la journée'}<kbd>P</kbd></button>
-  <button data-act="focusnext">Focus sur la prochaine tâche<kbd>F</kbd></button>
+  <button data-act="focusnext">Focus<kbd>F</kbd></button>
   <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
   ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
   ${d===today()&&flowOn()?`<button data-act="plan">Mes heures et mon plan du jour (${hhmm(dayHours(d).s)} → ${hhmm(dayHours(d).end)})</button>`:''}
-  <button data-act="tplfromday">Enregistrer cette journée comme modèle</button>
+  <button data-act="tplfromday">Enregistrer comme modèle</button>
   <button data-act="palopen">Rechercher ou lancer une commande<kbd>⌘K</kbd></button>
  </div></div>`);
 }
@@ -143,9 +143,9 @@ function viewDump(){
  const inbox=S.tasks.filter(t=>t.inbox&&!t.done);
  return `<div class="head"><div><h1>Vide-tête</h1><div class="sub">Écris tout ce qui t’encombre l’esprit, une idée par ligne. Tu trieras après.</div></div></div>
  <textarea class="dump" data-dump rows="10" placeholder="Rappeler le garagiste&#10;Idée cadeau pour Raf&#10;Préparer le devis lundi 45m #villette&#10;Acheter des ampoules demain…">${esc(S.dump||'')}</textarea>
- <div class="row" style="flex-wrap:wrap;margin:10px 0 4px">${SR?`<button data-act="dictate">${rec?'■ Arrêter la dictée':'🎙 Dicter'}</button>`:''}<span class="sp"></span><button data-act="dumptasks">Transformer en tâches</button>${aiOn()?'<button class="pri" data-act="dumpai">Trier avec Claude</button>':''}</div>
+ <div class="row" style="flex-wrap:wrap;margin:10px 0 4px">${SR?`<button data-act="dictate">${rec?'■ Arrêter la dictée':'🎙 Dicter'}</button>`:''}<span class="sp"></span><button data-act="dumptasks">En tâches</button>${aiOn()?'<button class="pri" data-act="dumpai">Trier avec Claude</button>':''}</div>
  <p class="mute" style="font-size:13px;margin:4px 0 0">Astuce : « demain », « lundi », « 12/12 », « 30m », « 1h », « #catégorie » sont compris. Touche <kbd>D</kbd> pour revenir ici de n’importe où.</p>
- ${dumpAI?`<div class="aibox">${dumpAI.loading?'<span class="mute">Claude trie ton vide-tête…</span>':dumpAI.error?`<span class="mute">Claude : ${esc(dumpAI.error)}</span>`:`<b>Claude</b>${dumpAI.text?`<p>${esc(dumpAI.text)}</p>`:''}${propItems(dumpAI.prop).map(it=>`<div class="pitem${(dumpAI.applied||{})[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${(dumpAI.applied||{})[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="dumpapply" data-k="${it.k}">Ajouter</button>`}</div>`).join('')}<div class="row">${propItems(dumpAI.prop).some(it=>!(dumpAI.applied||{})[it.k])?'<button class="sm pri" data-act="dumpapplyall">Tout ajouter et vider</button>':''}<span class="sp"></span><button class="sm ghost" data-act="dumpaiclose">Fermer</button></div>`}</div>`:''}
+ ${dumpAI?`<div class="aibox">${dumpAI.loading?'<span class="mute">Claude trie ton vide-tête…</span>':dumpAI.error?`<span class="mute">Claude : ${esc(dumpAI.error)}</span>`:`<b>Claude</b>${dumpAI.text?`<p>${esc(dumpAI.text)}</p>`:''}${propItems(dumpAI.prop).map(it=>`<div class="pitem${(dumpAI.applied||{})[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${(dumpAI.applied||{})[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="dumpapply" data-k="${it.k}">Ajouter</button>`}</div>`).join('')}<div class="row">${propItems(dumpAI.prop).some(it=>!(dumpAI.applied||{})[it.k])?'<button class="sm pri" data-act="dumpapplyall">Tout ajouter</button>':''}<span class="sp"></span><button class="sm ghost" data-act="dumpaiclose">Fermer</button></div>`}</div>`:''}
  <h2 style="font-size:18px;margin:26px 0 8px">À trier (${inbox.length})</h2>
  <div class="list">${inbox.length?inbox.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm" data-act="inbox" data-id="${t.id}" data-to="${today()}">Aujourd’hui</button><button class="sm ghost" data-act="inbox" data-id="${t.id}" data-to="${addDays(today(),1)}">Demain</button><button class="sm ghost" data-act="inbox" data-id="${t.id}" data-to="backlog">Backlog</button>`)).join(''):'<div class="empty">Rien à trier. Les idées sans date atterrissent ici.</div>'}</div>`;
 }
@@ -286,14 +286,14 @@ function viewSettings(){
   <div class="connrow"><b>Microsoft To Do</b><span class="mute">Tâches To Do dans ta journée</span><span class="sp"></span><span class="status${msOn()?' on':''}">${msOn()?'Connecté':'Non connecté'}</span>${msOn()||!S.settings.msClientId?'':'<button class="sm" data-act="min">Connecter</button>'}</div>
  </section>
  <section><h2>Notifications</h2><p>Début de chaque créneau, rendez-vous occupé dans 5 minutes, rappel de planifier le matin et de clôturer le soir. Elles s’affichent tant que Diem est ouverte (onglet ou appli installée, même en arrière-plan sur ordinateur). Sur téléphone, le système peut mettre l’appli en pause quand elle n’est pas à l’écran.</p>
-  <div class="row"><span class="status${notifOk()?' on':''}">${notifOk()?'Activées':('Notification' in window&&Notification.permission==='denied')?'Bloquées par le navigateur':'Désactivées'}</span><span class="sp"></span>${notifOk()?'<button class="ghost sm" data-act="notifoff">Désactiver</button><button class="sm" data-act="notiftest">Tester</button>':'<button class="pri" data-act="notifon">Activer les notifications</button>'}</div></section>
+  <div class="row"><span class="status${notifOk()?' on':''}">${notifOk()?'Activées':('Notification' in window&&Notification.permission==='denied')?'Bloquées par le navigateur':'Désactivées'}</span><span class="sp"></span>${notifOk()?'<button class="ghost sm" data-act="notifoff">Désactiver</button><button class="sm" data-act="notiftest">Tester</button>':'<button class="pri" data-act="notifon">Activer</button>'}</div></section>
  <section><h2>Claude (assistant)</h2><p>Colle ici ta clé API Anthropic (console.anthropic.com → API Keys), une seule fois : elle est recopiée sur tes autres appareils par la synchro, dans le dossier caché de Diem de ton Google Drive (invisible pour les autres applis). Coût : quelques centimes par jour avec Haiku.</p>
   <label>Clé API<input type="password" data-set="aiKey" value="${esc(s.aiKey)}" placeholder="sk-ant-…" autocomplete="off"></label>
   <div class="grid2"><label>Modèle<select data-set="aiModel"><option value="claude-haiku-5-5" ${s.aiModel==='claude-haiku-5-5'?'selected':''}>Haiku — rapide et économique</option><option value="claude-sonnet-5-5" ${s.aiModel==='claude-sonnet-5-5'?'selected':''}>Sonnet — plus fin</option></select></label>
   <label>En arrière-plan<select data-set="aiAuto"><option value="1" ${s.aiAuto?'selected':''}>Suggestions automatiques</option><option value="" ${s.aiAuto?'':'selected'}>Seulement quand je demande</option></select></label></div>
   <div class="grid2"><label>Plafond mensuel ($, 0 = aucun)<input type="number" min="0" step="0.5" data-set="aiBudget" value="${esc(s.aiBudget)}"></label></div>
   <p style="margin:10px 0 0"><b data-live="aicost">${costTxt()}</b> — estimation d’après les jetons consommés ; le montant exact est sur console.anthropic.com.</p>
-  <div class="row" style="margin-top:12px"><span class="status${aiOn()?' on':''}">${aiOn()?'Clé enregistrée':'Pas de clé'}</span><span class="sp"></span><button class="ghost sm" data-act="aiclear">Effacer la conversation</button></div></section>
+  <div class="row" style="margin-top:12px"><span class="status${aiOn()?' on':''}">${aiOn()?'Clé enregistrée':'Pas de clé'}</span><span class="sp"></span><button class="ghost sm" data-act="aiclear">Effacer</button></div></section>
  <details class="adv"${advOpen?' open':''} data-adv><summary>Réglages avancés</summary><div class="set">
  <section><h2>Google : identifiants et agendas affichés</h2><p>Affiche tes rendez-vous et crée un événement pour chaque tâche que tu places dans l’agenda. Voir le README pour obtenir l’identifiant.</p>
   <label>Identifiant client OAuth (…apps.googleusercontent.com)<input data-set="googleClientId" value="${esc(s.googleClientId)}" placeholder="1234-abcd.apps.googleusercontent.com" autocomplete="off"></label>
@@ -308,7 +308,7 @@ function viewSettings(){
  <section><h2>Adresse de redirection</h2><p>À coller à l’identique dans la console Google et dans Azure.</p><div class="row"><code>${esc(REDIRECT)}</code><button class="sm" data-act="copyuri">Copier</button></div></section>
  <section><h2>Importer depuis Sunsama</h2><p>Dans Sunsama : Settings → Account Management → export. Les tâches terminées de plus de 30 jours vont dans l’historique (utilisé par Claude pour estimer tes durées) ; les rituels Sunsama ne sont pas importés. Tu peux réimporter sans créer de doublons.</p><input type="file" accept=".csv,text/csv" data-sunsama aria-label="Fichier d’export Sunsama">${S.archive&&S.archive.length?`<p style="margin-top:8px">Historique : ${S.archive.length} tâches archivées.</p>`:''}</section>
  <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
- <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus sur la prochaine tâche</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Vide-tête</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
+ <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Vide-tête</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
  </div></details>
  </div>`;
 }
@@ -343,7 +343,7 @@ function viewCal(){
  return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span>${layoutBtn()}${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
  ${gStateHtml(d)}${alldayHtml(d)}
  <div class="tl">${calCol(d)}</div>
- <div class="sinfo" style="padding-top:0"><span>${flowOn()?'Agenda vivant : les tâches suivent l’ordre de la liste. Glisse une tâche ici pour fixer son heure.':'Glisse une tâche sur l’agenda pour lui réserver un créneau.'}</span>${flowOn()?'':'<button class="sm" data-act="autobox">Placer automatiquement les tâches du jour</button>'}</div>`;
+ <div class="sinfo" style="padding-top:0"><span>${flowOn()?'Agenda vivant : les tâches suivent l’ordre de la liste. Glisse une tâche ici pour fixer son heure.':'Glisse une tâche sur l’agenda pour lui réserver un créneau.'}</span>${flowOn()?'':'<button class="sm" data-act="autobox">Placer les tâches</button>'}</div>`;
 }
 /* ---------- grand agenda (vue inversée) ---------- */
 let scrolledBig=false,layout=lsGet('journee.layout')||'tasks',calSpan=+(lsGet('journee.span')||3);
