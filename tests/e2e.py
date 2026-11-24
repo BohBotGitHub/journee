@@ -822,6 +822,29 @@ def _(c):
     assert st(pg, "T('mA').where") == 'out'
     assert not errs, errs; ctx.close()
 
+@test('Moteur 2 : horaires de boulot lus dans l’agenda (phases, ignorés, journée entière), réglage manuel prioritaire')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.evaluate("""()=>{const S=window.journee.state,f=window.journee.fn,d=f.today();S.tasks=S.tasks.filter(t=>t.day!==d);S.days[d]={hs:7,he:23};S.settings.travel=60;
+      const at=h=>{const x=new Date(f.parseYmd?f.parseYmd(d):new Date(d+'T00:00'));x.setMinutes(h*60);return x.toISOString()};
+      const ev=(id,t,a,b)=>({id,summary:t,start:{dateTime:at(a)},end:{dateTime:at(b)},_cid:'travail-id',_cal:'Travail'});
+      gEvents[d]=[ev('e1','AXA France / Montage',8,10),ev('e2','AXA France / Exploitation',10,15),ev('e3','Autre / Indisponible sur la phase',16,18)];
+      [['A','any'],['B','home'],['C','any']].forEach(([n,w],i)=>S.tasks.push({id:'g'+n,title:'T'+n,day:d,order:i+1,est:30,prio:'high',done:false,subtasks:[],where:w}));window.journee.save()}""")
+    plan = lambda: st(pg, "Object.fromEntries(simFlow(today()).map(([t,s])=>[t.id,new Date(s).getHours()+':'+String(new Date(s).getMinutes()).padStart(2,'0')]))")
+    j = st(pg, "jobOf(today())"); assert j['auto'] and j['s'] == 8 and j['e'] == 15 and len(j['segs']) == 2, j
+    p = plan(); assert p['gA'] == '10:00' and p['gC'] == '10:30' and p['gB'] == '16:00', p
+    assert 'agenda' in st(pg, "jobLabel(today())")
+    # journée entière = sans pause 8–18
+    pg.evaluate("()=>{const d=window.journee.fn.today();gEvents[d]=[{id:'e9',summary:'Mvision',start:{date:d},end:{date:window.journee.fn.addDays(d,1)},_cid:'travail-id',_cal:'Travail',transparency:'transparent'}]}")
+    p = plan(); assert p['gA'] == '19:00', p
+    # réglage manuel : libre l'emporte, puis retour à l'agenda
+    pg.evaluate("()=>{const S=window.journee.state;S.days[window.journee.fn.today()].job=''}")
+    p = plan(); assert p['gA'] == '10:00' and p['gB'] == '10:30', p
+    pg.evaluate("()=>startRitual('plan',window.journee.fn.today())"); tick(pg, 200)
+    pg.click('#sheet [data-act="setjob"][data-v="auto"]'); tick(pg, 100)
+    assert st(pg, "S.days[today()].job===undefined") is True and pg.locator('#sheet .jobseg').count() == 1
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

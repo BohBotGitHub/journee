@@ -590,3 +590,8 @@ code{white-space:nowrap}
 .wh{display:inline-flex;align-items:center;gap:3px}.wh svg{width:12px;height:12px}
 .sumchip svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
 .wnow{align-self:center;margin-left:6px;font-size:13px;white-space:nowrap}.pbtn svg{width:18px;height:18px}
+.jobsegs{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.jobseg{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:13px;border-left:3px solid var(--mute);padding:3px 8px;background:var(--panel2);border-radius:0 6px 6px 0}
+.jobseg.busy{border-left-color:var(--warn)}.jobseg.watch{border-left-color:var(--acc)}
+.jobseg span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.jobseg em{font-style:normal;color:var(--mute)}
+.jobcals{display:flex;flex-direction:column;gap:8px;margin:8px 0}.jobcal{display:grid;grid-template-columns:1fr minmax(0,320px);gap:10px;align-items:center}

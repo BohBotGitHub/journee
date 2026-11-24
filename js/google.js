@@ -50,7 +50,7 @@ async function ensureRange(from,to,force){
   const tMin=parseYmd(from).toISOString(),tMax=parseYmd(addDays(to,1)).toISOString();let items=[],page='';
   const cals=(await loadCals()).filter(calOn);
   for(const c of cals){page='';
-   do{const j=await gFetch(`/calendars/${encodeURIComponent(c.id)}/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}${page?'&pageToken='+encodeURIComponent(page):''}`);(j.items||[]).forEach(e=>{e._cal=c.name;e._col=c.color});items=items.concat(j.items||[]);page=j.nextPageToken}while(page);
+   do{const j=await gFetch(`/calendars/${encodeURIComponent(c.id)}/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}${page?'&pageToken='+encodeURIComponent(page):''}`);(j.items||[]).forEach(e=>{e._cal=c.name;e._col=c.color;e._cid=c.id});items=items.concat(j.items||[]);page=j.nextPageToken}while(page);
   }
   gErr='';
   days.forEach(d=>gEvents[d]=[]);
@@ -95,3 +95,21 @@ function setBlock(t,start,noRender){
  if(!t.est)t.est=30;
  return setRange(t,start,new Date(start.getTime()+t.est*60000),noRender);
 }
+
+// ---------- agendas de boulot : chaque événement dit si tu es au boulot, et comment ----------
+// réglage par agenda : 'phases' (prestations : Exploitation = en veille, autres phases = sans pause) · 'busy' (toujours sans pause) · 'off'
+function jobCalMode(id,name){const m=(S.settings.jobCals||{})[id];if(m)return m;const n=(name||'')+' '+(id||'');if(/diesesoftware|villette/i.test(n))return 'busy';if(/^(travail|boulot|work)$/i.test((name||'').trim()))return 'phases';return 'off'}
+function classifyEv(e){
+ if(!e||isMine(e)||!e._cid)return null;const m=jobCalMode(e._cid,e._cal);if(m==='off')return null;
+ const t=(e.summary||'').trim();if(/^(autre|vacances|cong[ée]s?)\b/i.test(t))return 'ignore';
+ if(!e.start.dateTime)return 'allday';
+ if(new Date(e.end.dateTime)-new Date(e.start.dateTime)>20*3600e3)return 'ignore';
+ if(m==='busy')return 'busy';
+ const ph=t.includes(' / ')?t.split(' / ').pop():'';return /exploitation/i.test(ph)?'watch':'busy';
+}
+// segments de boulot d'un jour (heures décimales), déduits de l'agenda
+function jobSegs(d){const base=+parseYmd(d),out=[];
+ for(const e of (gEvents[d]||[])){const k=classifyEv(e);if(!k||k==='ignore')continue;
+  if(k==='allday'){out.push({s:S.settings.allDayStart??8,e:S.settings.allDayEnd??18,mode:'busy',t:e.summary||''});continue}
+  const s=(new Date(e.start.dateTime)-base)/3600e3,en=Math.min(24,(new Date(e.end.dateTime)-base)/3600e3);if(en>s)out.push({s,e:en,mode:k,t:e.summary||''})}
+ return out.sort((a,b)=>a.s-b.s)}

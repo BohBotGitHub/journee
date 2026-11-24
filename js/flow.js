@@ -2,10 +2,11 @@
 /* ---------- journée vivante : le focus et le temps qui passe décalent l'agenda ---------- */
 const M5=3e5,ceil5=x=>Math.ceil(x/M5)*M5,floor5=x=>Math.floor(x/M5)*M5;
 const runningTask=()=>{const r=S.running&&T(S.running.taskId);return r&&!r.done?r:null};
-function busyAt(d){return timedEvents(d).filter(e=>!evFree(e)).map(e=>[+new Date(e.start.dateTime),+new Date(e.end.dateTime)])}
+function busyAt(d){return timedEvents(d).filter(e=>!evFree(e)&&!['watch','ignore'].includes(typeof classifyEv==='function'?classifyEv(e):null)).map(e=>[+new Date(e.start.dateTime),+new Date(e.end.dateTime)])}
 // créneaux où une tâche de ce lieu ne peut pas être placée : trajet avant/après le boulot, et le boulot lui-même (sauf « n'importe où » en veille)
 function locBusy(d,where){const j=jobOf(d);if(!j)return[];const base=+parseYmd(d),ws=base+j.s*3600e3,we=base+j.e*3600e3,tr=(S.settings.travel??60)*60000,out=[];
  if(tr>0){out.push([ws-tr,ws]);out.push([we,we+tr])}
+ if(j.segs){if(where!=='any')out.push([ws,we]);for(const x of j.segs)if(x.mode==='busy')out.push([base+x.s*3600e3,base+x.e*3600e3]);return out}
  if(j.mode==='busy'||where!=='any')out.push([ws,we]);return out}
 function activate(t){
  const now=Date.now(),d=today();

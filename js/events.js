@@ -123,7 +123,7 @@ document.addEventListener('click',async e=>{
   case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();moveTask(id,addDays(today(),1));toast('Reportée à demain');break}
   case'rolldrop':deleteTask(id);closeModal();render();toast('Tâche supprimée');break;
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
-  case'setjob':{const dd=b.dataset.d;S.days[dd]=Object.assign(S.days[dd]||{},{job:b.dataset.v||''});save();render();if(ritual)renderRitual();break}
+  case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();if(ritual)renderRitual();break}
   case'setwhere':{const t=T(id);if(t){t.where=b.dataset.v||'';save();render();openTask(id)}break}
   case'accent':{S.settings.accent=b.dataset.v;save();render();break}
   case'ritdone':{await toggleDone(id);if(ritual)renderRitual();break}
@@ -182,6 +182,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',async e=>{
  const el=e.target,f=el.dataset.f;
+ if(el.dataset.jobcal){S.settings.jobCals=Object.assign({},S.settings.jobCals||{},{[el.dataset.jobcal]:el.value});save();render();return}
  if(el.dataset.jh){const dd=el.dataset.d,[a,b2]=String(el.value||'').split(':').map(Number);if(!isNaN(a)){S.days[dd]=Object.assign(S.days[dd]||{},{[el.dataset.jh==='s'?'js':'je']:a+(b2||0)/60});save();render();if(ritual)renderRitual()}return}
  if(el.hasAttribute('data-fedit')){const t=T(el.dataset.fedit);const m=String(el.value).trim().match(/^(?:(\d+)\s*[h:]\s*)?(\d+)?\s*(?:min)?$/i);if(t&&m&&(m[1]||m[2])){const sec=((+m[1]||0)*60+(+m[2]||0))*60;if(S.running&&S.running.taskId===t.id)S.running.start=Date.now();t.actual=sec;save()}focusEdit=null;renderFocus();render();return}
  if(f&&modalTask){const t=T(modalTask);if(!t)return;const r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
