@@ -37,7 +37,7 @@ function treeSvg(){
   paths+=`<path d="${link(par?par.a:it.a,par?par.r:0,it.a,it.r)}" stroke="${col}" stroke-width="${[0,3,2,1.4][it.depth]}" fill="none"/>`;
   const [x,y]=P2(it.a,it.r),sel=treeSel===it.n.id;
   dots+=`<g class="tvn${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}"><circle cx="${x}" cy="${y}" r="${sel?11:[0,8,6,5][it.depth]+4}" fill="transparent"/><circle cx="${x}" cy="${y}" r="${[0,7,5.5,4.5][it.depth]}" fill="${col}"${sel?' stroke="var(--ink)" stroke-width="2.5"':''}/>${it.leaf&&it.depth<3&&kids(it.n.id).length?`<circle cx="${x}" cy="${y}" r="${[0,12,10][it.depth]}" fill="none" stroke="${col}" stroke-dasharray="3 3"/>`:''}</g>`;
-  const name=esc(it.n.name)+(cnt[it.n.id]&&it.depth===3?` · ${cnt[it.n.id]}`:'');
+  const name=esc(it.n.name)+(cnt[it.n.id]&&it.depth===3?` <tspan class="tvc">(${cnt[it.n.id]})</tspan>`:'');
   if(it.leaf){const deg=it.a*180/Math.PI-90,flip=it.a>Math.PI,off=it.r+(it.depth===3?10:16);
    labels+=`<text class="tvl d${it.depth}${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" transform="rotate(${deg}) translate(${off},0)${flip?' rotate(180)':''}" text-anchor="${flip?'end':'start'}" dy="0.33em" fill="${col}">${name}${it.depth<3&&kids(it.n.id).length?' +':''}</text>`}
   else{const [lx,ly]=P2(it.a,it.r);labels+=`<text class="tvl d${it.depth} halo${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx}" y="${ly-(it.depth===1?14:11)}" text-anchor="middle" fill="${col}">${esc(it.n.name)}</text>`}
@@ -52,7 +52,7 @@ function tvPanel(){
  const inh=n.lvl===0?'Agenda par défaut':'Hérite : '+(()=>{const c=nodeCal(n.parent);const g=gCals&&gCals.find(x=>x.id===c);return g?g.name:'agenda par défaut'})();
  const cal=gCals?`<label>Agenda Google<select data-ncal="${esc(n.id)}"><option value="">${esc(inh)}</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${n.cal===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>`:`<p class="mute" style="font-size:13px">${gTok()?(loadCals().then(()=>{if(view==='tree')render()}),'Chargement des agendas…'):'Connecte Google pour choisir un agenda.'}</p>`;
  return `<div class="tvp"><small class="mute">${LVL[n.lvl]}${path.length>1?' · '+path.slice(0,-1).map(p=>esc(p.name)).join(' › '):''}</small>
- <div class="tvrow">${n.lvl===0?`<input type="color" data-nc="${esc(n.id)}" value="${esc(n.color)}" aria-label="Couleur">`:`<span class="dot" style="--c:${esc(n.color)}"></span>`}<input class="tvname" data-nn="${esc(n.id)}" value="${esc(n.name)}" aria-label="Nom"></div>
+ <div class="tvrow">${n.lvl===0?`<label class="cdot" style="--c:${esc(n.color)}" title="Changer la couleur"><input type="color" data-nc="${esc(n.id)}" value="${esc(n.color)}" aria-label="Couleur de ${esc(n.name)}"></label>`:`<span class="dot" style="--c:${esc(n.color)}"></span>`}<input class="tvname" data-nn="${esc(n.id)}" value="${esc(n.name)}" aria-label="Nom"></div>
  ${n.lvl===2?`<label>Raccourci à la saisie<div class="tvkey"><span>#</span><input data-nk="${esc(n.id)}" value="${esc(n.key||'')}" placeholder="ex. natation" aria-label="Raccourci"></div></label>`:''}
  ${cal}
  <p class="mute" style="font-size:13px;margin:8px 0">${act} tâche${act>1?'s':''} en cours · ${done} terminée${done>1?'s':''}</p>
@@ -72,12 +72,12 @@ function viewTree(){
  return `<div class="head"><div><h1>Arbre des catégories</h1><div class="sub">4 piliers → domaines → catégories. La base du futur skill tree.</div></div>
  <div class="acts"><div class="seg"><button class="sm${mode==='map'?' on':''}" data-act="tvmode" data-m="map">Diagramme</button><button class="sm${mode==='list'?' on':''}" data-act="tvmode" data-m="list">Liste</button></div></div></div>
  ${tabs}${refine}
- ${mode==='map'?`<div class="tvwrap"><div class="tvmap">${treeSvg()}</div>${tvPanel()}</div>`:`<div class="tvlist">${tvList()}</div>`}`;
+ ${mode==='map'?`<div class="tvwrap"><div class="tvmap">${treeSvg()}<p class="tvleg"><span>(3)</span> = tâches en cours dans la catégorie · cercle pointillé = arbre replié, clique pour le déployer</p></div>${tvPanel()}</div>`:`<div class="tvlist">${tvList()}</div>`}`;
 }
 function tvList(){
  const ps=treeFocus?[pillarOf(treeFocus)]:pillars();
  const cnt=id=>S.tasks.filter(t=>!t.done&&pathOf(t.channel).some(x=>x.id===id)).length;
- const row=n=>`<div class="tnode l${n.lvl}" data-node="${esc(n.id)}">${n.lvl===0?`<input type="color" data-nc="${esc(n.id)}" value="${esc(n.color)}" aria-label="Couleur">`:`<span class="dot" style="--c:${esc(n.color)}"></span>`}<input class="tname" data-nn="${esc(n.id)}" value="${esc(n.name)}" aria-label="Nom">${n.lvl===2?`<input class="tkey" data-nk="${esc(n.id)}" value="${esc(n.key||'')}" placeholder="raccourci" aria-label="Raccourci #">`:''}<span class="mute tcnt">${cnt(n.id)||''}</span><button class="x" data-act="nodemenu" data-id="${esc(n.id)}" aria-label="Options de ${esc(n.name)}">⋯</button></div>`;
+ const row=n=>`<div class="tnode l${n.lvl}" data-node="${esc(n.id)}">${n.lvl===0?`<label class="cdot" style="--c:${esc(n.color)}" title="Changer la couleur"><input type="color" data-nc="${esc(n.id)}" value="${esc(n.color)}" aria-label="Couleur de ${esc(n.name)}"></label>`:`<span class="dot" style="--c:${esc(n.color)}"></span>`}<input class="tname" data-nn="${esc(n.id)}" value="${esc(n.name)}" aria-label="Nom">${n.lvl===2?`<input class="tkey" data-nk="${esc(n.id)}" value="${esc(n.key||'')}" placeholder="raccourci" aria-label="Raccourci #">`:''}${cnt(n.id)?`<span class="tcnt" title="Tâches en cours">${cnt(n.id)} en cours</span>`:''}<button class="x" data-act="nodemenu" data-id="${esc(n.id)}" aria-label="Options de ${esc(n.name)}">⋯</button></div>`;
  return `<div class="tree">${ps.map(p=>`<div class="tpil">${row(p)}${kids(p.id).map(d=>`<details class="tdom" ${treeFocus===d.id||ps.length===1?'open':''}><summary>${row(d)}</summary><div class="tcats">${kids(d.id).map(row).join('')}<button class="sm ghost" data-act="nodeadd" data-id="${esc(d.id)}">+ Catégorie</button></div></details>`).join('')}<button class="sm ghost" data-act="nodeadd" data-id="${esc(p.id)}">+ Domaine</button></div>`).join('')}</div>`;
 }
 function nodeMenu(id){const n=node(id);if(!n)return;treeSel=id;showModal(`<div class="rit"><h2>${esc(n.name)}</h2>${tvPanel()}</div>`)}

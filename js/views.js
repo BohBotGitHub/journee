@@ -8,7 +8,7 @@ function card(t){
  <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
  <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${t.prio==='urgent'?'<span class="prio u" title="Urgent">!!</span>':t.prio==='high'?'<span class="prio" title="Prioritaire">!</span>':''}${esc(t.title)}</div>
  <div class="cmeta">${c?`<span class="chip pc" data-act="pickcat" data-id="${t.id}" style="--c:${esc(c.color)}" title="${t.aiCat?'Devinée par Claude — clique pour changer':'Changer de catégorie'}">${esc(nodeLabel(c.id))}${t.aiCat?' ✦':''}</span>`:t.done?'':`<span class="chip pc nocat" data-act="pickcat" data-id="${t.id}">+ catégorie</span>`}${t.proj&&proj(t.proj)?`<span class="pchip">◆ ${esc(proj(t.proj).name)}</span>`:''}${t.block?`<span title="${t.pinned?'Heure fixée':'Suit l’ordre de la liste'}">${hm(new Date(t.block.start))}${t.pinned?' 📌':''}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${dueLabel(t)}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?nodeLabel(t.aiSug.channel):'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
- <div class="ctime"><span class="est" data-act="estmenu" data-id="${t.id}" data-live="t-${t.id}" title="Temps passé / estimé — clique pour changer la durée">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'—'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
+ <div class="ctime"><span class="est" data-act="estmenu" data-id="${t.id}" data-live="t-${t.id}" title="Temps passé / estimé — clique pour changer la durée">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'<span class="nodur">+ durée</span>'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
 }
 function loadInfo(d){const ts=dayTasks(d);const task=ts.reduce((a,t)=>a+(t.est||0),0),meet=meetingMin(d),cap=Math.max(60,(S.settings.workEnd-S.settings.workStart)*60);return{task,meet,cap,over:task+meet-cap}}
 function loadBar(d){
@@ -16,7 +16,7 @@ function loadBar(d){
  return `<div class="load${L.over>0?' over':''}"><div class="lbar"><i class="m" style="width:${p(L.meet)}%"></i><i class="t" style="width:${Math.max(0,Math.min(100-p(L.meet),p(L.task)))}%"></i></div>
  <div class="ltxt"><span>${fmtMin(L.task)} de tâches${L.meet?' · '+fmtMin(L.meet)+' de réunions':''} sur ${fmtMin(L.cap)} de travail</span><span>${L.over>0?fmtMin(L.over)+' de trop':fmtMin(-L.over)+' de marge'}</span></div></div>`;
 }
-const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day||''}"><input name="t" data-keep="${keep||'add-'+(day||'backlog')}" placeholder="${esc(ph)}${!keep&&ph.length>20?' — touche N':''}" autocomplete="off" aria-label="Nouvelle tâche"></form>`;
+const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day||''}"><input name="t" data-keep="${keep||'add-'+(day||'backlog')}" placeholder="${esc(ph)}" autocomplete="off" aria-label="Nouvelle tâche" aria-describedby="addhint-${keep||day||'b'}"><small class="addhint" id="addhint-${keep||day||'b'}">Tu peux écrire <b>45m</b>, <b>demain</b>, <b>#natation</b>, <b>+projet</b> · Entrée pour ajouter${keep?'':' · touche N pour revenir ici'}</small></form>`;
 const objChips=w=>{const os=weekObjs(w);return os.length?`<div class="objs">${os.map(o=>`<span class="obj${o.done?' done':''}">${esc(o.title)}</span>`).join('')}</div>`:''};
 
 /* ---------- vue Aujourd'hui ---------- */
@@ -64,7 +64,7 @@ function summaryHtml(d,isT){
  const chips=[
   chip('load',`<i class="meter"><i style="width:${Math.min(100,(L.task+L.meet)/L.cap*100)}%"></i></i>${fmtMin(L.task+L.meet)} / ${fmtMin(L.cap)}`,L.over>0?'warn':''),
   evs.length?chip('ev',`${evs.length} rendez-vous`):'',
-  past.length?chip('late',`${past.length} en retard`,'warn'):'',
+  past.length?chip('late',`<span aria-hidden="true">⚠</span> ${past.length} en retard`,'warn'):'',
   soon.length?chip('due',`⏰ ${soon.length} échéance${soon.length>1?'s':''}`,'acc'):'',
   objs.length?chip('obj',`${objs.filter(o=>o.done).length}/${objs.length} objectif${objs.length>1?'s':''}`):'',
   isT&&flowOn()?`<button class="sumchip${info.frozen?' on':''}" data-act="freeze" title="${info.frozen?'Journée figée : les créneaux ne glissent plus avec l’heure':'Les créneaux suivent l’heure ; clique pour figer'}">${info.frozen?'❄ Figée':'Figer'}</button>`:''
@@ -83,11 +83,13 @@ function viewToday(){
  const title=isT?'Aujourd’hui':d===addDays(today(),1)?'Demain':d===addDays(today(),-1)?'Hier':cap1(fmtDay(d,{weekday:'long'}));
  const done=ts.filter(t=>t.done),r=savedRit();
  const planLbl=r&&r.type==='plan'&&r.day===d?'Reprendre ('+(r.step+1)+'/5)':info.planned?'Replanifier':'Planifier ma journée';
+ // une seule action mise en avant, selon le moment ; les autres sont dans •••
+ const h=new Date().getHours(),past=d<today();
+ const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus sur la suivante','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
  return `<div class="head tight"><div class="htitle"><h1>${title}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
- <div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>
- <div class="acts"><button class="${!info.planned&&d>=today()?'pri':''}" data-act="plan">${planLbl}<kbd class="k">P</kbd></button><button data-act="focusnext">Focus<kbd class="k">F</kbd></button><button class="ghost more" data-act="daymenu" aria-label="Plus d’actions">•••</button></div></div>
+ <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button></div></div>
  ${summaryHtml(d,isT)}
- ${addForm(d,'Ajouter une tâche… (« Natation 45m #natation demain »)')}
+ ${addForm(d,'Ajouter une tâche')}
  ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>`}
  ${ts.length?`<div class="foot">${done.length}/${ts.length} terminée${done.length>1?'s':''} · ${fmtMin(ts.reduce((a,t)=>a+actualSec(t),0)/60)} suivies</div>`:''}
  ${info.note?`<div class="note"><b>Fin de journée</b>\n${esc(info.note)}</div>`:''}`;
@@ -95,6 +97,8 @@ function viewToday(){
 function dayMenu(){
  const d=cur,info=S.days[d]||{};
  showModal(`<div class="rit"><h2>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}</h2><div class="menu">
+  <button data-act="plan">${info.planned?'Replanifier la journée':'Planifier la journée'}<kbd>P</kbd></button>
+  <button data-act="focusnext">Focus sur la prochaine tâche<kbd>F</kbd></button>
   <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
   <button data-act="layout">Grand agenda au centre<kbd>C</kbd></button>
   ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
@@ -306,8 +310,8 @@ function calCol(d){
  const y=dt=>((dt.getHours()-st)*60+dt.getMinutes()+(ymd(dt)!==d?(dt>parseYmd(d)?1440:-1440):0))/60*PX;
  const hrs=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
  const blocksHtml=out.map(it=>{
-  const top=Math.max(0,y(it.s)),h=Math.max(22,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
-  const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<40?' short':'';
+  const top=Math.max(0,y(it.s)),h=Math.max(14,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
+  const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<40?(h<24?' short tiny':' short'):'';
   if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
   const t=it.t,c=ch(t.channel),act=S.running&&S.running.taskId===t.id;return `<div class="blk${t.done?' done':''}${act?' active':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${t.pinned?'📌 ':''}${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
  }).join('');

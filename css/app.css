@@ -7,7 +7,7 @@
 :root{color-scheme:light dark;
 --bg:light-dark(#faf8f5,#141619);--panel:light-dark(#ffffff,#1c1f24);--panel2:light-dark(#f3f0eb,#22262c);
 --line:light-dark(#e8e3dc,#2d3239);--ink:light-dark(#1c1e22,#eceae6);--mute:light-dark(#6a6e77,#9aa0a9);
---acc:#e8590c;--acc2:light-dark(#fff0e6,#3a2416);--ok:#2f9e6a;--warn:#d6336c;--ev:light-dark(#e9edf3,#2a3038);--evi:light-dark(#3d4a5c,#c3ccd8);
+--acc:#e8590c;--acc-strong:#c2410c;--ok-strong:#1f7a4f;--acc2:light-dark(#fff0e6,#3a2416);--ok:#2f9e6a;--warn:#d6336c;--ev:light-dark(#e9edf3,#2a3038);--evi:light-dark(#3d4a5c,#c3ccd8);
 --sh:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04)}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
@@ -17,7 +17,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 12px;min-height:36px;font-size:14px;font-weight:500;color:var(--ink)}
 button:hover{border-color:var(--mute)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
-button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+button.pri{background:var(--acc-strong);border-color:var(--acc-strong);color:#fff;font-weight:600}
 button.pri:hover{filter:brightness(1.06)}
 button.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
 button.ghost{background:transparent}
@@ -76,12 +76,12 @@ form.add input{background:var(--panel);border-style:dashed}
 .card{display:flex;align-items:flex-start;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;box-shadow:0 1px 1px rgba(0,0,0,.03);cursor:grab;transition:border-color .12s}
 .card:hover{border-color:color-mix(in srgb,var(--ink) 22%,var(--line))}
 .card.dragging{opacity:.4}
-.card.done{opacity:.55;box-shadow:none;background:transparent}
+.card.done{box-shadow:none;background:transparent}.card.done .ctitle{color:var(--mute)}.card.done .cmeta,.card.done .ctime{opacity:.85}
 .card.done .ctitle{text-decoration:line-through}
 .card.running{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc2)}
 .chk{width:20px;height:20px;min-height:20px;padding:0;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--mute) 70%,transparent);flex:none;margin-top:1px;font-size:12px;line-height:1;color:#fff;background:transparent}
 .chk:hover{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent)}
-.card.done .chk{background:var(--ok);border-color:var(--ok)}
+.card.done .chk{background:var(--ok-strong);border-color:var(--ok-strong)}
 .cbody{flex:1;cursor:pointer}
 .due{font-weight:500}.due.soon{color:var(--acc)}.due.late{color:var(--warn);font-weight:600}
 .prio{color:var(--acc);font-weight:800;margin-right:5px}.prio.u{color:var(--warn)}
@@ -142,7 +142,7 @@ form.add input{background:var(--panel);border-style:dashed}
 .blk{display:block}
 .blk.short,.ev.short{display:flex}.blk .bchk{position:absolute;right:4px;top:3px;width:16px;height:16px;min-height:16px;opacity:0;padding:0;border-radius:50%;border:1.5px solid var(--mute);background:var(--panel);font-size:10px;line-height:1;color:#fff}
 .blk:hover .bchk,.blk.done .bchk{opacity:1}
-.blk.done .bchk{background:var(--ok);border-color:var(--ok)}
+.blk.done .bchk{background:var(--ok-strong);border-color:var(--ok-strong)}
 .blk:hover b{padding-right:18px}
 .blk .rz{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:ns-resize}
 .blk .rz::after{content:"";position:absolute;left:50%;bottom:2px;width:22px;height:3px;margin-left:-11px;border-radius:2px;background:var(--line);opacity:0}
@@ -187,7 +187,7 @@ label.full{margin-top:12px}
 .sub.d span{text-decoration:line-through;color:var(--mute)}
 .sub span{flex:1}
 .sub .x{font-size:16px;min-height:28px;min-width:28px}
-.sub.d .chk{background:var(--ok);border-color:var(--ok)}
+.sub.d .chk{background:var(--ok-strong);border-color:var(--ok-strong)}
 .subs form input{min-height:34px;font-size:14px;margin-top:4px}
 .mfoot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:20px}
 /* rituels */
@@ -305,9 +305,9 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 .connrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)}.connrow:last-of-type{border:0}.connrow .mute{font-size:13px}
 details.adv{margin-top:8px}details.adv>summary{cursor:pointer;font-weight:600;padding:12px 0;color:var(--mute);list-style:none}details.adv>summary::before{content:'▸ ';}details.adv[open]>summary::before{content:'▾ '}
 details.adv .set{margin-top:8px}
-.mtl{display:flex;flex-direction:column;gap:6px;border-left:2px solid var(--line);margin-left:44px;padding-left:10px}
-.mrow{display:flex;gap:8px;align-items:flex-start;position:relative}.mrow .card{flex:1}
-.mtime{position:absolute;left:-60px;width:44px;text-align:right;top:10px;font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+.mtl{display:flex;flex-direction:column;gap:8px}
+.mrow{display:flex;flex-direction:column;gap:3px;position:relative}.mrow .card,.mrow .mev{width:100%}
+.mtime{font-size:12px;font-weight:600;color:var(--mute);font-variant-numeric:tabular-nums;padding-left:4px}
 .mev{flex:1;background:var(--ev);color:var(--evi);border-radius:10px;padding:8px 12px;font-size:14px}.mev b{display:block;font-weight:500}.mev small{font-size:12px}
 .mev.free{background:transparent;border:1px dashed var(--evi)}
 .mnow{position:relative;height:0;border-top:2px solid var(--warn);margin:4px 0}.mnow span{position:absolute;left:-60px;top:-9px;width:44px;text-align:right;font-size:11px;color:var(--warn);font-weight:700}
@@ -429,3 +429,42 @@ details.adv .set{margin-top:8px}
 @media (max-width:760px){.tvwrap{grid-template-columns:1fr}.tvp{position:static}#pickov{padding:0;align-items:stretch}.pk{border-radius:0;max-height:100vh;height:100%}.pkgrid{grid-template-columns:1fr}}
 
 @media (min-width:761px){body.wideview #app{grid-template-columns:196px minmax(0,1fr) 0}body.wideview #side{display:none}}
+
+/* ---------- polissage (revue UI du 24/11) ---------- */
+/* créneaux très courts : une ligne, sans débordement sur le suivant */
+.blk.tiny,.ev.tiny{padding:0 6px;font-size:11px;align-items:center;border-radius:4px}
+.blk.tiny b,.ev.tiny b,.blk.tiny small,.ev.tiny small{line-height:1.05}
+.blk.tiny .bchk,.blk.tiny .rz{display:none}
+/* durée manquante */
+.nodur{color:light-dark(#c2410c,#ff9a5c);font-size:12px;font-weight:600;white-space:nowrap}
+/* astuce de saisie, seulement quand on écrit */
+form.add{position:relative}
+.addhint{display:none;position:absolute;left:0;right:0;top:100%;z-index:5;margin-top:4px;font-size:12.5px;color:var(--mute);padding:6px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--sh);pointer-events:none}
+.addhint b{font-weight:600;color:var(--ink)}
+form.add:focus-within .addhint{display:block}
+/* en-tête : navigation et action principale sur une seule ligne */
+.head.tight .acts{align-items:center}
+.head.tight .dnav{margin-right:4px}
+.more{min-width:44px;font-weight:700;letter-spacing:1px}
+/* pastille de couleur cliquable (au lieu du grand carré) */
+.cdot{position:relative;width:16px;height:16px;border-radius:50%;background:var(--c);flex:none;margin:0 3px;cursor:pointer;box-shadow:0 0 0 2px var(--panel),0 0 0 3px color-mix(in srgb,var(--c) 50%,transparent)}
+.cdot input{position:absolute;inset:-14px;opacity:0;cursor:pointer;width:auto;height:auto;min-height:0;padding:0}
+.tcnt{font-size:12px;color:var(--mute);white-space:nowrap}
+.tvc{fill:var(--mute);font-size:.85em}
+.tvleg{margin:4px 10px 8px;font-size:12.5px;color:var(--mute)}.tvleg span{color:var(--ink)}
+.tvsvg{max-height:calc(100vh - 230px)}
+.tvl{font-size:17px}.tvl.d1{font-size:22px}.tvl.d2{font-size:18px}
+/* sélecteur : suggestions sur une ligne qui défile */
+.pksug{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}.pksug .pkc{flex:none}
+/* écrans tactiles : zones de 44 px minimum sans grossir le visuel */
+@media (pointer:coarse){
+ .chk,.play,.est,.bchk,.chip.pc,.cdot,.sumchip,.dnav button,.x{position:relative}
+ .chk::after,.play::after,.est::after,.chip.pc::after,.sumchip::after,.x::after{content:"";position:absolute;inset:-12px}
+ .play::after{inset:-7px}.sumchip::after{inset:-7px -2px}.est::after{inset:-11px -6px}.chip.pc::after{inset:-14px -4px}
+ .dnav button,.more,button.sm,button.pri,.pkc{min-height:44px;min-width:44px}
+ .sumchip{min-height:36px}
+ .tvtabs button{min-height:44px}
+}
+.pk>.pkhead,.pk>.pkq,.pk>.pksug,.pk>.pklead,.pk>.pkfoot{flex:none}
+.pksug{align-items:center;overflow-y:hidden}.pksug small{flex:none}
+.pkgrid{flex:1;min-height:0}

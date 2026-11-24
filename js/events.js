@@ -13,7 +13,7 @@ document.addEventListener('click',async e=>{
   case'open':if(!e.target.closest('.chk'))openTask(id);break;
   case'play':openFocus(id);break;
   case'openfocus':openFocus(id);break;
-  case'focusnext':{const t=dayTasks(cur).find(t=>!t.done);t?openFocus(t.id):toast('Aucune tâche à faire ce jour-là');break}
+  case'focusnext':{if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();const t=dayTasks(cur).find(t=>!t.done);t?openFocus(t.id):toast('Aucune tâche à faire ce jour-là');break}
   case'focusclose':focusOn=null;focusSub=null;renderFocus();render();break;
   case'focusdone':{await toggleDone(id);const nx=dayTasks(cur).find(t=>!t.done);focusOn=null;renderFocus();toast(nx?'Bravo ! Prochaine : '+nx.title:'Bravo ! Tout est fait.');break}
   case'timer':if(S.running&&S.running.taskId===id){stopTimer();render()}else{startTimer(id);const tt=T(id);if(tt)activate(tt)}renderFocus();break;
@@ -23,7 +23,7 @@ document.addEventListener('click',async e=>{
   case'nextw':cur=addDays(cur,7);render();break;
   case'gotoday':cur=today();render();break;
   case'openday':cur=b.dataset.day;go('today');break;
-  case'plan':startRitual('plan',cur);break;
+  case'plan':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();startRitual('plan',cur);break;
   case'shutdown':if(!$('#modal').classList.contains('hidden')&&!ritual)$('#modal').classList.add('hidden');startRitual('shutdown',cur);break;
   case'weekplan':startRitual('weekplan',cur);break;
   case'weekreview':startRitual('weekreview',cur);break;
