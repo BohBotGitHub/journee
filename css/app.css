@@ -589,3 +589,4 @@ code{white-space:nowrap}
 .wseg{display:flex;flex-wrap:wrap;gap:4px}
 .wh{display:inline-flex;align-items:center;gap:3px}.wh svg{width:12px;height:12px}
 .sumchip svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
+.wnow{align-self:center;margin-left:6px;font-size:13px;white-space:nowrap}.pbtn svg{width:18px;height:18px}

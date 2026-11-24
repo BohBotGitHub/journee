@@ -218,7 +218,8 @@ const projKey=p=>norm(p.name).replace(/[^a-z0-9]+/g,'').slice(0,20)||'projet';
 // type de journée : '' libre (chez moi) · 'busy' boulot sans pause (aucune tâche) · 'watch' boulot en veille (seulement le faisable n'importe où)
 const JOBMODES=[['','Libre','Chez toi : tout peut être placé'],['busy','Boulot sans pause','Aucune tâche pendant le boulot'],['watch','Boulot en veille','Seulement ce qui se fait n’importe où']];
 function jobOf(d){const i=S.days[d]||{},s=S.settings;if(!i.job)return null;return{mode:i.job,s:typeof i.js==='number'?i.js:(s.jobStart??9),e:typeof i.je==='number'?i.je:(s.jobEnd??18)}}
-const jobLabel=d=>{const j=jobOf(d);if(!j)return 'Journée libre';return (j.mode==='busy'?'Boulot sans pause':'Boulot en veille')+' '+hhmm(j.s).replace(':00','h').replace(':','h')+'–'+hhmm(j.e).replace(':00','h').replace(':','h')};
+const hShort=v=>Math.floor(v)+' h'+(v%1?pad(Math.round(v%1*60)):'');
+const jobLabel=d=>{const j=jobOf(d);if(!j)return 'Journée libre';return (j.mode==='busy'?'Boulot sans pause':'Boulot en veille')+' · '+hShort(j.s)+'–'+hShort(j.e)};
 // lieu d'une tâche : 'any' n'importe où (faisable au boulot) · 'home' chez moi · 'out' dehors
 const WHERES=[['','Auto'],['any','N’importe où'],['home','Chez moi'],['out','Dehors']];
 const CAT_WHERE={'d-corps':'home','c-natation':'out','d-foyer':'home','c-courses':'out','c-demarches':'out','c-piano':'home','c-art':'home','c-lego':'home','c-evenements':'out'};
