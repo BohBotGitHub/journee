@@ -22,7 +22,7 @@ function importSunsama(txt){
  const st={tasks:0,archive:0,channels:0,objectives:0,recurring:0,skipped:0,dup:0};
  S.tasks=S.tasks.filter(t=>!/^Exemple : /.test(t.title));
  const chIdx={},perCtx={},tree=hasTree();
- // arbre en place : chaque tâche est rangée d'après son ancien canal et son titre
+ // arbre en place : chaque tâche est rangée d'après son ancien catégorie et son titre
  const cname=r=>(r.channel||'').replace(/^#/,'').trim();
  const chOf=r=>tree?classify(r.text,cname(r)):(chIdx[cname(r)]||null);
  const projOf=r=>{if(!tree)return null;const n=cname(r);if(!PROJ_FROM.includes(norm(n)))return null;S.projects=S.projects||[];let p=S.projects.find(x=>norm(x.name)===norm(n));if(!p){p={id:'pr-'+norm(n).replace(/[^a-z0-9]+/g,'-'),name:n,end:null,done:false};S.projects.push(p)}return p.id};

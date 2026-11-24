@@ -485,24 +485,54 @@ def _(c):
     ctx, pg, errs = new_page(c['b'])
     assert st(pg, "S.channels.filter(c=>c.lvl===0).map(c=>c.name).join(',')") == 'Être,Grandir,Relier,Bâtir'
     assert st(pg, "S.channels.filter(c=>c.lvl===1).length") == 10
-    assert st(pg, "S.channels.filter(c=>c.lvl===2).length") == 35
+    assert st(pg, "S.channels.filter(c=>c.lvl===2).length") == 34
     assert st(pg, "window.journee.fn.nodeLabel('c-jdr')") == 'Jeu › MJ de JDR'
     # agenda : catégorie > domaine > pilier
     pg.evaluate("()=>{const S=window.journee.state,n=id=>S.channels.find(c=>c.id===id);n('p-grandir').cal='A';n('d-jeu').cal='B';window.journee.save()}")
     assert st(pg, "window.journee.fn.nodeCal('c-piano')") == 'A'
     assert st(pg, "window.journee.fn.nodeCal('c-magic')") == 'B'
-    pg.click('#nav [data-view="settings"]'); pg.wait_for_timeout(200)
-    assert pg.locator('.tpil').count() == 4
-    pg.click('.tnode[data-node="d-jeu"] ~ .tcats [data-act="nodeadd"]'); pg.wait_for_timeout(200)
+    pg.click('#nav [data-view="tree"]'); pg.wait_for_timeout(200)
+    assert pg.locator('.tvsvg .tvn').count() == 4 + 10 + 34, pg.locator('.tvsvg .tvn').count()
+    # déployer un seul arbre : seuls ses nœuds restent détaillés
+    pg.click('.tvtabs [data-id="p-grandir"]'); pg.wait_for_timeout(150)
+    assert pg.locator('.tvsvg .tvn').count() == 4 + 3 + 9
+    pg.click('[data-act="tvmode"][data-m="list"]'); pg.wait_for_timeout(150)
+    assert pg.locator('.tpil').count() == 1
+    pg.click('.tdom:has([data-node="d-jeu"]) [data-act="nodeadd"]'); pg.wait_for_timeout(200)
     nid = st(pg, "S.channels.at(-1).id")
     assert st(pg, "S.channels.at(-1).parent") == 'd-jeu'
     pg.fill(f'[data-nn="{nid}"]', 'Jeux vidéo'); pg.keyboard.press('Tab'); pg.wait_for_timeout(100)
     pg.fill(f'[data-nk="{nid}"]', 'JV'); pg.keyboard.press('Tab'); pg.wait_for_timeout(100)
     assert st(pg, f"window.journee.fn.findNode('jv').id") == nid
-    # supprimer une catégorie remonte ses tâches au domaine
+    # supprimer : on choisit où vont les tâches
     pg.evaluate(f"()=>{{const S=window.journee.state;S.tasks[0].channel='{nid}';window.journee.save()}}")
-    pg.click(f'.tnode[data-node="{nid}"] [data-act="nodemenu"]'); pg.click('[data-act="nodedel"]'); pg.wait_for_timeout(100)
-    assert st(pg, "S.tasks[0].channel") == 'd-jeu'
+    pg.click(f'.tnode[data-node="{nid}"] [data-act="nodemenu"]'); pg.click('#modal [data-act="nodedelask"]'); pg.wait_for_selector('#pickov')
+    assert pg.locator('#pickov [data-act="pkok"][disabled]').count() == 1
+    pg.click('#pickov .pkc:text-is("Magic")'); pg.click('#pickov [data-act="pkok"]'); pg.wait_for_timeout(150)
+    assert st(pg, "S.tasks[0].channel") == 'c-magic' and not st(pg, f"S.channels.some(c=>c.id==='{nid}')")
+    # déplacer une catégorie vers un autre domaine
+    pg.click('.tvtabs [data-id=""]'); pg.wait_for_timeout(100)
+    pg.evaluate("()=>{document.querySelectorAll('details.tdom').forEach(d=>d.open=true)}")
+    pg.click('.tnode[data-node="c-lego"] [data-act="nodemenu"]'); pg.click('#modal [data-act="nodemove"]'); pg.wait_for_selector('#pickov')
+    pg.click('#pickov .pkdh:has-text("Création")'); pg.wait_for_timeout(150)
+    assert st(pg, "S.channels.find(c=>c.id==='c-lego').parent") == 'd-creation'
+    assert not errs, errs; ctx.close()
+
+@test('Choisir la catégorie d’une tâche : recherche, suggestions, sans catégorie')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    add(pg, 'Tonte barbe 10m')
+    assert st(pg, 'S.tasks.at(-1).channel') == 'c-routines', 'tonte = pilosité, pas jardin'
+    pg.click('#main .card:has-text("Tonte barbe") .chip.pc'); pg.wait_for_selector('#pickov')
+    assert pg.locator('#pickov .pksug .pkc').count() >= 1
+    pg.fill('#pickov .pkq', 'nata'); pg.wait_for_timeout(100)
+    assert pg.locator('#pickov .pkgrid .pkc').count() == 1
+    pg.keyboard.press('Enter'); pg.wait_for_timeout(150)
+    assert st(pg, 'S.tasks.at(-1).channel') == 'c-natation' and pg.locator('#pickov').count() == 0
+    # depuis le détail de la tâche
+    pg.click('#main .card:has-text("Tonte barbe") .cbody .ctitle'); pg.click('#modal [data-act="pickcatm"]'); pg.wait_for_selector('#pickov')
+    pg.click('#pickov [data-act="pkpick"][data-id=""]'); pg.wait_for_timeout(150)
+    assert st(pg, 'S.tasks.at(-1).channel') is None and pg.locator('#modal:not(.hidden) .catbtn').count() == 1
     assert not errs, errs; ctx.close()
 
 OLD = """localStorage.setItem('journee.v1',JSON.stringify({seeded:true,settings:{aiKey:'k',aiAuto:false},channels:[{id:'o1',name:'Perso',color:'#2f9e6a',cal:'pro@group'},{id:'o2',name:'Ménage',color:'#888'},{id:'o3',name:'Déménagement',color:'#c90'}],

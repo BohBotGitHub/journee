@@ -78,7 +78,7 @@ if(!S.seeded){
 }
 
 /* ---------- état d'interface ---------- */
-const VIEWS=['today','week','dump','backlog','review','objectives','stats','settings'];
+const VIEWS=['today','week','dump','backlog','review','objectives','stats','settings','tree'];
 let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,focusSub=null,drag=null,scrolledCal='',lastDay=today();
 let gEvents={},gLoading={};
 const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,tLoading:false};

@@ -60,14 +60,26 @@ document.addEventListener('click',async e=>{
   case'treeask':showModal(treeMigrationHtml());break;
   case'treego':applyTree();closeModal();render();relocateBlocks();toast('Tâches rangées dans l’arbre');break;
   case'nodemenu':nodeMenu(id);break;
-  case'nodeadd':{const n=nodeAdd(id);render();if(n)setTimeout(()=>{const i=document.querySelector(`[data-nn="${n.id}"]`);if(i){i.focus();i.select()}},50);break}
-  case'nodedel':nodeDel(id);closeModal();render();break;
+  case'tvsel':treeSel=treeSel===id?null:id;if(isNarrow()&&treeSel){nodeMenu(id)}else render();break;
+  case'tvfocus':treeFocus=id?(treeFocus===id?null:id):null;if(id&&!treeSel)treeSel=id;render();break;
+  case'tvmode':treeMode=b.dataset.m;render();break;
+  case'tvaddpil':{const n={id:uid(),name:'Nouveau pilier',color:'#888780',lvl:0,parent:null,o:pillars().length};S.channels.push(n);treeColors();save();treeSel=n.id;render();break}
+  case'nodedelask':closeModal();nodeDelAsk(id);break;
+  case'nodedelgo':if(nodeDelGo)nodeDelGo();break;
+  case'nodemove':{const n=node(id);if(!n)break;closeModal();openPicker({title:'Déplacer « '+n.name+' » vers…',levels:[n.lvl-1],current:n.parent,exclude:new Set([n.parent]),noneLabel:false,onPick:to=>{if(to){nodeMove(id,to);toast('« '+n.name+' » déplacé dans '+node(to).name)}render()}});break}
+  case'pkpick':pickChoose(b.dataset.id);break;
+  case'pkclose':closePicker();break;
+  case'pkok':{if(pick&&pick.sel!==undefined){const f=pick.onPick,v=pick.sel;f(v)}break}
+  case'pickcat':e.stopPropagation&&e.stopPropagation();pickTaskCat(id,false);break;
+  case'pickcatm':pickTaskCat(id,true);break;
+  case'nodeadd':{const n=nodeAdd(id);closeModal();if(n){treeSel=n.id;if(treeFocus===null&&view==='tree'&&treeMode!=='list'){}}render();if(n)setTimeout(()=>{const i=document.querySelector(`[data-nn="${n.id}"]`);if(i){i.focus();i.select()}},50);break}
+  case'nodedel':closeModal();nodeDelAsk(id);break;
   case'nodeup':nodeShift(id,-1);render();break;
   case'nodedown':nodeShift(id,1);render();break;
   case'projadd':S.projects=S.projects||[];S.projects.push({id:uid(),name:'Nouveau projet',end:null,done:false});save();render();break;
   case'refine':{if(!aiOn())break;b.disabled=true;b.textContent='Claude range…';try{refineProp=await aiRefine((a,n)=>{b.textContent=`Claude range… ${a}/${n}`});if(!refineProp.length){toast('Claude n’a rien trouvé à affiner');render()}else showModal(refineHtml())}catch(err){toast('Claude : '+err.message);render()}break}
   case'refineok':{const skip=new Set([...document.querySelectorAll('[data-refine]')].filter(x=>!x.checked).map(x=>x.dataset.refine));const n=applyRefine(skip);closeModal();render();toast(n+' tâches rangées');break}
-  case'chadd':S.channels.push({id:uid(),name:'Nouveau canal',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
+  case'chadd':S.channels.push({id:uid(),name:'Nouveau catégorie',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;
   case'unpin':{const t=T(modalTask);if(t){t.pinned=false;save();openTask(t.id)}break}
   case'notifon':{if(!('Notification' in window)){toast('Ce navigateur ne gère pas les notifications');break}const pm=await Notification.requestPermission();S.settings.notif=pm==='granted';save();render();toast(pm==='granted'?'Notifications activées':'Notifications refusées par le navigateur');break}
@@ -170,7 +182,7 @@ document.addEventListener('change',async e=>{
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
  if(el.dataset.ncal!==undefined){const n=node(el.dataset.ncal);if(n){n.cal=el.value||null;save();relocateBlocks();toast('Agenda de « '+n.name+' » enregistré')}return}
  if(el.dataset.nc){const n=node(el.dataset.nc);if(n){n.color=el.value;treeColors();save();render()}return}
- if(el.dataset.nn){const n=node(el.dataset.nn);if(n){n.name=el.value.trim()||n.name;save()}return}
+ if(el.dataset.nn){const n=node(el.dataset.nn);if(n){n.name=el.value.trim()||n.name;save();if(view==='tree'&&!document.querySelector('#modal:not(.hidden)'))render()}return}
  if(el.dataset.nk!==undefined){const n=node(el.dataset.nk);if(n){n.key=norm(el.value).replace(/[^a-z0-9]/g,'');el.value=n.key;save()}return}
  if(el.dataset.nmove){nodeMove(el.dataset.nmove,el.value);closeModal();render();return}
  if(el.dataset.pn){const p=proj(el.dataset.pn);if(p){p.name=el.value.trim()||p.name;save()}return}
@@ -181,7 +193,7 @@ document.addEventListener('change',async e=>{
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
  if(el.dataset.chn){const c=ch(el.dataset.chn);if(c){c.name=el.value.trim()||c.name;save()}return}
  if(el.hasAttribute('data-todolist')){todo.listId=el.value;S.settings.todoList=el.value;save();renderSide();return}
- if(el.hasAttribute('data-sunsama')&&el.files[0]){try{const st=importSunsama(await el.files[0].text());showModal(`<div class="rit"><h2>Import Sunsama terminé</h2><div class="stat"><div><b>${st.tasks}</b><small>tâches actives ou récentes</small></div><div><b>${st.archive}</b><small>tâches dans l’historique</small></div><div><b>${st.channels}</b><small>canaux créés</small></div></div><p class="lead">${st.objectives} objectifs, ${st.recurring} récurrence(s) active(s), ${st.skipped} rituels ignorés${st.dup?', '+st.dup+' déjà importées':''}.</p><div class="mfoot"><span class="sp"></span><button class="pri" data-act="close">Voir ma journée</button></div></div>`);view='today';cur=today();render()}catch(err){toast('Import impossible : '+err.message)}return}
+ if(el.hasAttribute('data-sunsama')&&el.files[0]){try{const st=importSunsama(await el.files[0].text());showModal(`<div class="rit"><h2>Import Sunsama terminé</h2><div class="stat"><div><b>${st.tasks}</b><small>tâches actives ou récentes</small></div><div><b>${st.archive}</b><small>tâches dans l’historique</small></div><div><b>${st.channels}</b><small>catégories créées</small></div></div><p class="lead">${st.objectives} objectifs, ${st.recurring} récurrence(s) active(s), ${st.skipped} rituels ignorés${st.dup?', '+st.dup+' déjà importées':''}.</p><div class="mfoot"><span class="sp"></span><button class="pri" data-act="close">Voir ma journée</button></div></div>`);view='today';cur=today();render()}catch(err){toast('Import impossible : '+err.message)}return}
  if(el.hasAttribute('data-import')&&el.files[0]){try{const j=JSON.parse(await el.files[0].text());if(!Array.isArray(j.tasks))throw new Error('format inconnu');S=Object.assign(defaults(),j);S.settings=Object.assign(defaults().settings,j.settings||{});save();render();toast('Sauvegarde importée')}catch(err){toast('Import impossible : '+err.message)}}
 });
 
@@ -214,7 +226,7 @@ document.addEventListener('drop',async e=>{
 });
 
 /* ---------- interactions fluides liste ↔ agenda ---------- */
-const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Objectifs'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Objectifs'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
 let tipI=0;
 function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
@@ -248,7 +260,7 @@ setInterval(gSilent,60000);setTimeout(gSilent,2000);
 let pal=null;
 function palItems(q){
  const out=[],ql=norm(q).trim();
- const cmds=[['Aujourd’hui','go:today'],['Semaine','go:week'],['Vide-tête','go:dump'],['Backlog et modèles','go:backlog'],['Revue : objectifs','go:objectives'],['Revue : statistiques','go:stats'],['Figer ou libérer la journée','freeze'],['Réglages','go:settings'],['Planifier ma journée','plan'],['Clôturer la journée','shutdown'],['Focus sur la prochaine tâche','focus'],['Inverser liste et grand agenda','layout'],['Planifier la semaine','weekplan'],['Revue de la semaine','weekreview'],['Nouveau modèle','tplnew'],...(S.templates||[]).map(t=>['Appliquer « '+t.name+' » aujourd’hui','tpl:'+t.id])];
+ const cmds=[['Aujourd’hui','go:today'],['Semaine','go:week'],['Vide-tête','go:dump'],['Backlog et modèles','go:backlog'],['Revue : objectifs','go:objectives'],['Arbre des catégories','go:tree'],['Revue : statistiques','go:stats'],['Figer ou libérer la journée','freeze'],['Réglages','go:settings'],['Planifier ma journée','plan'],['Clôturer la journée','shutdown'],['Focus sur la prochaine tâche','focus'],['Inverser liste et grand agenda','layout'],['Planifier la semaine','weekplan'],['Revue de la semaine','weekreview'],['Nouveau modèle','tplnew'],...(S.templates||[]).map(t=>['Appliquer « '+t.name+' » aujourd’hui','tpl:'+t.id])];
  const cmdHit=ql&&cmds.some(([l])=>norm(l).startsWith(ql));
  if(cmdHit)cmds.filter(([l])=>norm(l).includes(ql)).slice(0,6).forEach(([l,k])=>out.push({k,label:l,grp:'Commandes'}));
  if(ql){
@@ -309,7 +321,7 @@ document.addEventListener('keydown',e=>{
  else if(e.key==='?'){showKeys()}
  else if(e.key==='/'){e.preventDefault();openPal()}
  else if(k==='d'){go('dump');setTimeout(()=>{const ta=document.querySelector('[data-dump]');if(ta){ta.focus();ta.selectionStart=ta.value.length}},50)}
- else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');else if(k==='r')go('review');
+ else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');else if(k==='a')go('tree');else if(k==='r')go('review');
  else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur);
  else if(k==='f'){const t=dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,(view==='week'||view==='objectives')?7*s:s);render()}

@@ -19,7 +19,7 @@ function aiContext(){
  const wk=monday(d),days=[...Array(7)].map((_,i)=>addDays(wk,i));
  return `Maintenant : ${cap1(fmtDay(t0))}, ${hm(now)}. Jour affiché : ${fmtDay(d)} (${d}).
 Heures de travail : ${S.settings.workStart}h–${S.settings.workEnd}h.
-${hasTree()?'Catégories (pilier / domaine, puis domaine › catégorie) :\n'+catPaths().join('\n'):'Canaux : '+(S.channels.map(c=>c.name).join(', ')||'aucun')}.${activeProjects().length?'\nProjets en cours : '+activeProjects().map(p=>p.name+(p.end?' (fin '+p.end+')':'')).join(', '):''}
+${hasTree()?'Catégories (pilier / domaine, puis domaine › catégorie) :\n'+catPaths().join('\n'):'Catégories : '+(S.channels.map(c=>c.name).join(', ')||'aucun')}.${activeProjects().length?'\nProjets en cours : '+activeProjects().map(p=>p.name+(p.end?' (fin '+p.end+')':'')).join(', '):''}
 Objectifs de la semaine : ${weekObjs(wk).map(o=>o.title+(o.done?' (atteint)':'')).join(' ; ')||'aucun'}.
 ${(S.days[d]||{}).intent?'Intention du jour : '+S.days[d].intent+'\n':''}Réunions du jour :\n${meet.join('\n')||'- aucune connue'}
 Tâches du jour :\n${dayTasks(d).map(line).join('\n')||'- aucune'}
@@ -29,13 +29,13 @@ Backlog :\n${S.tasks.filter(t=>!t.day&&!t.done).slice(0,40).map(line).join('\n')
 Historique estimé/réel :\n${hist.join('\n')||'- pas encore de données'}
 Habitudes passées (archive, durée réelle moyenne) :\n${archivePatterns()||'- aucune'}`;
 }
-const AI_SYS=`Tu es Claude, l'assistant de planification intégré à l'appli « MyDayBot » (équivalent de Sunsama). Tu aides l'utilisateur à organiser son temps : ordre des tâches, catégorie (canal), durée réaliste, répartition dans la semaine, et nouvelles tâches utiles (préparer une réunion, un suivi, une étape vers un objectif de la semaine).
+const AI_SYS=`Tu es Claude, l'assistant de planification intégré à l'appli « MyDayBot » (équivalent de Sunsama). Tu aides l'utilisateur à organiser son temps : ordre des tâches, catégorie, durée réaliste, répartition dans la semaine, et nouvelles tâches utiles (préparer une réunion, un suivi, une étape vers un objectif de la semaine).
 Règles :
 - Français, tutoiement, ton chaleureux et direct, réponses courtes (3-6 phrases max).
 - Sois réaliste : tâches + réunions ne doivent pas dépasser les heures de travail ; s'il y a trop, propose de reporter (updates avec day) plutôt que d'entasser.
 - Ordre conseillé : tâches importantes et exigeantes tôt, petites tâches entre les réunions, liées aux objectifs de la semaine en priorité.
 - Durées : appuie-toi sur l'historique estimé/réel quand il existe (si l'utilisateur sous-estime, corrige).
-- Canaux : uniquement des noms de la liste fournie.
+- Catégories : uniquement des noms de la liste fournie.
 - Échéances : une tâche doit être planifiée avant sa date d’échéance ; signale celles qui sont menacées.
 - Nouvelles tâches : maximum 3, seulement si vraiment utiles, avec une raison courte.
 - Dès que tu suggères un changement concret, utilise l'outil « proposer » : l'utilisateur validera chaque élément. Ne prétends jamais avoir modifié quelque chose toi-même.`;
@@ -74,7 +74,7 @@ function propItems(p){
  if(!p)return[];const out=[];
  const tt=id=>{const t=T(id);return t?t.title:null};
  if(p.order&&p.order.filter(tt).length>1)out.push({k:'order',label:'Réordonner : '+p.order.filter(tt).map(tt).join(' → ')});
- (p.updates||[]).forEach((u,i)=>{const t=T(u.id);if(!t)return;if(u.drop){out.push({k:'u'+i,label:'Abandonner : '+t.title,reason:u.reason});return}const parts=[];if(u.subtasks&&u.subtasks.length)parts.push('sous-tâches : '+u.subtasks.join(', '));if(u.channel)parts.push('canal '+u.channel);if(u.est)parts.push(fmtMin(u.est));if(u.day)parts.push(u.day==='backlog'?'au backlog':'le '+fmtDay(u.day,{weekday:'long',day:'numeric'}));if(parts.length)out.push({k:'u'+i,label:t.title+' : '+parts.join(', '),reason:u.reason})});
+ (p.updates||[]).forEach((u,i)=>{const t=T(u.id);if(!t)return;if(u.drop){out.push({k:'u'+i,label:'Abandonner : '+t.title,reason:u.reason});return}const parts=[];if(u.subtasks&&u.subtasks.length)parts.push('sous-tâches : '+u.subtasks.join(', '));if(u.channel)parts.push('catégorie '+u.channel);if(u.est)parts.push(fmtMin(u.est));if(u.day)parts.push(u.day==='backlog'?'au backlog':'le '+fmtDay(u.day,{weekday:'long',day:'numeric'}));if(parts.length)out.push({k:'u'+i,label:t.title+' : '+parts.join(', '),reason:u.reason})});
  (p.pick||[]).forEach((id,i)=>{const t=T(id);if(t&&t.day!==cur&&!t.done)out.push({k:'p'+i,label:'Ajouter au jour : '+t.title+(t.est?' ('+fmtMin(t.est)+')':'')})});
  (p.blocks||[]).forEach((b,i)=>{const t=T(b.id);if(t&&/^\d{1,2}:\d{2}$/.test(b.start||''))out.push({k:'b'+i,label:'Créneau '+b.start+' : '+t.title})});
  if(p.intent)out.push({k:'i',label:'Intention : '+p.intent});

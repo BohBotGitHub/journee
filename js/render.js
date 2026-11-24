@@ -4,8 +4,9 @@ function render(){
  const a=document.activeElement,keep=a&&a.dataset&&a.dataset.keep,val=keep?a.value:null;
  document.querySelectorAll('#nav [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===view||(b.dataset.view==='review'&&(view==='objectives'||view==='stats'))));
  {const nb=document.querySelector('#nav [data-view="dump"]'),n=S.tasks.filter(t=>t.inbox&&!t.done).length;if(nb){const o=nb.querySelector('.badge');if(o)o.remove();if(n)nb.insertAdjacentHTML('beforeend',`<span class="badge">${n}</span>`)}}
+ document.body.classList.toggle('wideview',view==='tree');
  const m=$('#main'),st=m.scrollTop,bc0=document.querySelector('.bigcal'),bst=bc0?bc0.scrollTop:null;
- m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='settings'?viewSettings():viewToday();
+ m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='settings'?viewSettings():view==='tree'?viewTree():viewToday();
  m.scrollTop=st;
  renderSide();renderRun();renderSyncBar();
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
@@ -43,7 +44,7 @@ function openTask(id){
  const ests=[0,10,15,20,30,45,60,75,90,120,150,180,240];if(!ests.includes(t.est))ests.push(t.est),ests.sort((a,b)=>a-b);
  showModal(`<div class="mhead"><input class="mtitle" data-f="title" value="${esc(t.title)}" aria-label="Titre"><button class="x" data-act="close" aria-label="Fermer">×</button></div>
  <div class="grid2">
- <label>Catégorie<select data-f="channel">${treeOptions(t.channel,'Aucune')}</select></label><label>Projet<select data-f="proj"><option value="">Aucun</option>${(S.projects||[]).filter(p=>!p.done||p.id===t.proj).map(p=>`<option value="${esc(p.id)}" ${p.id===t.proj?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
+ <label>Catégorie<button type="button" class="catbtn" data-act="pickcatm" data-id="${t.id}" style="--c:${esc(ch(t.channel)?ch(t.channel).color:'var(--line)')}">${ch(t.channel)?`<span class="chip">${esc(nodeLabel(t.channel))}</span>`:'<span class="mute">Choisir une catégorie…</span>'}<span class="mute">Changer</span></button></label><label>Projet<select data-f="proj"><option value="">Aucun</option>${(S.projects||[]).filter(p=>!p.done||p.id===t.proj).map(p=>`<option value="${esc(p.id)}" ${p.id===t.proj?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
  <label>Durée estimée<select data-f="est">${ests.map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${v?fmtMin(v):'—'}</option>`).join('')}</select></label>
  <label>Jour (vide = backlog)<input type="date" data-f="day" value="${t.day||''}"></label>
  <label>Créneau dans l’agenda<span class="row"><input type="time" step="900" data-f="time" value="${t.block?hm(new Date(t.block.start)):''}">${t.block&&t.pinned?'<button class="sm ghost" data-act="unpin">Libérer l’heure</button>':''}${t.block&&!flowOn()?'<button class="sm ghost" data-act="unblock">Retirer</button>':''}</span></label>
@@ -68,7 +69,7 @@ function modalAIHtml(t){
 }
 async function aiSplit(t){
  modalAI={tid:t.id,loading:true};openTask(t.id);
- try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nTâche [${t.id}] « ${t.title} »${t.notes?' — notes : '+t.notes.slice(0,500):''}. Découpe-la en 3 à 6 sous-tâches concrètes et actionnables (updates subtasks), propose une durée réaliste (est) et un canal si absent. Message très court.`}],true);
+ try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nTâche [${t.id}] « ${t.title} »${t.notes?' — notes : '+t.notes.slice(0,500):''}. Découpe-la en 3 à 6 sous-tâches concrètes et actionnables (updates subtasks), propose une durée réaliste (est) et une catégorie si absent. Message très court.`}],true);
   modalAI={tid:t.id,text:r.text,prop:r.prop,applied:{}}}
  catch(e){modalAI={tid:t.id,error:e.message}}
  if(modalTask===t.id)openTask(t.id);

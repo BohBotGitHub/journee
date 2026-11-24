@@ -19,3 +19,8 @@
 - Le cœur (planification) ne dépend jamais des modules de jeu : ils s'abonnent aux événements.
 - Le thème passe par des variables CSS et un dictionnaire de libellés, pour basculer sans recharger.
 - Toutes les données restent dans `S` (localStorage + Drive) ; la clé API Claude reste locale.
+
+## Notes à intégrer (demandées le 24/11)
+- **Lieu des tâches** : savoir si une tâche est faisable à la maison, au boulot ou partout. Claude pose la question au moment de la saisie si ce n'est pas évident, et le plan du jour n'en propose que les tâches compatibles avec l'endroit où tu es.
+- **Indisponibilités** : plages à exclure de la planification (absences, trajets, créneaux bloqués), en plus des rendez-vous Google.
+- **Journées de boulot** : définir les jours travaillés (et leurs horaires), pour que la planification et le lieu des tâches en tiennent compte.

@@ -13,7 +13,7 @@ const TREE=[
   ['engagement','Engagement',[['militantisme','Militantisme'],['caritatif','Caritatif'],['citoyennete','Citoyenneté']]]]],
  ['batir','Bâtir','#378add',[
   ['metier','Métier',[['villette','La Villette'],['stardust','Stardust'],['formation','Formation']]],
-  ['foyer','Foyer',[['menage','Ménage'],['courses','Courses'],['cuisine','Cuisine'],['bricolage','Bricolage'],['jardin','Jardin'],['deco','Déco & aménagement']]],
+  ['foyer','Foyer',[['menage','Ménage'],['courses','Courses'],['cuisine','Cuisine'],['bricolage','Bricolage'],['deco','Déco & aménagement']]],
   ['gestion','Gestion',[['admin','Administratif'],['budget','Budget & épargne'],['organisation','Organisation']]]]]];
 const LVL=['Pilier','Domaine','Catégorie'];
 const hasTree=()=>S.channels.some(c=>c.lvl!==undefined);
@@ -23,7 +23,7 @@ const pillars=()=>kids(null).filter(c=>c.lvl===0);
 function pathOf(id){const out=[];let n=node(id),g=0;while(n&&g++<6){out.unshift(n);n=n.parent?node(n.parent):null}return out}
 const pillarOf=id=>pathOf(id)[0]||null;
 const domainOf=id=>pathOf(id)[1]||null;
-// libellé affiché : « Domaine › Catégorie » (ou le nom seul d'un pilier / domaine / ancien canal)
+// libellé affiché : « Domaine › Catégorie » (ou le nom seul d'un pilier / domaine / ancien catégorie)
 function nodeLabel(id){const p=pathOf(id);if(!p.length)return '';if(p.length>=3)return p[1].name+' › '+p[p.length-1].name;return p[p.length-1].name}
 // couleurs : le pilier donne la teinte, chaque domaine une nuance, la catégorie hérite de son domaine
 const shadeHex=(hex,k)=>{const n=parseInt(String(hex||'#888888').slice(1),16),cl=v=>Math.max(0,Math.min(255,v+k));return '#'+[n>>16,(n>>8)&255,n&255].map(v=>cl(v).toString(16).padStart(2,'0')).join('')};
@@ -56,7 +56,7 @@ function buildTree(){
 const CAT_RULES=[
  [/callisth|traction|pompes?\b|dips|muscu|gainage|abdo|street ?work/,'c-callisthenie'],[/natation|piscine|nager|\bnage/,'c-natation'],[/mobilit|etirement|stretch|yoga|souplesse/,'c-mobilite'],
  [/medit|mantra|coherence|respir/,'c-meditation'],[/\bjournal(ing)?\b(?! du)|introspect|gratitude/,'c-journal'],
- [/douche|\bbain\b|rasage|raser|brosse|dents|petit[- ]?dej|dejeuner|\bdiner|\brepas|manger|routine|habiller|skincare/,'c-routines'],
+ [/douche|\bbain\b|rasage|raser|tonte|tondre|tondeuse|epil|barbe|cheveux|coiffeur|brosse|dents|petit[- ]?dej|dejeuner|\bdiner|\brepas|manger|routine|habiller|skincare/,'c-routines'],
  [/\bpsy|kine|medecin|docteur|dentiste|ophtalmo|pharmacie|ordonnance|sieste|dormir|sommeil|coucher|prise de sang|vaccin|osteo/,'c-soins'],
  [/alimentation|nutrition|legumes|proteine|batch|healthy|\bjeun/,'c-alimentation'],
  [/duolingo|anglais|espagnol|italien|japonais|langue/,'c-langues'],[/presse|\bactu|news|le monde|mediapart|newsletter|veille/,'c-presse'],[/\blire\b|lecture|\blivre|roman|bd\b|manga/,'c-lecture'],
@@ -69,13 +69,13 @@ const CAT_RULES=[
  [/villette|synoptique|optique|devis|resa|reservation|plans?\b|regie|fiche technique/,'c-villette'],[/stardust/,'c-stardust'],[/formation|cours\b|certif|tuto/,'c-formation'],
  [/menage|aspirat|lessive|linge|vaisselle|poussiere|ranger|rangement|nettoy|serpill|poubelle|draps|\blit\b|salle de bain|toilettes|vitres|lave-?(linge|vaisselle)|etendre|repass/,'c-menage'],
  [/courses|supermarche|carrefour|monoprix|franprix|lidl|picard|marche\b|drive\b/,'c-courses'],[/cuisine|cuisiner|recette|\bpatisser|gateau|\bcuire|prepar(er)? (le |un )?repas/,'c-cuisine'],
- [/bricol|reparer|reparation|percer|perceuse|visser|monter (le|la|les|un|une)|ampoule|plomb|joint/,'c-bricolage'],[/tonte|tondre|jardin|plantes?\b|arros|haie|potager|pelouse/,'c-jardin'],[/\bdeco|meuble|amenag|ikea|etagere|cadre|rideau|peindre (le|la|les) mur/,'c-deco'],
+ [/bricol|reparer|reparation|percer|perceuse|visser|monter (le|la|les|un|une)|ampoule|plomb|joint/,'c-bricolage'],[/plantes?\b|arros|rempot/,'c-deco'],[/\bdeco|meuble|amenag|ikea|etagere|cadre|rideau|peindre (le|la|les) mur/,'c-deco'],
  [/impot|\bcaf\b|pole emploi|france travail|note de frais|papiers|assurance|mutuelle|urssaf|secu\b|ameli|administratif|dossier|formulaire|courrier|declaration|\bmail(s)?\b/,'c-admin'],
  [/budget|bankin|\bcomptes?\b|epargne|abonnement|plum|economie|facture|banque|virement|remboursement/,'c-budget'],
  [/planifi|organis|revue|planning|\btodo|to-do|agenda|sunsama|mydaybot|inbox/,'c-organisation'],
  [/sport|footing|courir|course a pied|\brun\b|velo|marche rapide|salle/,'d-corps']];
 const ruleFor=title=>{const t=norm(title||'');for(const [re,id] of CAT_RULES)if(re.test(t))return id;return null};
-// anciens canaux Sunsama → nœud ; « fourre-tout » = on lit d'abord le titre
+// anciens catégories Sunsama → nœud ; « fourre-tout » = on lit d'abord le titre
 const OLD={'menage':'c-menage','courses':'c-courses','cusine':'c-cuisine','cuisine':'c-cuisine','bricolage':'c-bricolage','la villette':'c-villette','villette':'c-villette','stardust':'c-stardust','formation':'c-formation',
  'administratif':'c-admin','admin':'c-admin','economies':'c-budget','finances':'c-budget','organisation':'c-organisation','evenements':'c-evenements','social':'c-amis','vj bhbt':'c-vj','vj':'c-vj','art':'c-art',
  'sante':'d-corps','perso':'d-corps','pro':'d-metier','travail':'d-metier','ethique':'d-engagement','demenagement':'d-foyer','ludostream':'d-jeu'};
@@ -102,7 +102,7 @@ function applyTree(plan){
  try{lsSet('journee.backup.pretree',JSON.stringify(S))}catch(e){}
  const old=S.channels.filter(c=>c.lvl===undefined);
  const keep=S.channels.filter(c=>c.lvl!==undefined),fresh=keep.length?keep:buildTree();
- // garder l'agenda déjà choisi sur un ancien canal qui devient une catégorie
+ // garder l'agenda déjà choisi sur un ancien catégorie qui devient une catégorie
  for(const c of old){const to=plan.chMap[c.id];const n=fresh.find(x=>x.id===to);if(n&&c.cal&&!n.cal)n.cal=c.cal}
  S.channels=fresh;
  S.projects=S.projects||[];
@@ -114,9 +114,15 @@ function applyTree(plan){
  treeColors();S.treeAt=Date.now();save();emit('tree:migrate',{n:plan.n});
 }
 // au démarrage : installation silencieuse si rien à migrer, sinon on demande
+// corrections ponctuelles d'un arbre déjà installé
+function treeFixes(){
+ S.fixes=S.fixes||{};let ch=false;
+ if(!S.fixes.jardin){S.fixes.jardin=1;const j=node('c-jardin');if(j&&/jardin/i.test(j.name)){S.tasks.forEach(t=>{if(t.channel==='c-jardin'){t.channel=/tont|tond/.test(norm(t.title))?'c-routines':'d-foyer';ch=true}});(S.archive||[]).forEach(a=>{if(a.c==='c-jardin')a.c=/tont|tond/.test(norm(a.t))?'c-routines':'d-foyer'});S.channels=S.channels.filter(c=>c.id!=='c-jardin');ch=true}}
+ if(ch){treeColors();save()}
+}
 function ensureTree(){
  const old=S.channels.some(c=>c.lvl===undefined);
- if(!old){if(!hasTree())applyTree();else treeColors();return false}
+ if(!old){if(!hasTree())applyTree();else{treeFixes();treeColors()}return false}
  if(!planTree().n){applyTree();return false}
  return true; // une migration attend validation
 }
@@ -170,20 +176,12 @@ function findProject(q){q=norm(q).replace(/[^a-z0-9]/g,'');if(!q)return null;ret
 function projProgress(id){const ts=S.tasks.filter(t=>t.proj===id);return{n:ts.length,done:ts.filter(t=>t.done).length}}
 /* ---------- éditeur de l'arbre (Réglages) ---------- */
 function treeEditorHtml(){
- if(!hasTree())return `<p>Tes tâches utilisent encore les anciens canaux.</p><button class="pri" data-act="treeask">Passer à l’arbre des catégories</button>`;
+ if(!hasTree())return `<p>Tes tâches utilisent encore les anciens catégories.</p><button class="pri" data-act="treeask">Passer à l’arbre des catégories</button>`;
  const calSel=(n,lbl)=>gCals?`<select data-ncal="${esc(n.id)}" aria-label="Agenda de ${esc(n.name)}"><option value="">${lbl}</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${n.cal===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>`:'';
  const cnt=id=>S.tasks.filter(t=>!t.done&&pathOf(t.channel).some(x=>x.id===id)).length;
  const row=(n,extra)=>`<div class="tnode l${n.lvl}" data-node="${esc(n.id)}">${n.lvl===0?`<input type="color" data-nc="${esc(n.id)}" value="${esc(n.color)}" aria-label="Couleur">`:`<span class="dot" style="--c:${esc(n.color)}"></span>`}<input class="tname" data-nn="${esc(n.id)}" value="${esc(n.name)}" aria-label="Nom">${n.lvl===2?`<input class="tkey" data-nk="${esc(n.id)}" value="${esc(n.key||'')}" placeholder="raccourci" aria-label="Raccourci #">`:''}<span class="mute tcnt">${cnt(n.id)||''}</span>${extra||''}<button class="x" data-act="nodemenu" data-id="${esc(n.id)}" aria-label="Options">⋯</button></div>`;
  return `<div class="tree">${pillars().map(p=>`<div class="tpil">${row(p,calSel(p,'Agenda par défaut'))}${kids(p.id).map(d=>`<div class="tdom">${row(d,calSel(d,'Agenda du pilier'))}<div class="tcats">${kids(d.id).map(c=>row(c,calSel(c,'Agenda du domaine'))).join('')}<button class="sm ghost" data-act="nodeadd" data-id="${esc(d.id)}">+ Catégorie</button></div></div>`).join('')}<button class="sm ghost" data-act="nodeadd" data-id="${esc(p.id)}">+ Domaine</button></div>`).join('')}</div>
  ${gTok()&&!gCals?(loadCals().then(()=>{if(view==='settings')render()}),'<p class="mute">Chargement des agendas…</p>'):!gTok()?'<p class="mute">Connecte Google pour choisir l’agenda de chaque pilier.</p>':''}`;
-}
-function nodeMenu(id){
- const n=node(id);if(!n)return;
- const parents=n.lvl===0?[]:S.channels.filter(c=>c.lvl===n.lvl-1);
- showModal(`<div class="rit"><h2>${esc(n.name)}</h2><p class="lead">${LVL[n.lvl]}${n.lvl?' · dans '+esc(node(n.parent).name):''}</p>
- ${parents.length?`<label>Déplacer vers<select data-nmove="${esc(n.id)}">${parents.map(p=>`<option value="${esc(p.id)}" ${p.id===n.parent?'selected':''}>${esc(p.lvl===1?node(p.parent).name+' › '+p.name:p.name)}</option>`).join('')}</select></label>`:''}
- <div class="row" style="margin-top:14px"><button class="ghost" data-act="nodeup" data-id="${esc(n.id)}">↑ Monter</button><button class="ghost" data-act="nodedown" data-id="${esc(n.id)}">↓ Descendre</button><span class="sp"></span>${n.lvl?`<button class="danger" data-act="nodedel" data-id="${esc(n.id)}">Supprimer</button>`:''}</div>
- ${n.lvl?'<p class="mute" style="font-size:13px">Supprimer range ses tâches dans le niveau au-dessus.</p>':''}</div>`);
 }
 function nodeAdd(parentId){
  const p=node(parentId);if(!p||p.lvl>=2)return;
