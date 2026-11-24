@@ -113,6 +113,7 @@ document.addEventListener('click',async e=>{
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
   case'mvup':closeModal();swapTask(id,-1);break;
   case'mvdown':closeModal();swapTask(id,1);break;
+  case'tobacklog':{const t=T(id);if(t&&t.day){moveTask(id,'backlog');toast('Renvoyée au backlog');if(modalTask===id)openTask(id)}break}
   case'sheetmv':closeModal();moveTask(id,b.dataset.to);toast(b.dataset.to==='backlog'?'Renvoyée au backlog':'Reportée à demain');break;
   case'sum':uiOpen=uiOpen===b.dataset.k?'':b.dataset.k;render();break;
   case'freeze':{const d=cur;S.days[d]=Object.assign(S.days[d]||{},{frozen:!(S.days[d]||{}).frozen});save();if(!$('#modal').classList.contains('hidden'))closeModal();render();toast(S.days[d].frozen?'Journée figée : les créneaux ne bougent plus avec l’heure':'Les créneaux suivent à nouveau l’heure');break}
@@ -215,7 +216,7 @@ document.addEventListener('drop',async e=>{
  else t=T(src[1]);
  if(!t)return;
  if(dz==='cal'){const dd=z.dataset.day||cur,dt=parseYmd(dd);dt.setMinutes(calMinute(z,e.clientY));t.pinned=true;if(t.day!==dd)t.order=nextOrder(dd);const p=setBlock(t,dt,true);syncOrder(dd);save();render();await p;return}
- if(dz==='backlog'){if(t.day!==null)moveTask(t.id,'backlog');else render();return}
+ if(dz==='backlog'){if(t.day!==null){moveTask(t.id,'backlog');toast('Renvoyée au backlog')}else render();return}
  if(dz.startsWith('day:')){
   const day=dz.slice(4),before=e.target.closest('.card');
   if(t.day!==day)moveTask(t.id,day,true);
@@ -332,3 +333,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&
 // annuler la remise à zéro du minuteur (Ctrl/⌘+Z dans les 10 s)
 let timerUndo=null;
 document.addEventListener('keydown',e=>{if(timerUndo&&Date.now()-timerUndo.at<15000&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){const t=T(timerUndo.id);if(t){t.actual=timerUndo.a;if(timerUndo.s&&S.running&&S.running.taskId===t.id)S.running.start=timerUndo.s;save();renderFocus();render();toast('Minuteur rétabli')}timerUndo=null;e.preventDefault()}});
+
+// clic droit sur une tâche : le même menu que l'appui long sur téléphone (monter, reporter, backlog, heure…)
+document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data-id],.blk[data-id]');if(!c||e.target.closest('input,textarea'))return;const t=T(c.dataset.id);if(!t||t.done)return;e.preventDefault();taskSheet(t.id)});

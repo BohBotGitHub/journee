@@ -536,6 +536,22 @@ def _(c):
     assert st(pg, 'S.tasks.at(-1).channel') is None and pg.locator('#modal:not(.hidden) .catbtn').count() == 1
     assert not errs, errs; ctx.close()
 
+@test('Renvoyer au backlog : glisser sur le menu, bouton du détail, clic droit')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    n0 = st(pg, "S.tasks.filter(t=>!t.day).length")
+    pg.locator('#main .card').first.drag_to(pg.locator('#nav [data-view="backlog"]')); pg.wait_for_timeout(200)
+    assert st(pg, "S.tasks.filter(t=>!t.day).length") == n0 + 1, 'dépôt sur le menu Backlog sans effet'
+    assert pg.evaluate('location.hash') != '#backlog', 'le dépôt ne doit pas changer de vue'
+    pg.click('#main .card .cbody .ctitle >> nth=0'); pg.click('#modal [data-act="tobacklog"]'); pg.wait_for_timeout(150)
+    assert st(pg, "S.tasks.filter(t=>!t.day).length") == n0 + 2
+    assert pg.locator('#modal [data-act="tobacklog"]').count() == 0, 'le bouton doit disparaître une fois au backlog'
+    pg.keyboard.press('Escape')
+    pg.click('#main .card .cbody .ctitle >> nth=0', button='right'); pg.wait_for_timeout(150)
+    pg.click('#modal [data-act="sheetmv"][data-to="backlog"]'); pg.wait_for_timeout(150)
+    assert st(pg, "S.tasks.filter(t=>!t.day).length") == n0 + 3
+    assert not errs, errs; ctx.close()
+
 OLD = """localStorage.setItem('journee.v1',JSON.stringify({seeded:true,settings:{aiKey:'k',aiAuto:false},channels:[{id:'o1',name:'Perso',color:'#2f9e6a',cal:'pro@group'},{id:'o2',name:'Ménage',color:'#888'},{id:'o3',name:'Déménagement',color:'#c90'}],
  tasks:[{id:'t1',title:'Douche',channel:'o1',day:null,subtasks:[]},{id:'t2',title:'Lessive',channel:'o2',day:null,subtasks:[]},{id:'t3',title:'Truc bizarre',channel:'o1',day:null,subtasks:[]},{id:'t4',title:'Cartons salon',channel:'o3',day:null,subtasks:[]}],
  archive:[{id:'a1',t:'Natation',c:'o1',d:'2025-01-01',a:1800},{id:'a2',t:'Méditation du soir',c:'o1',d:'2025-01-02',a:600}]}))"""
