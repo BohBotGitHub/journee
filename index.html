@@ -134,6 +134,16 @@ form.add input{background:var(--panel);border-style:dashed}
 .short{display:flex;gap:6px;align-items:center;padding-top:1px;padding-bottom:1px}.short b{flex:1;order:2}.short small{order:1;flex:none}
 .now{position:absolute;left:-6px;right:0;border-top:2px solid var(--warn);z-index:2;pointer-events:none}
 .now::before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.blk{display:block}.blk .bchk{position:absolute;right:4px;top:3px;width:18px;height:18px;min-height:18px;padding:0;border-radius:50%;border:1.5px solid var(--mute);background:var(--panel);font-size:10px;line-height:1;color:#fff}
+.blk.done .bchk{background:var(--ok);border-color:var(--ok)}
+.blk b{padding-right:20px}
+.blk .rz{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:ns-resize}
+.blk .rz::after{content:"";position:absolute;left:50%;bottom:2px;width:22px;height:3px;margin-left:-11px;border-radius:2px;background:var(--line)}
+.hl{outline:2px solid var(--acc)!important;outline-offset:1px}
+.ghostblk{position:absolute;left:2px;right:2px;border-radius:7px;background:var(--acc2);border:2px dashed var(--acc);pointer-events:none;z-index:4;font-size:12px;padding:2px 7px;color:var(--ink)}
+.ctime .est{cursor:pointer;border-radius:6px;padding:1px 4px}.ctime .est:hover{background:var(--panel2)}
+#pop{position:fixed;z-index:70;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:8px;display:flex;flex-wrap:wrap;gap:4px;width:236px}
+#pop button{min-width:52px}
 .ghostline{position:absolute;left:0;right:0;height:3px;background:var(--acc);border-radius:2px;pointer-events:none;z-index:4}
 .todo-item{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:grab;font-size:14px}
 .todo-item span{flex:1;overflow-wrap:anywhere}
@@ -498,6 +508,24 @@ function clearBlock(t,noRender){
  if(id&&gTok())gFetch(`/calendars/${calId()}/events/${encodeURIComponent(id)}`,{method:'DELETE'}).catch(()=>{});
  if(!noRender)render();
 }
+function syncOrder(d){
+ // la liste suit l'agenda : les tâches planifiées reprennent l'ordre horaire, les autres gardent leur place
+ const ts=dayTasks(d).filter(t=>!t.done),slots=[];ts.forEach((t,i)=>{if(t.block)slots.push(i)});
+ const bl=ts.filter(t=>t.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start)),arr=ts.slice();
+ slots.forEach((pos,k)=>arr[pos]=bl[k]);arr.forEach((t,i)=>t.order=i+1);dayTasks(d).filter(t=>t.done).forEach((t,i)=>t.order=arr.length+i+1);
+}
+function overlaps(d){const b=dayTasks(d).filter(t=>!t.done&&t.block).map(t=>[new Date(t.block.start)-0,new Date(t.block.end)-0]).sort((x,y)=>x[0]-y[0]);for(let i=1;i<b.length;i++)if(b[i][0]<b[i-1][1])return true;return false}
+function setEst(t,v){
+ t.est=v;if(t.recurId){const r=S.recurring.find(x=>x.id===t.recurId);if(r)r.est=v}
+ if(t.block){setBlock(t,new Date(t.block.start),true);if(t.day)pushOverlaps(t.day,t)}
+ t.aiSug=null;save();render();
+}
+function pushOverlaps(d,from){
+ // décale vers plus tard uniquement les créneaux qui se chevauchent, sans toucher aux autres
+ const ts=dayTasks(d).filter(t=>!t.done&&t.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start));let n=0;
+ for(let i=1;i<ts.length;i++){const prevEnd=new Date(ts[i-1].block.end);if(new Date(ts[i].block.start)<prevEnd){setBlock(ts[i],prevEnd,true);n++}}
+ if(n)toast(n+' créneau'+(n>1?'x':'')+' décalé'+(n>1?'s':'')+' pour éviter un chevauchement');return n;
+}
 function reflow(d){
  // suit l'ordre de la liste : les tâches déjà placées dans l'agenda sont réenchaînées dans cet ordre
  const ts=dayTasks(d).filter(t=>!t.done&&t.block);if(ts.length<2)return 0;
@@ -524,7 +552,7 @@ function autoBox(d){
   if(st+dur>end)continue;
   const dt=new Date(base);dt.setMinutes(st);setBlock(t,dt,true);busy.push([st,st+dur]);n++;
  }
- render();return n;
+ syncOrder(d);save();render();return n;
 }
 
 /* ---------- synchro entre appareils (dossier caché de l'appli dans Google Drive) ---------- */
@@ -832,7 +860,7 @@ function card(t){
  <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
  <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${t.prio==='urgent'?'<span class="prio u" title="Urgent">!!</span>':t.prio==='high'?'<span class="prio" title="Prioritaire">!</span>':''}${esc(t.title)}</div>
  <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}${t.block?`<span>${hm(new Date(t.block.start))}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?ch(t.aiSug.channel).name:'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
- <div class="ctime"><span data-live="t-${t.id}" title="Temps passé / estimé">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'—'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
+ <div class="ctime"><span class="est" data-act="estmenu" data-id="${t.id}" data-live="t-${t.id}" title="Temps passé / estimé — clique pour changer la durée">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'—'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
 }
 function loadInfo(d){const ts=dayTasks(d);const task=ts.reduce((a,t)=>a+(t.est||0),0),meet=meetingMin(d),cap=Math.max(60,(S.settings.workEnd-S.settings.workStart)*60);return{task,meet,cap,over:task+meet-cap}}
 function loadBar(d){
@@ -960,7 +988,7 @@ function viewCal(){
   const top=Math.max(0,y(it.s)),h=Math.max(20,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
   const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<36?' short':'';
   if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
-  const t=it.t,c=ch(t.channel);return `<div class="blk${t.done?' done':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="task|${t.id}" data-act="open" data-id="${t.id}"><b>${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small></div>`;
+  const t=it.t,c=ch(t.channel);return `<div class="blk${t.done?' done':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
  }).join('');
  const n=new Date(),nowTop=d===today()?y(n):-1;
  const gState=gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gEvents[d]&&!(gEvents[d]||[]).length?`<div class="pill">Aucun rendez-vous ce jour-là${gCals?' dans '+gCals.filter(calOn).length+' agenda(s)':''}</div>`:''))):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`;
@@ -969,7 +997,7 @@ function viewCal(){
  ${allday.length?`<div class="allday">${allday.map(e=>`<a href="${esc(e.htmlLink||'#')}" target="_blank" rel="noopener">${esc(e.summary||'(sans titre)')}</a>`).join('')}</div>`:''}
  <div class="tl"><div class="tlin" data-drop="cal" style="height:${H}px">${hrs}
  <div class="work" style="top:${(s.workStart-st)*PX}px;height:${Math.max(0,(s.workEnd-s.workStart)*PX)}px"></div>
- ${blocksHtml}${nowTop>=0&&nowTop<=H?`<div class="now" data-live="now" style="top:${nowTop}px"></div>`:''}<div class="ghostline hidden" id="ghost"></div></div></div>
+ ${blocksHtml}${nowTop>=0&&nowTop<=H?`<div class="now" data-live="now" style="top:${nowTop}px"></div>`:''}<div class="ghostblk hidden" id="ghost"></div></div></div>
  <div class="sinfo" style="padding-top:0"><span>Glisse une tâche sur l’agenda pour lui réserver un créneau${gTok()?' (un événement est créé dans Google Agenda)':''}.</span><button class="sm" data-act="autobox">Placer automatiquement les tâches du jour</button></div>`;
 }
 
@@ -1233,7 +1261,7 @@ document.addEventListener('click',async e=>{
   case'mvall':rolloverAll(b.dataset.to);renderRitual();break;
   case'mvday':dayTasks(ritual.day).filter(t=>!t.done).forEach(t=>moveTask(t.id,b.dataset.to,true));save();render();renderRitual();break;
   case'rm':deleteTask(id);render();if(ritual)renderRitual();break;
-  case'dur':{const t=T(id);if(t){t.est=+b.dataset.v;if(t.block)setBlock(t,new Date(t.block.start),true);if(t.recurId){const r=S.recurring.find(x=>x.id===t.recurId);if(r)r.est=t.est}save();render();renderRitual()}break}
+  case'dur':{const t=T(id);if(t){setEst(t,+b.dataset.v);renderRitual()}break}
   case'totoday':moveTask(id,today());toast('Ajoutée à aujourd’hui');break;
   case'del':deleteTask(id);closeModal();toast('Tâche supprimée');break;
   case'unblock':{const t=T(modalTask);if(t){clearBlock(t);openTask(t.id)}break}
@@ -1253,6 +1281,8 @@ document.addEventListener('click',async e=>{
   case'copyuri':try{await navigator.clipboard.writeText(REDIRECT);toast('Adresse copiée')}catch(err){toast('Copie impossible : sélectionne l’adresse à la main')}break;
   case'chadd':S.channels.push({id:uid(),name:'Nouveau canal',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;
+  case'estmenu':{const t=T(id);if(t)estMenu(t,b);break}
+  case'setest':{const t=T(id);if(t)setEst(t,+b.dataset.v);closePop();break}
   case'ritai':aiRitual();break;
   case'ritapply':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){applyItem(a,b.dataset.k);saveRit();renderRitual()}break}
   case'ritapplyall':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){propItems(a.prop).forEach(it=>applyItem(a,it.k));saveRit();renderRitual();toast('Suggestions appliquées')}break}
@@ -1263,7 +1293,7 @@ document.addEventListener('click',async e=>{
   case'aiq':sideTab='ai';document.body.classList.add('side-open');aiAsk(b.dataset.q,true);break;
   case'aiapply':{const m=S.chat[+b.dataset.m];if(m)applyItem(m,b.dataset.k);break}
   case'aiapplyall':{const m=S.chat[+b.dataset.m];if(m)propItems(m.prop).forEach(it=>applyItem(m,it.k));toast('Propositions appliquées');break}
-  case'aiok':{const t=T(id);if(t&&t.aiSug){if(t.aiSug.channel)t.channel=t.aiSug.channel;if(t.aiSug.est){t.est=t.aiSug.est;if(t.block)setBlock(t,new Date(t.block.start),true)}t.aiSug=null;save();render()}break}
+  case'aiok':{const t=T(id);if(t&&t.aiSug){if(t.aiSug.channel)t.channel=t.aiSug.channel;if(t.aiSug.est){setEst(t,t.aiSug.est)}t.aiSug=null;save();render()}break}
   case'aino':{const t=T(id);if(t){t.aiSug=null;save();render()}break}
   case'aiclear':S.chat=[];save();renderSide();toast('Conversation effacée');break;
   case'askclaude':sideTab='ai';closeModal();document.body.classList.add('side-open');aiAsk('Aide-moi à planifier ma journée : ordre, durées, catégories, et ce qui doit être reporté.',true);break;
@@ -1295,9 +1325,9 @@ document.addEventListener('change',async e=>{
  if(f&&modalTask){const t=T(modalTask);if(!t)return;const r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
   switch(f){
    case'channel':t.channel=el.value||null;if(r)r.channel=t.channel;break;
-   case'est':t.est=+el.value;if(r)r.est=t.est;if(t.block)setBlock(t,new Date(t.block.start),true);break;
+   case'est':setEst(t,+el.value);break;
    case'day':{const nd=el.value||null;if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;if(nd)t.order=nextOrder(nd);break}
-   case'time':if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);setBlock(t,dt,true)}else clearBlock(t,true);break;
+   case'time':if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);setBlock(t,dt,true);syncOrder(t.day)}else clearBlock(t,true);break;
    case'obj':t.objId=el.value||null;break;
    case'prio':t.prio=el.value;break;
    case'recur':setRecur(t,el.value);break;
@@ -1306,7 +1336,7 @@ document.addEventListener('change',async e=>{
   }
   save();render();if(['day','time','recur','est'].includes(f))openTask(t.id);return;
  }
- if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);await setBlock(t,dt,true)}else clearBlock(t,true);render();renderRitual()}return}
+ if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);setBlock(t,dt,true);syncOrder(ritual.day)}else clearBlock(t,true);save();render();renderRitual()}return}
  if(el.dataset.set){const k=el.dataset.set;S.settings[k]=k==='aiAuto'?!!el.value:el.type==='number'?+el.value:el.value.trim();save();if(el.type==='number'||k==='aiKey')render();return}
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
@@ -1323,7 +1353,7 @@ document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.o
 document.addEventListener('dragover',e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
  document.querySelectorAll('.over').forEach(x=>{if(x!==z)x.classList.remove('over')});z.classList.add('over');
- const g=$('#ghost');if(g){if(z.dataset.drop==='cal'){g.classList.remove('hidden');g.style.top=(calMinute(z,e.clientY)-S.settings.dayStart*60)/60*PX+'px'}else g.classList.add('hidden')}
+ const g=$('#ghost');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
 });
 document.addEventListener('drop',async e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
@@ -1332,16 +1362,40 @@ document.addEventListener('drop',async e=>{
  if(src[0]==='todo'){const x=(todo.tasks[src[1]]||[]).find(x=>x.id===src[2]);if(!x)return;t=importTodo(src[1],x,dz==='backlog'?null:dz.startsWith('day:')?dz.slice(4):cur)}
  else t=T(src[1]);
  if(!t)return;
- if(dz==='cal'){const dt=parseYmd(cur);dt.setMinutes(calMinute(z,e.clientY));await setBlock(t,dt);return}
+ if(dz==='cal'){const dt=parseYmd(cur);dt.setMinutes(calMinute(z,e.clientY));const p=setBlock(t,dt,true);syncOrder(cur);save();render();await p;return}
  if(dz==='backlog'){if(t.day!==null)moveTask(t.id,'backlog');else render();return}
  if(dz.startsWith('day:')){
   const day=dz.slice(4),before=e.target.closest('.card');
   if(t.day!==day)moveTask(t.id,day,true);
+  if(src[0]==='blk'&&t.block){clearBlock(t,true);toast('Retiré de l’agenda')}
   if(before&&before.dataset.id!==t.id){const b=T(before.dataset.id);if(b&&b.day===day){t.order=b.order-.5;renorm(day)}}
   if(reflow(day))toast('Agenda réorganisé selon le nouvel ordre');
   save();render();
  }
 });
+
+/* ---------- interactions fluides liste ↔ agenda ---------- */
+function closePop(){const p=$('#pop');if(p)p.remove()}
+function estMenu(t,el){
+ closePop();const r=el.getBoundingClientRect(),p=document.createElement('div');p.id='pop';
+ p.innerHTML=[10,15,20,30,45,60,75,90,120,180].map(v=>`<button class="sm${t.est===v?' pri':''}" data-act="setest" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('');
+ document.body.appendChild(p);const w=236;p.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';p.style.top=Math.min(innerHeight-p.offsetHeight-8,r.bottom+6)+'px';
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#pop')&&!e.target.closest('[data-act="estmenu"]'))closePop()},true);
+document.addEventListener('mouseover',e=>{
+ const el=e.target.closest('.card[data-id],.blk[data-id]');document.querySelectorAll('.hl').forEach(x=>x.classList.remove('hl'));
+ if(!el)return;const id=el.dataset.id;document.querySelectorAll(`.card[data-id="${id}"],.blk[data-id="${id}"]`).forEach(x=>{if(x!==el)x.classList.add('hl')});
+});
+let rz=null;
+document.addEventListener('pointerdown',e=>{
+ const h=e.target.closest('[data-rz]');if(!h)return;e.preventDefault();e.stopPropagation();
+ const blk=h.closest('.blk'),t=T(h.dataset.rz);if(!t||!t.block)return;blk.draggable=false;
+ rz={t,blk,y:e.clientY,h:blk.offsetHeight,start:new Date(t.block.start)};h.setPointerCapture&&h.setPointerCapture(e.pointerId);
+});
+document.addEventListener('pointermove',e=>{if(!rz)return;const nh=Math.max(PX/4,rz.h+(e.clientY-rz.y));const m=Math.max(15,Math.round(nh/PX*60/15)*15);rz.blk.style.height=(m/60*PX)+'px';rz.m=m;const sm=rz.blk.querySelector('small');if(sm){const end=new Date(rz.start.getTime()+m*60000);sm.textContent=hm(rz.start)+'–'+hm(end)+' · '+fmtMin(m)}});
+document.addEventListener('pointerup',()=>{if(!rz)return;const {t,m}=rz;rz=null;if(m&&m!==t.est){setEst(t,m);toast('Durée : '+fmtMin(m))}else render()});
+// rafraîchissement régulier de l'agenda Google
+setInterval(()=>{if(!document.hidden&&gTok()&&$('#modal').classList.contains('hidden')){const a=document.activeElement;if(a&&a.matches('input,textarea'))return;const w=monday(cur);view==='week'?ensureRange(w,addDays(w,6),true):ensureRange(cur,cur,true)}},5*60*1000);
 
 /* ---------- clavier ---------- */
 document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});
