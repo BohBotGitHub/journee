@@ -416,10 +416,11 @@ def _(c):
     pg.keyboard.press('?'); pg.wait_for_timeout(200)
     assert 'Raccourcis clavier' in pg.inner_text('#sheet')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-3).map(e=>e.id||e.className.split(' ')[0])")
-    assert order == ['runchip', 'navset', 'navrow'], order
-    r1, r2 = pg.locator('#nav .navrefresh').bounding_box(), pg.locator('#nav .navver').bounding_box()
-    assert abs((r1['y']+r1['height']/2)-(r2['y']+r2['height']/2)) < 4, 'version alignée avec Actualiser'
+    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
+    assert order == ['runchip', 'navset', 'navrefresh', 'navver'], order
+    xs = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav .navset .ll', '#nav .navrefresh .ll', '#nav .navver b')]
+    ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg')]
+    assert len(set(xs)) == 1 and len(set(ic)) == 1, (xs, ic)
     assert not errs, errs; ctx.close()
 
 @test('Mise en page : aucune vue ne déborde (ordinateur, téléphone, sombre)')
