@@ -276,9 +276,7 @@ function viewSettings(){
   ${hasTree()?`<div class="row" style="gap:8px;flex-wrap:wrap">${pillars().map(p=>`<span class="chip" style="--c:${esc(p.color)}">${esc(p.name)} · ${kids(p.id).length} domaines</span>`).join('')}<span class="sp"></span><button class="pri" data-act="go" data-v="tree">Ouvrir l’arbre</button></div>`:treeEditorHtml()}
   ${hasTree()&&refineCands().length?`<div class="row" style="margin-top:12px"><span class="mute">${refineCands().length} tâches à classer ou rangées seulement dans un domaine.</span><span class="sp"></span><button class="sm" data-act="refine" ${aiOn()?'':'disabled title="Ajoute ta clé Claude plus bas"'}>Affiner avec Claude</button></div>`:''}
   </section>
- <section><h2>Projets</h2><p>Des étiquettes qui traversent l’arbre, avec une date de fin. Les tâches d’un projet restent rangées dans leur catégorie.</p>
-  ${(S.projects||[]).map(p=>{const g=projProgress(p.id);return `<div class="chrow"><input data-pn="${esc(p.id)}" value="${esc(p.name)}" aria-label="Nom du projet"><input type="date" data-pe="${esc(p.id)}" value="${esc(p.end||'')}" aria-label="Date de fin" style="max-width:160px"><span class="mute" style="white-space:nowrap">${g.done}/${g.n}</span><label style="flex-direction:row;align-items:center;gap:6px;white-space:nowrap"><input type="checkbox" data-pd="${esc(p.id)}" ${p.done?'checked':''} style="width:auto;min-height:0">Terminé</label></div>`}).join('')}
-  <button class="sm" data-act="projadd">+ Nouveau projet</button></section>
+ <section><h2>Projets</h2><p>Les projets ont maintenant leur propre page.</p><button class="sm" data-act="go" data-v="projects">Ouvrir les projets</button></section>
  <section><h2>Connexions</h2>
   <div class="connrow"><b>Google</b><span class="mute">Agenda et synchro téléphone ↔ Mac</span><span class="sp"></span><span class="status${gTok()?' on':''}">${gTok()?'Connecté':gWas()?'Session expirée':'Non connecté'}</span>${gTok()?'':`<button class="sm pri" data-act="gin">${gWas()?'Reconnecter':'Connecter'}</button>`}</div>
   <p class="mute" style="margin:2px 0 10px;font-size:13px" data-live="sync">${esc(syncState)}</p>
@@ -379,4 +377,20 @@ function viewTodo(){
  ${!items?'<div class="sinfo">Chargement…</div>':!items.length?'<div class="sinfo">Cette liste est vide.</div>':items.map(x=>{const imp=S.tasks.find(t=>t.src&&t.src.taskId===x.id);const due=x.dueDateTime&&x.dueDateTime.dateTime?`<small>${fmtDay(x.dueDateTime.dateTime.slice(0,10),{day:'numeric',month:'short'})}</small>`:'';
   return `<div class="todo-item${imp?' imp':''}" draggable="true" data-drag="todo|${esc(l)}|${esc(x.id)}">${x.importance==='high'?'<i class="hi" title="Important">!</i>':''}<span>${esc(x.title)}</span>${due}<button class="sm${imp?' ghost':''}" data-act="todoadd" data-l="${esc(l)}" data-t="${esc(x.id)}">${imp&&imp.day?(imp.day===cur?'Prévue':esc(fmtDay(imp.day,{day:'numeric',month:'short'}))):'+ Jour'}</button></div>`}).join('')}
  <div class="sinfo"><span>Les tâches ajoutées sont cochées dans To Do quand tu les termines ici.</span></div>`;
+}
+
+/* ---------- vue Projets ---------- */
+function viewProjects(){
+ const ps=(S.projects||[]),act=ps.filter(p=>!p.done).sort((a,b)=>(a.end||'9')<(b.end||'9')?-1:1),fin=ps.filter(p=>p.done);
+ const one=p=>{const ts=S.tasks.filter(t=>t.proj===p.id),open=ts.filter(t=>!t.done).sort((a,b)=>(a.day||'9')<(b.day||'9')?-1:1),g=projProgress(p.id),pc=g.n?Math.round(g.done/g.n*100):0,late=p.end&&!p.done&&p.end<today(),left=p.end?Math.round((new Date(p.end)-new Date(today()))/864e5):null;
+  return `<section class="proj${late?' late':''}"><div class="projhead"><input class="projname" data-pn="${esc(p.id)}" value="${esc(p.name)}" aria-label="Nom du projet">
+  <label class="projend">Fin<input type="date" data-pe="${esc(p.id)}" value="${esc(p.end||'')}" aria-label="Date de fin"></label>
+  <label class="projdone"><input type="checkbox" data-pd="${esc(p.id)}" ${p.done?'checked':''}>Terminé</label></div>
+  <div class="projbar" title="${g.done}/${g.n} tâches faites"><i style="width:${pc}%"></i></div>
+  <div class="projmeta"><span>${g.n?`${g.done}/${g.n} tâches faites`:'Aucune tâche pour l’instant'}</span>${left!==null&&!p.done?`<span class="${late?'warn':left<=7?'soon':''}">${late?'en retard de '+(-left)+' j':left===0?'se termine aujourd’hui':'encore '+left+' j'}</span>`:''}<code>+${esc(projKey(p))}</code></div>
+  ${p.done?'':`<form class="add" data-form="add" data-day="" data-proj="${esc(p.id)}"><input name="t" data-keep="pj-${esc(p.id)}" placeholder="Ajouter une tâche à ce projet…" autocomplete="off" aria-label="Nouvelle tâche du projet"></form>`}
+  ${open.length?`<div class="list">${open.map(card).join('')}</div>`:''}</section>`};
+ return `<div class="head"><div><h1>Projets</h1><div class="sub">Des étiquettes qui traversent l’arbre, avec une date de fin. Tape <code>+nom</code> en créant une tâche pour l’y rattacher.</div></div><div class="acts"><button class="pri" data-act="projadd">Nouveau projet</button></div></div>
+ ${act.length?act.map(one).join(''):'<div class="empty">Aucun projet en cours. Crée-en un : un spectacle, un déménagement, une formation…</div>'}
+ ${fin.length?`<details class="projfin"><summary>Terminés (${fin.length})</summary>${fin.map(one).join('')}</details>`:''}`;
 }

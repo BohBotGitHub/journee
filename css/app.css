@@ -571,3 +571,14 @@ button.fclock{background:none;border:0;padding:0;min-height:0;cursor:text;border
 input.fedit{width:5ch;font-size:clamp(48px,10vw,80px);padding:0 8px;min-height:0;text-align:center}
 .fadj{display:flex;flex-direction:column;gap:6px}.fadj button{min-width:72px}
 .fclock.over{color:var(--warn)}
+.proj{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.proj.late{border-color:var(--warn)}
+.projhead{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.projname{flex:1;min-width:180px;font-size:18px;font-weight:700;border-color:transparent;background:transparent;padding:4px 6px}
+.projname:hover,.projname:focus{border-color:var(--line);background:var(--panel)}
+.projend,.projdone{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--mute);white-space:nowrap}
+.projend input{width:auto;min-height:34px;font-size:14px}.projdone input{width:auto;min-height:0}
+.projbar{height:6px;border-radius:3px;background:var(--panel2);margin:10px 0 6px;overflow:hidden}.projbar i{display:block;height:100%;background:var(--acc);border-radius:3px}
+.projmeta{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-bottom:8px}.projmeta .soon{color:var(--acc)}.projmeta .warn{color:var(--warn)}
+.proj .add{margin:4px 0 8px}
+.projfin summary{cursor:pointer;color:var(--mute);margin:8px 0}

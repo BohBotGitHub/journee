@@ -782,6 +782,23 @@ def _(c):
     assert st(pg, "!!S.running") is (not run), 'Espace doit mettre en pause / reprendre'
     assert not errs, errs; ctx.close()
 
+@test('Projets : page à part, création, tâche ajoutée au projet, progression')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.click('#nav [data-view="projects"]'); pg.wait_for_timeout(200)
+    assert 'Projets' in pg.inner_text('#main h1')
+    pg.click('#main [data-act="projadd"]'); pg.wait_for_timeout(200)
+    pid = st(pg, "S.projects[S.projects.length-1].id")
+    pg.fill(f'[data-pn="{pid}"]', 'Spectacle Villette'); pg.press(f'[data-pn="{pid}"]', 'Tab'); pg.wait_for_timeout(100)
+    assert st(pg, "S.projects[S.projects.length-1].name") == 'Spectacle Villette'
+    pg.fill(f'[data-keep="pj-{pid}"]', 'Plan de feu 30m'); pg.press(f'[data-keep="pj-{pid}"]', 'Enter'); pg.wait_for_timeout(200)
+    assert st(pg, f"S.tasks.filter(t=>t.proj==='{pid}').length") == 1
+    assert 'Plan de feu' in pg.inner_text('#main') and '0/1 tâches faites' in pg.inner_text('#main')
+    assert '+spectaclevillette' in pg.inner_text('#main')
+    pg.click('#nav [data-view="settings"]'); pg.wait_for_timeout(150)
+    assert pg.locator('#main [data-pn]').count() == 0
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

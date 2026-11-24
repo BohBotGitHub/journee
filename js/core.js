@@ -82,7 +82,7 @@ if(!S.seeded){
 }
 
 /* ---------- état d'interface ---------- */
-const VIEWS=['today','week','dump','backlog','review','objectives','stats','settings','tree'];
+const VIEWS=['today','week','dump','backlog','review','objectives','stats','projects','settings','tree'];
 let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,focusSub=null,drag=null,scrolledCal='',lastDay=today();
 let gEvents={},gLoading={};
 const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,tLoading:false};
@@ -211,3 +211,5 @@ function placeByPrio(t){if(!t||!t.day||t.done)return;const rk=x=>x.prio==='high'
 // Projets en cours : progression et échéance, pour la semaine et la revue
 function projListHtml(w){const ps=activeProjects().sort((a,b)=>(a.end||'9')<(b.end||'9')?-1:1),we=w?addDays(w,6):null;
  return ps.length?`<div class="rlist">${ps.map(p=>{const g=projProgress(p.id),soon=we&&p.end&&p.end<=we;return `<div class="rrow${soon?' hot':''}"><div><b>${esc(p.name)}</b><small>${g.n?`${g.done}/${g.n} tâches faites`:'Aucune tâche liée — ajoute +'+esc(p.name.split(' ')[0].toLowerCase())+' en créant une tâche'}${p.end?' · fin '+fmtDay(p.end,{day:'numeric',month:'short'})+(soon?' (cette semaine)':''):''}</small></div></div>`}).join('')}</div>`:'<p class="mute">Aucun projet en cours. Crée-en un dans Réglages › Projets.</p>'}
+
+const projKey=p=>norm(p.name).replace(/[^a-z0-9]+/g,'').slice(0,20)||'projet';
