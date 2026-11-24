@@ -183,7 +183,14 @@ def _(c):
     ctx, pg, errs = new_page(c['b'])
     pg.click('#main .card .chk >> nth=0'); tick(pg, 300)
     assert st(pg, 'S.tasks.filter(t=>t.done).length') == 1
+    assert not pg.locator('#main .card.done').is_visible(), 'les faites sont repliées'
+    pg.click('#main .donegrp summary'); tick(pg, 150)
     pg.click('#main .card.done .chk'); tick(pg, 300)
+    assert st(pg, 'S.tasks.filter(t=>t.done).length') == 0
+    # Ctrl+Z revient en arrière (re-coche), puis encore (décoche)
+    pg.keyboard.press('Control+z'); tick(pg, 200)
+    assert st(pg, 'S.tasks.filter(t=>t.done).length') == 1
+    pg.keyboard.press('Control+z'); tick(pg, 200)
     assert st(pg, 'S.tasks.filter(t=>t.done).length') == 0
     assert not errs, errs; ctx.close()
 
@@ -429,7 +436,7 @@ def _(c):
         ctx, pg, errs = new_page(c['b'], w, h, scheme=scheme)
         for v in ['today', 'week', 'dump', 'backlog', 'review', 'stats', 'settings']:
             pg.evaluate(f"()=>{{location.hash='{v}'}}"); pg.goto(BASE + '#' + v); pg.wait_for_timeout(350)
-            ow = pg.evaluate("()=>{const m=document.querySelector('#main');return [document.documentElement.scrollWidth-innerWidth,[...m.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>innerWidth+2&&!e.closest('.week,.bigcal,.scroll,.wkbars')}).slice(0,3).map(e=>e.className||e.tagName)]}")
+            ow = pg.evaluate("()=>{const m=document.querySelector('#main');return [document.documentElement.scrollWidth-innerWidth,[...m.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>innerWidth+2&&!e.closest('.week,.bigcal,.scroll,.wkbars,.summary')}).slice(0,3).map(e=>e.className||e.tagName)]}")
             assert ow[0] <= 0 and not ow[1], f'{v} {w}px déborde : {ow}'
         assert not errs, errs; ctx.close()
 
@@ -891,6 +898,36 @@ def _(c):
     bb = pg.locator('#main .card:not(.done) .chk').nth(0).bounding_box(); x, y = bb['x']+bb['width']/2, bb['y']+bb['height']/2
     for i in range(4): pg.mouse.click(x, y); tick(pg, 250)
     assert st(pg, "dayTasks(today()).filter(t=>t.done).length") == 4, st(pg, "dayTasks(today()).filter(t=>t.done).map(t=>t.title)")
+    assert not errs, errs; ctx.close()
+
+@test('Soirée : Maintenant/Ensuite, temps restant, saisie rapide, durée apprise, clavier, volet redimensionnable')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    assert pg.locator('#main .nownext .nowc .nowt').count() == 1
+    assert 'prévues' in pg.inner_text('#main .summary')
+    # durée apprise + saisie rapide
+    pg.evaluate("()=>{const S=window.journee.state;S.archive=(S.archive||[]).concat([{id:'a1',t:'Tonte barbe',a:14*60,d:'2026-11-01'},{id:'a2',t:'Tonte barbe',a:11*60,d:'2026-11-08'},{id:'a3',t:'tonte  barbe',a:13*60,d:'2026-11-15'}]);window.journee.save()}")
+    inp = '#main form[data-form="add"] input'
+    pg.fill(inp, 'Tonte barbe demain ! @maison'); pg.dispatch_event(inp, 'input'); tick(pg, 100)
+    prev = pg.inner_text('#main .qprev'); assert 'priorité haute' in prev and 'chez moi' in prev and '15 min' in prev, prev
+    pg.press(inp, 'Enter'); tick(pg, 200)
+    t = st(pg, "S.tasks.find(t=>t.title==='Tonte barbe')")
+    assert t['est'] == 15 and t['prio'] == 'high' and t['where'] == 'home' and t['day'] == st(pg, "addDays(today(),1)"), t
+    # clavier : ↓ choisit, X coche, Ctrl+Z annule
+    pg.click('#main h1'); n0 = st(pg, "dayTasks(today()).filter(t=>t.done).length")
+    pg.keyboard.press('ArrowDown'); tick(pg, 80)
+    assert pg.locator('#main .card.kbsel').count() == 1
+    pg.keyboard.press('x'); tick(pg, 200)
+    assert st(pg, "dayTasks(today()).filter(t=>t.done).length") == n0 + 1
+    assert pg.locator('#main .card.kbsel').count() == 1, 'la sélection passe à la suivante'
+    pg.keyboard.press('Control+z'); tick(pg, 200)
+    assert st(pg, "dayTasks(today()).filter(t=>t.done).length") == n0
+    # volet de droite
+    g = pg.locator('#side .sidegrip').bounding_box()
+    pg.mouse.move(g['x']+4, 400); pg.mouse.down(); pg.mouse.move(g['x']-150, 400, steps=5); pg.mouse.up(); tick(pg, 100)
+    w = pg.locator('#side').bounding_box()['width']; assert w > 470, w
+    pg.dblclick('#side .sidegrip'); tick(pg, 100)
+    assert abs(pg.locator('#side').bounding_box()['width'] - 360) < 3
     assert not errs, errs; ctx.close()
 
 def main():

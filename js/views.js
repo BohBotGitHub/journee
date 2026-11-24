@@ -65,6 +65,7 @@ function summaryHtml(d,isT){
  const chips=[
   chip('load',`<i class="meter"><i style="width:${Math.min(100,(L.task+L.meet)/L.cap*100)}%"></i></i>${fmtMin(L.task+L.meet)} / ${fmtMin(L.cap)}`,L.over>0?'warn':''),
   chip('job',ico('case')+jobLabel(d),jobOf(d)?'':'quiet'),
+  isT?(()=>{const base=+parseYmd(d),end=base+dayHours(d).e*3600e3,left=Math.max(0,Math.round((end-Date.now())/60000)),plan=dayTasks(d).filter(t=>!t.done).reduce((s,t)=>s+Math.max(0,(t.est||0)-Math.floor((t.actual||0)/60)),0);return chip('left',`${ico('clock')}${left?'<span class="lg">Il te reste </span>'+fmtMin(left):'Journée finie'}<span class="lg"> · ${fmtMin(plan)} prévues</span>`,plan>left?'warn':'')})():'',
   evs.length?chip('ev',`${evs.length} rendez-vous`):'',
   soon.length?chip('due',`⏰ ${soon.length} échéance${soon.length>1?'s':''}`,'acc'):'',
   objs.length?chip('obj',`${objs.filter(o=>o.done).length}/${objs.length} objectif${objs.length>1?'s':''}`):'',
@@ -79,7 +80,7 @@ function summaryHtml(d,isT){
  else if(open==='obj')det=objChips(monday(d))||'';
  return `<div class="summary">${chips}</div>${det?`<div class="sumdet">${det}</div>`:''}`;
 }
-let uiOpen='';
+let uiOpen='',uiDoneOpen=false;
 // bascule liste ⇄ grand agenda : une icône, toujours au même endroit dans l'en-tête
 const layoutBtn=()=>`<button class="layoutbtn" data-act="layout" aria-label="${layout==='cal'?'Liste au centre':'Grand agenda au centre'} (touche C)" title="${layout==='cal'?'Liste au centre':'Grand agenda au centre'} (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">${layout==='cal'?'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/>':'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16M15 4v16"/>'}</svg></button>`;
 function viewToday(){
@@ -96,7 +97,8 @@ function viewToday(){
  ${summaryHtml(d,isT)}
 
  ${addForm(d,'Ajouter une tâche')}
- ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>`}
+ ${isT?nowNext(d):''}
+ ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.filter(t=>!t.done).map(card).join('')||'<div class="empty">Tout est fait.</div>':'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>${done.length?`<details class="donegrp" data-donegrp ${uiDoneOpen?'open':''}><summary>${ico('check')}Faites (${done.length})</summary><div class="list donelist">${done.map(card).join('')}</div></details>`:''}`}
  ${(()=>{const sl=S.tasks.filter(t=>!t.done&&t.slid===d&&t.day===addDays(d,1));return sl.length?`<button class="slidnote" data-act="next">${sl.length} tâche${sl.length>1?'s':''} à demain →</button>`:''})()}
  ${ts.length?`<div class="foot">${done.length}/${ts.length} terminée${done.length>1?'s':''} · ${fmtMin(ts.reduce((a,t)=>a+actualSec(t),0)/60)} suivies</div>`:''}
  ${info.note?`<div class="note"><b>Fin de journée</b>\n${esc(info.note)}</div>`:''}`;
@@ -401,3 +403,11 @@ function viewProjects(){
  ${act.length?act.map(one).join(''):'<div class="empty">Aucun projet en cours. Crée-en un : un spectacle, un déménagement, une formation…</div>'}
  ${fin.length?`<details class="projfin"><summary>Terminés (${fin.length})</summary>${fin.map(one).join('')}</details>`:''}`;
 }
+
+/* ---------- Maintenant / Ensuite ---------- */
+function nowNext(d){
+ const ts=dayTasks(d).filter(t=>!t.done);if(!ts.length)return '';const now=Date.now(),r=runningTask();
+ const inWin=t=>t.block&&+new Date(t.block.start)<=now&&+new Date(t.block.end)>now;
+ const cur=r&&r.day===d?r:ts.find(inWin)||ts[0],nx=ts.filter(t=>t!==cur).sort((a,b)=>(a.block?+new Date(a.block.start):9e15)-(b.block?+new Date(b.block.start):9e15))[0];
+ const run=r===cur,end=cur.block?hm(new Date(cur.block.end)):null;
+ return `<div class="nownext"><div class="nowc${run?' run':''}"><small>${run?'En cours':'Maintenant'}</small><button class="nowt" data-act="open" data-id="${cur.id}">${esc(cur.title)}</button><span class="mute">${end?'jusqu’à '+end:cur.est?fmtMin(cur.est):''}</span><button class="nowplay" data-act="${run?'timer':'play'}" data-id="${cur.id}" aria-label="${run?'Pause':'Lancer le focus'}" title="${run?'Pause':'Lancer le focus'}">${ico(run?'pause':'play')}</button></div>${nx?`<div class="nextc"><small>Ensuite</small><button class="nowt" data-act="open" data-id="${nx.id}">${esc(nx.title)}</button><span class="mute">${nx.block?'à '+hm(new Date(nx.block.start)):''}</span></div>`:''}</div>`}

@@ -9,6 +9,7 @@ document.addEventListener('click',async e=>{
  if(e.target.id==='modal'){if(!ritual)closeModal();return}
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,id=b.dataset.id;
+ const pre=UNDO_ACTS.has(a)?undoSnap():null;
  switch(a){
   case'toggle':{const keep=keepUnder(b);await toggleDone(id);keep();if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
   case'open':if(!e.target.closest('.chk'))openTask(id);break;
@@ -159,6 +160,7 @@ document.addEventListener('click',async e=>{
   case'askclaude':sideTab='ai';closeModal();document.body.classList.add('side-open');aiAsk('Aide-moi à planifier ma journée : ordre, durées, catégories, et ce qui doit être reporté.',true);break;
   case'export':{const blob=new Blob([JSON.stringify(Object.assign({},S,{settings:Object.assign({},S.settings,{aiKey:''})}),null,1)],{type:'application/json'}),u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download='journee-'+today()+'.json';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);break}
  }
+ if(pre)undoCommit(pre,a);
 });
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('[data-adv]'))advOpen=e.target.open},true);
 document.addEventListener('submit',e=>{
@@ -237,6 +239,7 @@ document.addEventListener('dragover',e=>{
 });
 document.addEventListener('drop',async e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
+ const pre=undoSnap();setTimeout(()=>undoCommit(pre,'drop'),0);
  const dz=z.dataset.drop,src=drag.split('|');drag=null;z.classList.remove('over');
  let t;
  if(src[0]==='todo'){const x=(todo.tasks[src[1]]||[]).find(x=>x.id===src[2]);if(!x)return;t=importTodo(src[1],x,dz==='backlog'?null:dz.startsWith('day:')?dz.slice(4):(z.dataset.day||cur))}
@@ -345,6 +348,7 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){if(!$('#modal').classList.contains('hidden'))closeModal();else if(focusOn){focusMin=focusOn;focusOn=null;renderFocus();render()}else document.body.classList.remove('side-open');return}
  if(e.target.matches('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey||focusOn||!$('#modal').classList.contains('hidden'))return;
  const k=e.key.toLowerCase();
+ if(kbList(e))return;
  if(k==='n'){e.preventDefault();const i=document.querySelector('[data-keep^="add-"]');if(i)i.focus()}
  else if(k==='t'){cur=today();go('today')}
  else if(k==='c'){toggleLayout()}
@@ -353,7 +357,7 @@ document.addEventListener('keydown',e=>{
  else if(k==='d'){go('dump');setTimeout(()=>{const ta=document.querySelector('[data-dump]');if(ta){ta.focus();ta.selectionStart=ta.value.length}},50)}
  else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');else if(k==='a')go('tree');else if(k==='j')go('projects');else if(k==='r')go('review');
  else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur);
- else if(k==='f'){const t=dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
+ else if(k==='f'){const t=(kbSel&&T(kbSel)&&!T(kbSel).done)?T(kbSel):dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,(view==='week'||view==='objectives')?7*s:s);render()}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('brand')){e.preventDefault();e.target.click()}});
@@ -365,7 +369,7 @@ document.addEventListener('keydown',e=>{if(e.code!=='Space'||e.target.matches('i
  const big=focusOn&&!$('#focus').classList.contains('hidden'),mini=!focusOn&&$('#modal').classList.contains('hidden')&&(focusMin||S.running);if(!big&&!mini)return;
  e.preventDefault();const id=big?focusOn:(focusMin||S.running.taskId);if(S.running&&S.running.taskId===id){stopTimer();render()}else startTimer(id);renderFocus();renderMini()});
 function undoTimer(){if(!timerUndo)return;const t=T(timerUndo.id);if(t){t.actual=timerUndo.a;if(timerUndo.run)startTimer(t.id);save();renderFocus();render();toast('Minuteur rétabli')}timerUndo=null}
-document.addEventListener('keydown',e=>{if(timerUndo&&Date.now()-timerUndo.at<15000&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){undoTimer();e.preventDefault()}});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){if(timerUndo&&Date.now()-timerUndo.at<15000)undoTimer();else undoPop();e.preventDefault()}});
 
 // clic droit sur une tâche : le même menu que l'appui long sur téléphone (monter, reporter, backlog, heure…)
 document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data-id],.blk[data-id]');if(!c||e.target.closest('input,textarea'))return;const t=T(c.dataset.id);if(!t||t.done)return;e.preventDefault();taskSheet(t.id)});
@@ -381,3 +385,25 @@ function keepUnder(b){
   const d=nx.getBoundingClientRect().top-y0;if(Math.abs(d)<1)return;const m=$('#main');
   if(d>0||m.scrollTop+d>=0){m.scrollTop+=d}else{const l=nx.closest('.list');l.style.paddingTop=(parseFloat(getComputedStyle(l).paddingTop)||0)+(-d-m.scrollTop)+'px';m.scrollTop=0}}
 }
+
+// ---------- annuler partout : Ctrl/⌘ Z revient avant la dernière action sur les tâches ----------
+const UNDO_ACTS=new Set(['toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
+let undoStack=[];
+const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[]});
+function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}
+const UNDO_LBL={toggle:'coche',ritdone:'coche',rm:'suppression',rolldrop:'suppression',mv:'déplacement',sheetmv:'déplacement',drop:'déplacement',rolltomorrow:'report',tobacklog:'backlog',setprio:'priorité',setwhere:'lieu',dur:'durée',setjob:'type de journée',focusdone:'tâche terminée',rollover:'report'};
+function undoPop(){const u=undoStack.pop();if(!u){toast('Rien à annuler');return}const o=JSON.parse(u.s);S.tasks=o.tasks;S.days=o.days;S.projects=o.projects;save();render();if(ritual)renderRitual();toast('Annulé ('+(UNDO_LBL[u.a]||'dernière action')+')')}
+// ---------- clavier sur la liste : ↑↓ pour choisir, X ou Espace pour cocher, Entrée pour ouvrir, F pour le focus ----------
+let kbSel=null;
+function kbCards(){return [...document.querySelectorAll('#main .list > .card[data-id], #main .donegrp[open] .card[data-id]')]}
+function kbShow(){document.querySelectorAll('#main .card.kbsel').forEach(c=>c.classList.remove('kbsel'));if(!kbSel)return;const c=document.querySelector(`#main .card[data-id="${kbSel}"]`);if(c){c.classList.add('kbsel');c.scrollIntoView({block:'nearest'})}else kbSel=null}
+function kbList(e){if(!['today','week','backlog','projects'].includes(view))return false;const cs=kbCards();if(!cs.length)return false;const ids=cs.map(c=>c.dataset.id),i=ids.indexOf(kbSel);
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const s=e.key==='ArrowDown'?1:-1;kbSel=ids[i<0?(s>0?0:ids.length-1):Math.max(0,Math.min(ids.length-1,i+s))];kbShow();return true}
+ if(!kbSel||i<0)return false;
+ if(e.key==='x'||e.key==='X'||(e.code==='Space'&&!focusMin&&!S.running)){e.preventDefault();const b=cs[i].querySelector('.chk');if(b)b.click();setTimeout(()=>{const n=kbCards().map(c=>c.dataset.id);if(!n.includes(kbSel))kbSel=n[Math.min(i,n.length-1)]||null;kbShow()},30);return true}
+ if(e.key==='Enter'){e.preventDefault();openTask(kbSel);return true}
+ if(e.key==='Escape'){kbSel=null;kbShow();return true}
+ return false}
+document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('[data-donegrp]'))uiDoneOpen=e.target.open},true);
+// aperçu de ce que la saisie rapide a compris, sous le champ d'ajout
+document.addEventListener('input',e=>{const i=e.target;if(!i.matches||!i.matches('form[data-form="add"] input'))return;const f=i.form;let p=f.querySelector('.qprev');if(!p){p=document.createElement('div');p.className='qprev';f.appendChild(p)}p.innerHTML=quickPreview(i.value)});

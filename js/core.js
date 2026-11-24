@@ -105,11 +105,13 @@ function dateWord(w){
  return null;
 }
 function parseQuick(txt){
- let est=0,channel=null,pj=null;
+ let est=0,channel=null,pj=null,prio='',where='';
  txt=(' '+txt+' ').replace(/\s~?(\d{1,2})\s?h\s?(\d{1,2})?(?=\s)/i,(m,h,mm)=>{est=+h*60+(+mm||0);return ' '})
   .replace(/\s~?(\d{1,3})\s?(?:m|min|mn)(?=\s)/i,(m,n)=>{est=+n;return ' '})
   .replace(/\s#(\S+)/,(m,n)=>{const c=findNode(n);if(c){channel=c.id;return ' '}return m})
-  .replace(/\s\+(\S+)/,(m,n)=>{const p=findProject(n);if(p){pj=p.id;return ' '}return m});
+  .replace(/\s\+(\S+)/,(m,n)=>{const p=findProject(n);if(p){pj=p.id;return ' '}return m})
+  .replace(/\s!{1,3}(?=\s)/,()=>{prio='high';return ' '}).replace(/\s(?:!bas|↓)(?=\s)/i,()=>{prio='low';return ' '})
+  .replace(/\s@(maison|chez-?moi|home)(?=\s)/i,()=>{where='home';return ' '}).replace(/\s@(dehors|ext|out)(?=\s)/i,()=>{where='out';return ' '}).replace(/\s@(partout|ordi|boulot|any)(?=\s)/i,()=>{where='any';return ' '});
  let day,due;const t0=today(),WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
  txt=txt.replace(/\s(?:avant|pour|d'ici)\s+(le\s+)?(aujourd['’]hui|demain|après-demain|apres-demain|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|\d{1,2}\/\d{1,2})(?=\s)/i,(m,le,w)=>{const d=dateWord(w);if(d){due=d;return ' '}return m});
  txt=txt.replace(/\s(aujourd['’]hui|auj)(?=\s)/i,()=>{day=t0;return ' '})
@@ -117,12 +119,13 @@ function parseQuick(txt){
   .replace(/\s(demain)(?=\s)/i,()=>{day=addDays(t0,1);return ' '})
   .replace(/\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)(?=\s)/i,(m,w)=>{const k=WD.indexOf(w.toLowerCase()),c=parseYmd(t0).getDay();day=addDays(t0,((k-c+7)%7)||7);return ' '})
   .replace(/\s(\d{1,2})\/(\d{1,2})(?=\s)/,(m,dd,mm)=>{const y=new Date().getFullYear();let d=ymd(new Date(y,+mm-1,+dd));if(d<t0)d=ymd(new Date(y+1,+mm-1,+dd));day=d;return ' '});
- return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due,proj:pj};
+ return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due,proj:pj,prio,where};
 }
 function addTask(text,day){
  const q=parseQuick(text);if(!q.title)return null;if(q.day!==undefined)day=q.day;
  if(!q.channel&&hasTree())q.channel=ruleFor(q.title);
- const t=mk({title:q.title,est:q.est,channel:q.channel,day,order:nextOrder(day),due:q.due||null,proj:q.proj||null});
+ const le=q.est?0:learnedEst(q.title);
+ const t=mk({title:q.title,est:q.est||le,channel:q.channel,day,order:nextOrder(day),due:q.due||null,proj:q.proj||null,prio:q.prio||'',where:q.where||''});if(le)t.estLearn=1;
  S.tasks.push(t);save();render();aiWatch(t);emit('task:add',{task:t});return t;
 }
 async function toggleDone(id){
@@ -230,3 +233,15 @@ const whereOf=t=>t.where||catWhere(t.channel);
 function jobPicker(d,compact){const i=S.days[d]||{},auto=i.job===undefined||i.job===null,j=jobOf(d),m=auto?'auto':(i.job||''),h=v=>hhmm(v);
  const modes=[['auto','Selon l’agenda','Déduit de tes agendas de boulot'],...JOBMODES];
  return `<div class="jobpick"><div class="seg">${modes.map(([v,l,tt])=>`<button class="sm${m===v?' on':''}" data-act="setjob" data-d="${d}" data-v="${v}" title="${tt}">${l}</button>`).join('')}</div>${auto?(j?`<div class="jobsegs">${j.segs.map(x=>`<div class="jobseg ${x.mode}"><b>${hShort(x.s)}–${hShort(x.e)}</b><span>${esc(x.t)}</span><em>${x.mode==='busy'?'sans pause':'en veille'}</em></div>`).join('')}</div>`:`<p class="mute" style="font-size:13px;margin:6px 0 0">Rien de boulot dans tes agendas ce jour-là : journée libre.</p>`):j?`<div class="hoursrow jobh"><label>Boulot de<input type="time" step="900" data-jh="s" data-d="${d}" value="${h(j.s)}"></label><span>→</span><label>à<input type="time" step="900" data-jh="e" data-d="${d}" value="${h(j.e)}"></label></div>${compact?'':`<p class="mute" style="font-size:13px;margin:6px 0 0">${j.mode==='busy'?'Aucune tâche pendant le boulot.':'Pendant le boulot, seulement les tâches faisables n’importe où.'} Trajet de ${S.settings.travel??60} min bloqué avant et après ; ce qui se fait chez toi ou dehors est placé avant ou après.</p>`}`:''}</div>`}
+
+// durée apprise : le temps réel habituel des tâches faites qui portent le même nom (médiane, arrondie à 5 min)
+function learnedEst(title){const k=norm(title).replace(/[^a-z0-9]+/g,' ').trim();if(!k)return 0;
+ const xs=[...(S.archive||[]).filter(a=>a.a>60&&norm(a.t).replace(/[^a-z0-9]+/g,' ').trim()===k).map(a=>a.a/60),...S.tasks.filter(t=>t.done&&t.actual>60&&norm(t.title).replace(/[^a-z0-9]+/g,' ').trim()===k).map(t=>t.actual/60)].filter(m=>m<=8*60).sort((a,b)=>a-b);
+ if(!xs.length)return 0;const m=xs[Math.floor(xs.length/2)];return Math.max(5,Math.round(m/5)*5)}
+// aperçu de ce que la saisie rapide a compris
+function quickPreview(txt){const q=parseQuick(txt||'');if(!q.title)return '';const out=[];
+ if(q.day)out.push(q.day===today()?'aujourd’hui':fmtDay(q.day,{weekday:'long',day:'numeric'}));if(q.due)out.push('échéance '+fmtDay(q.due,{day:'numeric',month:'short'}));
+ const le=q.est?0:learnedEst(q.title);if(q.est)out.push(fmtMin(q.est));else if(le)out.push('≈ '+fmtMin(le)+' (d’habitude)');
+ if(q.prio)out.push(q.prio==='high'?'priorité haute':'priorité basse');if(q.where)out.push({home:'chez moi',out:'dehors',any:'n’importe où'}[q.where]);
+ if(q.channel)out.push(nodeLabel(q.channel));if(q.proj){const p=proj(q.proj);if(p)out.push('+'+p.name)}
+ return out.length?out.map(x=>`<span>${esc(x)}</span>`).join(''):''}
