@@ -34,7 +34,7 @@ if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null,snap=null;
 /* ---------- horodatage par élément (base de la synchro par fusion) ---------- */
 const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage'];
-function scalJson(k){if(k==='settings'){const {aiKey,...r}=S.settings||{};return JSON.stringify(r)}return JSON.stringify(S[k]===undefined?null:S[k])}
+function scalJson(k){return JSON.stringify(S[k]===undefined?null:S[k])}
 function stamp(){
  const now=Date.now(),prev=snap,next={};S.deleted=S.deleted||{};S.su=S.su||{};
  const mark=(k,x)=>{const {u,...r}=x,j=JSON.stringify(r);next[k]=j;if(prev?prev[k]!==j:!x.u)x.u=now};
@@ -53,10 +53,12 @@ function mergeState(L,R){
  for(const c of MAPS){out[c]=Object.assign({},R[c]||{});for(const [k,v] of Object.entries(L[c]||{})){const r=out[c][k];if(!r||((v&&v.u)||0)>=((r&&r.u)||0))out[c][k]=v}}
  const ids=new Set((L.archive||[]).map(a=>a.id));out.archive=[...(L.archive||[]),...(R.archive||[]).filter(a=>!ids.has(a.id))];
  out.su=Object.assign({},L.su||{});
- for(const k of SCAL){const lu=(L.su||{})[k]||0,ru=(R.su||{})[k]||0;if(ru>lu){out[k]=k==='settings'?Object.assign({},R.settings,{aiKey:(L.settings||{}).aiKey||''}):R[k];out.su[k]=ru}}
+ for(const k of SCAL){const lu=(L.su||{})[k]||0,ru=(R.su||{})[k]||0;if(ru>lu){out[k]=R[k];out.su[k]=ru}}
+ // la clé Claude n'est jamais effacée par un appareil qui ne l'a pas encore
+ out.settings=Object.assign({},out.settings||{});if(!(out.settings.aiKey||'').trim())out.settings.aiKey=((L.settings||{}).aiKey||(R.settings||{}).aiKey||'');
  out.deleted=del;out.seeded=true;return out;
 }
-const dataJson=x=>{const {running,syncedAt,updatedAt,...r}=x;r.settings=Object.assign({},r.settings||{},{aiKey:''});return JSON.stringify(r)};
+const dataJson=x=>{const {running,syncedAt,updatedAt,...r}=x;return JSON.stringify(r)};
 const save=()=>{S.updatedAt=Date.now();stamp();lsSet(KEY,JSON.stringify(S));clearTimeout(pushT);pushT=setTimeout(()=>driveSync(),1500);if(typeof queueFlow==='function')queueFlow()};
 const mk=o=>Object.assign({id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null,prio:'',due:null,proj:null},o);
 const T=id=>S.tasks.find(t=>t.id===id);

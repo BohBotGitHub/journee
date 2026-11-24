@@ -346,15 +346,21 @@ def _(c):
     assert pg.locator('.evrow', has_text='Dentiste').count() == 1, 'rendez-vous du lendemain absent'
     assert not errs, errs; ctx.close()
 
-@test('Synchro Drive : envoi puis récupération sur un autre appareil')
+@test('Synchro Drive : tâches, réglages et clé Claude sur un autre appareil')
 def _(c):
     g = Google()
     ctx, pg, errs = new_page(c['b'], google=g, storage=TOKEN)
+    pg.evaluate("()=>{const S=window.journee.state;S.settings.aiKey='sk-test';S.settings.workStart=8;window.journee.save()}")
     add(pg, 'Tâche synchronisée'); pg.wait_for_timeout(5000)
     assert g.drive and any(t['title'] == 'Tâche synchronisée' for t in g.drive.get('tasks', [])), 'rien envoyé sur Drive'
     ctx.close()
     ctx2, pg2, errs2 = new_page(c['b'], google=g, storage=TOKEN); pg2.wait_for_timeout(1500)
     assert st(pg2, "S.tasks.some(t=>t.title==='Tâche synchronisée')"), 'données non récupérées'
+    assert st(pg2, "S.settings.aiKey") == 'sk-test', 'clé Claude non recopiée'
+    assert st(pg2, "S.settings.workStart") == 8, 'réglages non recopiés'
+    # un réglage changé sur le 2e appareil n'efface pas la clé
+    pg2.evaluate("()=>{const S=window.journee.state;S.settings.workEnd=19;window.journee.save()}"); pg2.wait_for_timeout(2500)
+    assert g.drive['settings']['aiKey'] == 'sk-test' and g.drive['settings']['workEnd'] == 19
     assert not errs and not errs2, (errs, errs2); ctx2.close()
 
 @test('Claude : chat, application des propositions, coût, plafond')

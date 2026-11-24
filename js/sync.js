@@ -14,7 +14,7 @@ async function driveSync(light){
   const q=encodeURIComponent("name='journee.json'");
   const list=await (await dfetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,modifiedTime)`)).json();
   const f=list.files&&list.files[0];
-  const local=()=>{const c=Object.assign({},S);delete c.running;c.settings=Object.assign({},S.settings,{aiKey:''});return JSON.stringify(c)};
+  const local=()=>{const c=Object.assign({},S);delete c.running;c.settings=Object.assign({},S.settings);return JSON.stringify(c)};
   const dirty=(S.updatedAt||0)>(S.syncedAt||0);
   if(f&&light&&!dirty&&f.modifiedTime===remoteMod){syncState='Synchronisé à '+hm(new Date());return}
   if(f){remoteMod=f.modifiedTime;
@@ -48,3 +48,6 @@ function renderSyncBar(){
  el.classList.remove('hidden');
  el.innerHTML=`<span>${was?'Session Google expirée : cet appareil ne se synchronise plus.':'Cet appareil n’est pas synchronisé avec tes autres appareils.'}</span><button class="sm pri" data-act="gin">${was?'Reconnecter':'Connecter Google'}</button><button class="x" data-act="synchide" aria-label="Masquer pour aujourd’hui">×</button>`;
 }
+
+// notifications activées sur un autre appareil : l'autorisation du navigateur est demandée ici au premier geste
+document.addEventListener('click',function askN(){if(S.settings.notif&&'Notification' in window&&Notification.permission==='default'){try{Notification.requestPermission()}catch(e){}}if(!('Notification' in window)||Notification.permission!=='default'||!S.settings.notif)document.removeEventListener('click',askN,true)},true);
