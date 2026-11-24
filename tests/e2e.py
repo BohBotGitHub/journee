@@ -737,6 +737,18 @@ def _(c):
     setp('pD', ''); assert order() == 'pC,pD,pB,pA', order()
     assert not errs, errs; ctx.close()
 
+@test('Un rituel rouvert repart toujours du premier onglet')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    for ty in ('shutdown', 'plan'):
+        pg.evaluate(f"()=>startRitual('{ty}',window.journee.fn.today())"); tick(pg, 150)
+        pg.click('[data-act="ritnext"]'); tick(pg, 150)
+        pg.click('[data-act="close"] >> nth=-1'); tick(pg, 150)
+        pg.evaluate(f"()=>startRitual('{ty}',window.journee.fn.today())"); tick(pg, 150)
+        assert pg.locator('#sheet .rsteps span').nth(0).get_attribute('class') == 'on', ty
+        pg.keyboard.press('Escape'); tick(pg, 100)
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')
