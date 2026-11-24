@@ -645,3 +645,7 @@ code{white-space:nowrap}
 .tvl.d2{font-size:16.5px;font-weight:650}
 .tvl.halo{paint-order:stroke;stroke:var(--panel);stroke-width:6px;stroke-linejoin:round}
 .tvsvg{max-height:calc(100vh - 250px)}
+/* Actualiser et le numéro de version sur la même ligne */
+#nav .navrow{display:flex;align-items:center;gap:6px;min-width:0}
+#nav .navrow .navrefresh{flex:none}
+#nav .navrow .navver{margin:0 0 0 auto;padding:0 10px 0 0;flex:0 1 auto;min-width:0}

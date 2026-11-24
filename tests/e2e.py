@@ -416,8 +416,10 @@ def _(c):
     pg.keyboard.press('?'); pg.wait_for_timeout(200)
     assert 'Raccourcis clavier' in pg.inner_text('#sheet')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
-    assert order == ['runchip', 'navset', 'navrefresh', 'navver'], order
+    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-3).map(e=>e.id||e.className.split(' ')[0])")
+    assert order == ['runchip', 'navset', 'navrow'], order
+    r1, r2 = pg.locator('#nav .navrefresh').bounding_box(), pg.locator('#nav .navver').bounding_box()
+    assert abs((r1['y']+r1['height']/2)-(r2['y']+r2['height']/2)) < 4, 'version alignée avec Actualiser'
     assert not errs, errs; ctx.close()
 
 @test('Mise en page : aucune vue ne déborde (ordinateur, téléphone, sombre)')
@@ -872,11 +874,22 @@ def _(c):
     assert 'hidden' not in pg.get_attribute('#focus', 'class') and pg.locator('#minifocus .mfexp').count() == 0
     pg.keyboard.press('Escape'); tick(pg, 150)
     assert pg.locator('#minifocus .mfexp').count() == 1, 'Échap réduit'
+    run = st(pg, "!!S.running"); pg.keyboard.press('Space'); tick(pg, 150)
+    assert st(pg, "!!S.running") is (not run), 'Espace marche aussi en pastille'
     pg.click('#minifocus .mfexp'); tick(pg, 100); pg.click('#focus [data-act="focusclose"]'); tick(pg, 150)
     # Quitter : si le minuteur tourne encore, la pastille le rappelle ; en pause, elle disparaît
     assert pg.locator('#minifocus .mfexp').count() == (1 if st(pg, "!!S.running") else 0)
     if st(pg, "!!S.running"): pg.click('#minifocus .mfplay'); tick(pg, 150)
     assert pg.locator('#minifocus .mfexp').count() == 0
+    assert not errs, errs; ctx.close()
+
+@test('Cocher à la chaîne : la case suivante revient sous le curseur')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn,d=f.today();S.tasks=S.tasks.filter(t=>t.day!==d);['Une tâche courte','Une tâche avec un titre bien plus long qui passe sur deux lignes dans la liste du jour, pour voir','Courte','Encore une','Dernière'].forEach((n,i)=>S.tasks.push({id:'k'+i,title:n,day:d,order:i+1,est:15,done:false,subtasks:[],due:i===1?d:null}));window.journee.save();render()}"); tick(pg, 300)
+    bb = pg.locator('#main .card:not(.done) .chk').nth(0).bounding_box(); x, y = bb['x']+bb['width']/2, bb['y']+bb['height']/2
+    for i in range(4): pg.mouse.click(x, y); tick(pg, 250)
+    assert st(pg, "dayTasks(today()).filter(t=>t.done).length") == 4, st(pg, "dayTasks(today()).filter(t=>t.done).map(t=>t.title)")
     assert not errs, errs; ctx.close()
 
 def main():

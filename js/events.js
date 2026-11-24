@@ -10,7 +10,7 @@ document.addEventListener('click',async e=>{
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,id=b.dataset.id;
  switch(a){
-  case'toggle':{await toggleDone(id);if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
+  case'toggle':{const keep=keepUnder(b);await toggleDone(id);keep();if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
   case'open':if(!e.target.closest('.chk'))openTask(id);break;
   case'play':openFocus(id);break;
   case'openfocus':openFocus(id);break;
@@ -360,7 +360,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&
 
 // annuler la remise à zéro du minuteur (Ctrl/⌘+Z dans les 10 s)
 let timerUndo=null;
-document.addEventListener('keydown',e=>{if(e.code==='Space'&&focusOn&&!$('#focus').classList.contains('hidden')&&!e.target.matches('input,textarea,select,button')){e.preventDefault();const id=focusOn;if(S.running&&S.running.taskId===id){stopTimer();render()}else startTimer(id);renderFocus()}});
+document.addEventListener('keydown',e=>{if(e.code!=='Space'||e.target.matches('input,textarea,select,button,[contenteditable]'))return;
+ // en grand, ou réduit en pastille (fenêtre fermée) : Espace met en pause et relance
+ const big=focusOn&&!$('#focus').classList.contains('hidden'),mini=!focusOn&&$('#modal').classList.contains('hidden')&&(focusMin||S.running);if(!big&&!mini)return;
+ e.preventDefault();const id=big?focusOn:(focusMin||S.running.taskId);if(S.running&&S.running.taskId===id){stopTimer();render()}else startTimer(id);renderFocus();renderMini()});
 function undoTimer(){if(!timerUndo)return;const t=T(timerUndo.id);if(t){t.actual=timerUndo.a;if(timerUndo.run)startTimer(t.id);save();renderFocus();render();toast('Minuteur rétabli')}timerUndo=null}
 document.addEventListener('keydown',e=>{if(timerUndo&&Date.now()-timerUndo.at<15000&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){undoTimer();e.preventDefault()}});
 
@@ -369,3 +372,12 @@ document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data
 
 // petite récompense visuelle quand une tâche est cochée
 function celebrate(id){requestAnimationFrame(()=>{document.querySelectorAll(`[data-id="${id}"] .chk, .chk[data-id="${id}"]`).forEach(c=>{c.classList.remove('burst');void c.offsetWidth;c.classList.add('burst');setTimeout(()=>c.classList.remove('burst'),700)});const r=document.querySelector('.dayring');if(r){r.classList.remove('bump');void r.offsetWidth;r.classList.add('bump')}})}
+
+// cocher à la chaîne : après une coche, la case de la tâche suivante revient exactement sous le curseur
+function keepUnder(b){
+ const card=b.closest('.card'),list=card&&card.parentElement;if(!card||!list||!$('#main').contains(card))return()=>{};
+ const undone=[...list.querySelectorAll(':scope > .card:not(.done)')],ix=undone.indexOf(card),y0=b.getBoundingClientRect().top;
+ return ()=>{const nl=$('#main').querySelectorAll('.list > .card:not(.done) .chk'),nx=nl[ix];if(ix<0||!nx)return;
+  const d=nx.getBoundingClientRect().top-y0;if(Math.abs(d)<1)return;const m=$('#main');
+  if(d>0||m.scrollTop+d>=0){m.scrollTop+=d}else{const l=nx.closest('.list');l.style.paddingTop=(parseFloat(getComputedStyle(l).paddingTop)||0)+(-d-m.scrollTop)+'px';m.scrollTop=0}}
+}
