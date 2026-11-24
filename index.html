@@ -261,6 +261,7 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 .evrow{display:flex;align-items:center;gap:10px;background:var(--ev);color:var(--evi);border-radius:9px;padding:6px 10px;font-size:14px}
 .evrow .evt{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
 .evrow .evn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dump{min-height:240px;font-size:17px;line-height:1.7;background:var(--panel);border-radius:14px;padding:14px 16px}
 .evrow.mini{font-size:12.5px;padding:3px 8px;gap:6px}
 .evrow.free{background:transparent;border:1px dashed var(--evi)}
 .ev{cursor:pointer}.ev.free{background:repeating-linear-gradient(135deg,var(--ev) 0 6px,transparent 6px 12px);border-left-style:dashed;opacity:.85}
@@ -297,6 +298,7 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
   <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#e8590c"/><path d="M7 21a9 9 0 0 1 18 0" fill="#fff"/><rect x="5" y="22.5" width="22" height="2.4" rx="1.2" fill="#fff"/></svg>Journée</div>
   <button data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Aujourd'hui</button>
   <button data-view="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Semaine</button>
+  <button data-view="dump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.2 3.4 2 4.5.6.8 1 1.6 1 2.5h6c0-.9.4-1.7 1-2.5.8-1.1 2-2.3 2-4.5a6 6 0 0 0-6-6z"/><path d="M9 20h6"/></svg>Vide-tête</button>
   <button data-view="backlog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Backlog</button>
   <button data-view="objectives"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Objectifs</button>
   <button data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
@@ -367,7 +369,7 @@ if(!S.seeded){
 }
 
 /* ---------- état d'interface ---------- */
-const VIEWS=['today','week','backlog','objectives','settings'];
+const VIEWS=['today','week','dump','backlog','objectives','settings'];
 let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,focusSub=null,drag=null,scrolledCal='',lastDay=today();
 let gEvents={},gLoading={};
 const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,tLoading:false};
@@ -383,10 +385,16 @@ function parseQuick(txt){
  txt=(' '+txt+' ').replace(/\s~?(\d{1,2})\s?h\s?(\d{1,2})?(?=\s)/i,(m,h,mm)=>{est=+h*60+(+mm||0);return ' '})
   .replace(/\s~?(\d{1,3})\s?(?:m|min|mn)(?=\s)/i,(m,n)=>{est=+n;return ' '})
   .replace(/\s#(\S+)/,(m,n)=>{const c=S.channels.find(c=>c.name.toLowerCase().startsWith(n.toLowerCase()));if(c){channel=c.id;return ' '}return m});
- return {title:txt.trim().replace(/\s+/g,' '),est,channel};
+ let day;const t0=today(),WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+ txt=txt.replace(/\s(aujourd['’]hui|auj)(?=\s)/i,()=>{day=t0;return ' '})
+  .replace(/\s(après-demain|apres-demain)(?=\s)/i,()=>{day=addDays(t0,2);return ' '})
+  .replace(/\s(demain)(?=\s)/i,()=>{day=addDays(t0,1);return ' '})
+  .replace(/\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)(?=\s)/i,(m,w)=>{const k=WD.indexOf(w.toLowerCase()),c=parseYmd(t0).getDay();day=addDays(t0,((k-c+7)%7)||7);return ' '})
+  .replace(/\s(\d{1,2})\/(\d{1,2})(?=\s)/,(m,dd,mm)=>{const y=new Date().getFullYear();let d=ymd(new Date(y,+mm-1,+dd));if(d<t0)d=ymd(new Date(y+1,+mm-1,+dd));day=d;return ' '});
+ return {title:txt.trim().replace(/\s+/g,' '),est,channel,day};
 }
 function addTask(text,day){
- const q=parseQuick(text);if(!q.title)return null;
+ const q=parseQuick(text);if(!q.title)return null;if(q.day!==undefined)day=q.day;
  const t=mk({title:q.title,est:q.est,channel:q.channel,day,order:nextOrder(day)});
  S.tasks.push(t);save();render();aiWatch(t);emit('task:add',{task:t});return t;
 }
@@ -406,7 +414,7 @@ function moveTask(id,to,noRender){
  const t=T(id);if(!t)return;
  const day=to==='backlog'?null:to;
  if(t.block&&ymd(new Date(t.block.start))!==day)clearBlock(t,true);
- t.day=day;t.order=nextOrder(day);save();if(!noRender)render();
+ t.day=day;if(day)t.inbox=false;t.order=nextOrder(day);save();if(!noRender)render();
 }
 function deleteTask(id){
  const t=T(id);if(!t)return;
@@ -1053,6 +1061,40 @@ function viewWeek(){
   <div class="list" data-drop="day:${d}">${ts.map(card).join('')}</div></div>`}).join('')}</div>`;
 }
 
+/* ---------- vide-tête (brain dump) ---------- */
+let dumpAI=null,rec=null;
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function viewDump(){
+ const inbox=S.tasks.filter(t=>t.inbox&&!t.done);
+ return `<div class="head"><div><h1>Vide-tête</h1><div class="sub">Écris tout ce qui t’encombre l’esprit, une idée par ligne. Tu trieras après.</div></div></div>
+ <textarea class="dump" data-dump rows="10" placeholder="Rappeler le garagiste&#10;Idée cadeau pour Raf&#10;Préparer la réunion lundi 45m #pro&#10;Acheter des ampoules demain…">${esc(S.dump||'')}</textarea>
+ <div class="row" style="flex-wrap:wrap;margin:10px 0 4px">${SR?`<button data-act="dictate">${rec?'■ Arrêter la dictée':'🎙 Dicter'}</button>`:''}<span class="sp"></span><button data-act="dumptasks">Transformer en tâches</button>${aiOn()?'<button class="pri" data-act="dumpai">Trier avec Claude</button>':''}</div>
+ <p class="mute" style="font-size:13px;margin:4px 0 0">Astuce : « demain », « lundi », « 12/12 », « 30m », « 1h », « #canal » sont compris. Touche <kbd>D</kbd> pour revenir ici de n’importe où.</p>
+ ${dumpAI?`<div class="aibox">${dumpAI.loading?'<span class="mute">Claude trie ton vide-tête…</span>':dumpAI.error?`<span class="mute">Claude : ${esc(dumpAI.error)}</span>`:`<b>Claude</b>${dumpAI.text?`<p>${esc(dumpAI.text)}</p>`:''}${propItems(dumpAI.prop).map(it=>`<div class="pitem${(dumpAI.applied||{})[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${(dumpAI.applied||{})[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="dumpapply" data-k="${it.k}">Ajouter</button>`}</div>`).join('')}<div class="row">${propItems(dumpAI.prop).some(it=>!(dumpAI.applied||{})[it.k])?'<button class="sm pri" data-act="dumpapplyall">Tout ajouter et vider</button>':''}<span class="sp"></span><button class="sm ghost" data-act="dumpaiclose">Fermer</button></div>`}</div>`:''}
+ <h2 style="font-size:18px;margin:26px 0 8px">À trier (${inbox.length})</h2>
+ <div class="list">${inbox.length?inbox.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm" data-act="inbox" data-id="${t.id}" data-to="${today()}">Aujourd’hui</button><button class="sm ghost" data-act="inbox" data-id="${t.id}" data-to="${addDays(today(),1)}">Demain</button><button class="sm ghost" data-act="inbox" data-id="${t.id}" data-to="backlog">Backlog</button>`)).join(''):'<div class="empty">Rien à trier. Les idées sans date atterrissent ici.</div>'}</div>`;
+}
+function dumpToTasks(){
+ const lines=(S.dump||'').split('\n').map(l=>l.replace(/^[-*•\d.)\s]+/,'').trim()).filter(Boolean);if(!lines.length){toast('Ton vide-tête est vide');return}
+ let n=0;for(const l of lines){const q=parseQuick(l);if(!q.title)continue;const day=q.day||null;S.tasks.push(mk({title:q.title,est:q.est,channel:q.channel,day,inbox:!day,order:nextOrder(day)}));n++}
+ S.dump='';save();render();toast(n+' tâche'+(n>1?'s':'')+' créée'+(n>1?'s':''));
+ S.tasks.filter(t=>t.inbox&&!t.est).slice(-n).forEach(aiWatch);
+}
+async function dumpSort(){
+ const txt=(S.dump||'').trim();if(!txt){toast('Ton vide-tête est vide');return}
+ dumpAI={loading:true};render();
+ try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nVoici mon vide-tête (une idée par ligne, en vrac) :\n<vide_tete>\n${txt}\n</vide_tete>\nTransforme-le en tâches claires et actionnables (new_tasks) : reformule brièvement si besoin, fusionne les doublons, découpe ce qui contient plusieurs actions, attribue un canal existant, une durée réaliste et un jour (day = YYYY-MM-DD si c'est daté ou urgent, sinon "backlog"). Ce qui n'est pas une tâche (idée, note, souci) : mentionne-le dans le message, en une phrase. Message court.`}],true);dumpAI={text:r.text,prop:r.prop,applied:{}}}
+ catch(e){dumpAI={error:e.message}}
+ render();
+}
+function dictate(){
+ if(!SR)return;if(rec){rec.stop();rec=null;render();return}
+ rec=new SR();rec.lang='fr-FR';rec.continuous=true;rec.interimResults=false;
+ rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const t=e.results[i][0].transcript.trim();S.dump=((S.dump||'').replace(/\s*$/,'')+(S.dump?'\n':'')+t.charAt(0).toUpperCase()+t.slice(1));save();const ta=document.querySelector('[data-dump]');if(ta)ta.value=S.dump}};
+ rec.onend=()=>{rec=null;render()};rec.onerror=e=>{toast('Dictée : '+(e.error==='not-allowed'?'micro refusé':e.error));rec=null;render()};
+ try{rec.start();toast('Parle, chaque phrase devient une ligne');render()}catch(e){rec=null}
+}
+
 /* ---------- vue Backlog ---------- */
 function viewBacklog(){
  const ts=S.tasks.filter(t=>!t.day&&!t.done).sort((a,b)=>a.order-b.order);
@@ -1116,7 +1158,7 @@ function viewSettings(){
   <button class="sm" data-act="chadd">+ Ajouter un canal</button></section>
  <section><h2>Importer depuis Sunsama</h2><p>Dans Sunsama : Settings → Account Management → export. Les tâches terminées de plus de 30 jours vont dans l’historique (utilisé par Claude pour estimer tes durées) ; les rituels Sunsama ne sont pas importés. Tu peux réimporter sans créer de doublons.</p><input type="file" accept=".csv,text/csv" data-sunsama aria-label="Fichier d’export Sunsama">${S.archive&&S.archive.length?`<p style="margin-top:8px">Historique : ${S.archive.length} tâches archivées.</p>`:''}</section>
  <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
- <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus sur la prochaine tâche</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
+ <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus sur la prochaine tâche</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Vide-tête</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
  </div>`;
 }
 
@@ -1193,8 +1235,9 @@ function viewTodo(){
 function render(){
  const a=document.activeElement,keep=a&&a.dataset&&a.dataset.keep,val=keep?a.value:null;
  document.querySelectorAll('#nav [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
+ {const nb=document.querySelector('#nav [data-view="dump"]'),n=S.tasks.filter(t=>t.inbox&&!t.done).length;if(nb){const o=nb.querySelector('.badge');if(o)o.remove();if(n)nb.insertAdjacentHTML('beforeend',`<span class="badge">${n}</span>`)}}
  const m=$('#main'),st=m.scrollTop,bc0=document.querySelector('.bigcal'),bst=bc0?bc0.scrollTop:null;
- m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='objectives'?viewObjectives():view==='settings'?viewSettings():viewToday();
+ m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='objectives'?viewObjectives():view==='settings'?viewSettings():viewToday();
  m.scrollTop=st;
  renderSide();renderRun();
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
@@ -1455,6 +1498,13 @@ document.addEventListener('click',async e=>{
   case'notifon':{if(!('Notification' in window)){toast('Ce navigateur ne gère pas les notifications');break}const pm=await Notification.requestPermission();S.settings.notif=pm==='granted';save();render();toast(pm==='granted'?'Notifications activées':'Notifications refusées par le navigateur');break}
   case'notifoff':S.settings.notif=false;save();render();break;
   case'notiftest':{let n;try{n=JSON.parse(lsGet('journee.notified')||'{}')}catch(err){n={}}notify('test'+Date.now(),'Journée','Les notifications fonctionnent.');break}
+  case'dumptasks':dumpToTasks();break;
+  case'dumpai':dumpSort();break;
+  case'dictate':dictate();break;
+  case'dumpaiclose':dumpAI=null;render();break;
+  case'dumpapply':{if(dumpAI){applyItem(dumpAI,b.dataset.k);render()}break}
+  case'dumpapplyall':{if(dumpAI){propItems(dumpAI.prop).forEach(it=>applyItem(dumpAI,it.k));S.dump='';dumpAI=null;save();render();toast('Vide-tête transformé en tâches')}break}
+  case'inbox':{const t=T(id);if(t){t.inbox=false;moveTask(t.id,b.dataset.to);toast(b.dataset.to==='backlog'?'Rangée au backlog':'Planifiée')}break}
   case'keys':showKeys();break;
   case'layout':toggleLayout();break;
   case'span':calSpan=+b.dataset.n;lsSet('journee.span',String(calSpan));render();break;
@@ -1497,6 +1547,7 @@ document.addEventListener('input',e=>{
  if(ritual&&el.hasAttribute('data-intent')){S.days[ritual.day]=Object.assign(S.days[ritual.day]||{},{intent:el.value});save()}
  if(ritual&&el.hasAttribute('data-note')){S.days[ritual.day]=Object.assign(S.days[ritual.day]||{},{note:el.value});save()}
  if(ritual&&el.hasAttribute('data-review')){const w=monday(ritual.day);S.weeks[w]=Object.assign(S.weeks[w]||{},{review:el.value});save()}
+ if(el.hasAttribute('data-dump')){S.dump=el.value;save()}
  if(el.dataset.fnotes){const t=T(el.dataset.fnotes);if(t){t.notes=el.value;save()}}
 });
 document.addEventListener('change',async e=>{
@@ -1555,7 +1606,7 @@ document.addEventListener('drop',async e=>{
 });
 
 /* ---------- interactions fluides liste ↔ agenda ---------- */
-const KEYS=[['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Objectifs'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+const KEYS=[['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Objectifs'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
 let tipI=0;
 function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
@@ -1595,6 +1646,7 @@ document.addEventListener('keydown',e=>{
  else if(k==='t'){cur=today();go('today')}
  else if(k==='c'){toggleLayout()}
  else if(e.key==='?'){showKeys()}
+ else if(k==='d'){go('dump');setTimeout(()=>{const ta=document.querySelector('[data-dump]');if(ta){ta.focus();ta.selectionStart=ta.value.length}},50)}
  else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');
  else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur);
  else if(k==='f'){const t=dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
