@@ -31,18 +31,24 @@ function treeSvg(){
  for(const t of S.tasks)if(!t.done)for(const p of pathOf(t.channel))cnt[p.id]=(cnt[p.id]||0)+1;
  const link=(pa,pr,ca,cr)=>{const [x0,y0]=P2(pa,pr),[x1,y1]=P2(ca,pr),[x2,y2]=P2(ca,cr);return pr?`M${x0},${y0}A${pr},${pr} 0 0 ${ca>pa?1:0} ${x1},${y1}L${x2},${y2}`:`M0,0L${x2},${y2}`};
  const byId=new Map(items.map(it=>[it.n.id,it]));
- let paths='',dots='',labels='';
+ let paths='',dots='',labels='';const placed=[];
  for(const it of items){
   const par=it.n.parent?byId.get(it.n.parent):null,col=esc(it.n.color||'#888');
   paths+=`<path d="${link(par?par.a:it.a,par?par.r:0,it.a,it.r)}" stroke="${col}" stroke-width="${[0,3,2,1.4][it.depth]}" fill="none"/>`;
   const [x,y]=P2(it.a,it.r),sel=treeSel===it.n.id;
   dots+=`<g class="tvn${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}"><circle cx="${x}" cy="${y}" r="${sel?11:[0,8,6,5][it.depth]+4}" fill="transparent"/><circle cx="${x}" cy="${y}" r="${[0,7,5.5,4.5][it.depth]}" fill="${col}"${sel?' stroke="var(--ink)" stroke-width="2.5"':''}/>${it.leaf&&it.depth<3&&kids(it.n.id).length?`<circle cx="${x}" cy="${y}" r="${[0,12,10][it.depth]}" fill="none" stroke="${col}" stroke-dasharray="3 3"/>`:''}</g>`;
   const name=esc(it.n.name)+(cnt[it.n.id]&&it.depth===3?` <tspan class="tvc">(${cnt[it.n.id]})</tspan>`:'');
-  if(it.leaf){const deg=it.a*180/Math.PI-90,flip=it.a>Math.PI,off=it.r+(it.depth===3?10:16);
-   labels+=`<text class="tvl d${it.depth}${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" transform="rotate(${deg}) translate(${off},0)${flip?' rotate(180)':''}" text-anchor="${flip?'end':'start'}" dy="0.33em" fill="${col}">${name}${it.depth<3&&kids(it.n.id).length?' +':''}</text>`}
-  else{const [lx,ly]=P2(it.a,it.r);labels+=`<text class="tvl d${it.depth} halo${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx}" y="${ly-(it.depth===1?14:11)}" text-anchor="middle" fill="${col}">${esc(it.n.name)}</text>`}
+  if(it.leaf){
+   // libellés toujours horizontaux, ancrés du côté où ils partent
+   const sn=Math.sin(it.a),base=it.r+(it.depth===3?12:16),anc=sn>0.06?'start':sn<-0.06?'end':'middle',fs=it.depth===3?15:16.5,w=(it.n.name.length+(cnt[it.n.id]?4:0))*fs*0.56,h=fs*1.25;
+   // on écarte le libellé vers l'extérieur tant qu'il chevauche un libellé déjà posé
+   let lr=base,lx,ly,dy,box;for(let g=0;g<8;g++){[lx,ly]=P2(it.a,lr);dy=anc==='middle'?(Math.cos(it.a)>0?-4:14):5;const x0=anc==='start'?lx:anc==='end'?lx-w:lx-w/2,y0=ly+dy-h*0.8;box=[x0,y0,x0+w,y0+h];if(!placed.some(b=>box[0]<b[2]&&box[2]>b[0]&&box[1]<b[3]&&box[3]>b[1]))break;lr+=14}
+   placed.push(box);const stag=lr-base;
+   if(stag)paths+=`<path d="M${P2(it.a,it.r+5).join(',')}L${P2(it.a,lr-6).join(',')}" stroke="${col}" stroke-width="1" opacity=".45"/>`;
+   labels+=`<text class="tvl d${it.depth} halo${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx.toFixed(1)}" y="${(ly+dy).toFixed(1)}" text-anchor="${anc}" style="--c:${col}">${name}${it.depth<3&&kids(it.n.id).length?' +':''}</text>`}
+  else{const [lx,ly]=P2(it.a,it.r);labels+=`<text class="tvl d${it.depth} halo${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx}" y="${ly-(it.depth===1?14:11)}" text-anchor="middle" style="--c:${col}">${esc(it.n.name)}</text>`}
  }
- return `<svg class="tvsvg" viewBox="-530 -500 1060 1000" role="img" aria-label="Arbre des catégories"><circle r="8" fill="var(--mute)"/>${paths}${dots}${labels}</svg>`;
+ return `<svg class="tvsvg" viewBox="-580 -400 1160 800" role="img" aria-label="Arbre des catégories"><circle r="8" fill="var(--mute)"/>${paths}${dots}${labels}</svg>`;
 }
 /* ---------- panneau d'édition du nœud choisi ---------- */
 function tvPanel(){

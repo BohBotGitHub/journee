@@ -22,7 +22,14 @@ function renderSide(){
  if(sideTab==='ai'){aiUnread=0;renderBadge();}
  if(sideTab==='ai'){sb.scrollTop=sb.scrollHeight}else if(sideTab==='cal'&&!bigOn&&scrolledCal!==cur){scrolledCal=cur;const n=new Date(),h=cur===today()?Math.max(S.settings.dayStart,n.getHours()-1):S.settings.workStart;sb.scrollTop=(h-S.settings.dayStart)*PX}else sb.scrollTop=st;
 }
+let focusMin=null;
+function renderMini(){let el=$('#minifocus');if(!el){el=document.createElement('div');el.id='minifocus';document.body.appendChild(el)}
+ const id=focusMin||(S.running&&!focusOn?S.running.taskId:null),t=id&&T(id);
+ if(!t||t.done||focusOn){el.className='hidden';el.innerHTML='';return}
+ const run=S.running&&S.running.taskId===t.id;el.className=run?'on':'';
+ el.innerHTML=`<button class="mfexp" data-act="focusmax" data-id="${t.id}" title="Agrandir le focus">${ico('maximize')}<span class="mft">${esc(t.title)}</span><span class="mfc" data-live="mini">${clock(actualSec(t))}</span></button><button class="mfplay" data-act="timer" data-id="${t.id}" aria-label="${run?'Pause':'Reprendre'}" title="${run?'Pause':'Reprendre'}">${run?ico('pause'):ico('play')}</button>`}
 function renderRun(){
+ renderMini();
  const r=S.running,t=r&&T(r.taskId);
  $('#runchip').innerHTML=t?`<div class="runbox" data-act="openfocus" data-id="${t.id}"><span>En cours</span><b>${esc(t.title)}</b><span class="t" data-live="run">${clock(actualSec(t))}</span></div>`:'';
 }
@@ -217,7 +224,7 @@ function renderFocus(){
  const t=T(focusOn);if(!t){focusOn=null;el.classList.add('hidden');return}
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
  el.classList.remove('hidden');
- el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<button class="x" data-act="focusclose">Quitter</button></div>
+ el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<span class="ftopacts"><button class="sm ghost" data-act="focusmin" title="Réduire (Échap) : le minuteur continue, une pastille permet de revenir">${ico('minimize')}Réduire</button><button class="sm ghost" data-act="focusclose" title="Quitter le focus">Quitter</button></span></div>
  ${(()=>{const sb=focusSub&&t.subtasks.find(x=>x.id===focusSub);return sb?`<div class="fsub">${esc(t.title)} · sous-tâche ${t.subtasks.indexOf(sb)+1}/${t.subtasks.length}</div><h1 class="ftitle">${esc(sb.t)}</h1>`:`<h1 class="ftitle">${esc(t.title)}</h1>`})()}
  <div><div class="fclockrow">${focusEdit===t.id?`<input class="fclock fedit" data-fedit="${t.id}" value="${Math.floor(actualSec(t)/60)}" inputmode="numeric" aria-label="Temps passé en minutes (ou 1h20)" title="Minutes, ou 1h20">`:`<button class="fclock${t.est&&actualSec(t)>=t.est*60?' over':''}" data-live="focus" data-act="timeredit" data-id="${t.id}" title="Cliquer pour corriger le temps">${clock(actualSec(t))}</button>`}<div class="fadj"><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="-5" aria-label="Retirer 5 minutes">−5 min</button><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="5" aria-label="Ajouter 5 minutes">+5 min</button></div><button class="freset" data-act="timerreset" data-id="${t.id}" aria-label="Remettre à zéro (met en pause)" title="Remettre à zéro (met en pause)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></div><div class="fsub">${t.est?'Estimé : '+fmtMin(t.est):'Pas d’estimation'}${run?'':' · en pause'}${t.block?' · créneau '+hm(new Date(t.block.start))+'–'+hm(new Date(t.block.end)):''}${(()=>{const nx=dayTasks(today()).filter(x=>!x.done&&x!==t&&x.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start))[0];return nx?' · ensuite : '+esc(nx.title)+' à '+hm(new Date(nx.block.start)):''})()}</div></div>
  <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button>${focusSub?`<button class="ok big" data-act="focussubdone">Sous-tâche faite</button><button class="ghost big" data-act="focusdone" data-id="${t.id}">Tout terminer</button>`:`<button class="ok big" data-act="focusdone" data-id="${t.id}">Terminer</button>`}</div>
@@ -228,7 +235,7 @@ function renderFocus(){
 /* ---------- boucle d'une seconde ---------- */
 setInterval(()=>{
  const r=S.running,t=r&&T(r.taskId);
- if(t){const el=document.querySelector('[data-live="run"]');if(el)el.textContent=clock(actualSec(t));
+ if(t){const el=document.querySelector('[data-live="run"]');if(el)el.textContent=clock(actualSec(t));const mi=document.querySelector('[data-live="mini"]');if(mi)mi.textContent=clock(actualSec(t));
   const f=document.querySelector('[data-live="focus"]');if(f&&focusOn===t.id){f.textContent=clock(actualSec(t));f.classList.toggle('over',!!(t.est&&actualSec(t)>=t.est*60))}
   const c=document.querySelector(`[data-live="t-${t.id}"]`);if(c)c.textContent=fmtMin(actualSec(t)/60)+' / '+(t.est?fmtMin(t.est):'—');}
  document.querySelectorAll('[data-live="now"]').forEach(nl=>{const n=new Date();nl.style.top=((n.getHours()-S.settings.dayStart)*60+n.getMinutes())/60*PX+'px'});

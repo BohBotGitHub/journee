@@ -858,6 +858,27 @@ def _(c):
     assert st(pg, "ritual.step") == 0, 'des heures invalides ne doivent pas laisser partir'
     assert not errs, errs; ctx.close()
 
+@test('Focus : réduire en pastille (bouton ou Échap), pause depuis la pastille, agrandir')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
+    pg.evaluate(f"()=>openFocus('{tid}')"); tick(pg, 200)
+    pg.click('#focus [data-act="focusmin"]'); tick(pg, 150)
+    assert 'hidden' in pg.get_attribute('#focus', 'class') and pg.locator('#minifocus .mfexp').count() == 1
+    assert st(pg, f"!!(S.running&&S.running.taskId==='{tid}')") is True, 'le minuteur continue'
+    pg.click('#minifocus .mfplay'); tick(pg, 150)
+    assert st(pg, "S.running") is None and pg.locator('#minifocus .mfexp').count() == 1, 'en pause, la pastille reste'
+    pg.click('#minifocus .mfexp'); tick(pg, 150)
+    assert 'hidden' not in pg.get_attribute('#focus', 'class') and pg.locator('#minifocus .mfexp').count() == 0
+    pg.keyboard.press('Escape'); tick(pg, 150)
+    assert pg.locator('#minifocus .mfexp').count() == 1, 'Échap réduit'
+    pg.click('#minifocus .mfexp'); tick(pg, 100); pg.click('#focus [data-act="focusclose"]'); tick(pg, 150)
+    # Quitter : si le minuteur tourne encore, la pastille le rappelle ; en pause, elle disparaît
+    assert pg.locator('#minifocus .mfexp').count() == (1 if st(pg, "!!S.running") else 0)
+    if st(pg, "!!S.running"): pg.click('#minifocus .mfplay'); tick(pg, 150)
+    assert pg.locator('#minifocus .mfexp').count() == 0
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

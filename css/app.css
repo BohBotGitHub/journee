@@ -626,3 +626,22 @@ code{white-space:nowrap}
 #nav .navver b{display:inline;font-weight:500;color:var(--mute);font-size:11px}
 #nav .navver span{display:none}
 .ritbody .rlist{max-height:none;overflow:visible}
+/* focus réduit : pastille flottante */
+#minifocus{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:70;display:flex;align-items:stretch;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:99px;box-shadow:0 8px 28px rgba(0,0,0,.18);overflow:hidden;max-width:min(520px,calc(100vw - 24px))}
+#minifocus.hidden{display:none}
+#minifocus.on{border-color:var(--acc)}
+#minifocus button{border:0;border-radius:0;background:transparent;min-height:44px;display:flex;align-items:center;gap:10px}
+#minifocus .mfexp{padding:6px 8px 6px 16px;flex:1;min-width:0}
+#minifocus .mfexp svg,#minifocus .mfplay svg{width:18px;height:18px;flex:none}
+#minifocus .mft{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+#minifocus .mfc{font-variant-numeric:tabular-nums;font-weight:700;color:var(--acc)}
+#minifocus .mfplay{padding:0 16px;border-left:1px solid var(--line)}
+#minifocus button:hover{background:var(--panel2)}
+.ftopacts{display:flex;gap:6px}.ftopacts button{display:inline-flex;align-items:center;gap:6px}.ftopacts svg{width:16px;height:16px}
+@media (max-width:760px){#minifocus{bottom:76px}}
+/* arbre plus lisible : texte foncé teinté de la couleur du pilier, halo, tailles plus grandes */
+.tvl{fill:color-mix(in srgb,var(--c,var(--ink)) 62%,var(--ink));font-size:15px;font-weight:500}
+.tvl.d1{font-size:22px;font-weight:700;fill:color-mix(in srgb,var(--c,var(--ink)) 80%,var(--ink))}
+.tvl.d2{font-size:16.5px;font-weight:650}
+.tvl.halo{paint-order:stroke;stroke:var(--panel);stroke-width:6px;stroke-linejoin:round}
+.tvsvg{max-height:calc(100vh - 250px)}

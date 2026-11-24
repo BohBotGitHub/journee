@@ -15,7 +15,9 @@ document.addEventListener('click',async e=>{
   case'play':openFocus(id);break;
   case'openfocus':openFocus(id);break;
   case'focusnext':{if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();const t=dayTasks(cur).find(t=>!t.done);t?openFocus(t.id):toast('Aucune tâche à faire ce jour-là');break}
-  case'focusclose':focusOn=null;focusSub=null;renderFocus();render();break;
+  case'focusclose':focusOn=null;focusSub=null;focusMin=null;renderFocus();render();break;
+  case'focusmin':{focusMin=focusOn;focusOn=null;renderFocus();render();break}
+  case'focusmax':{const fid=id||focusMin;focusMin=null;if(fid)openFocus(fid);break}
   case'focusdone':{await toggleDone(id);const nx=dayTasks(cur).find(t=>!t.done);focusOn=null;renderFocus();toast(nx?'Bravo ! Prochaine : '+nx.title:'Bravo ! Tout est fait.');break}
   case'timer':if(S.running&&S.running.taskId===id){stopTimer();render()}else{startTimer(id);const tt=T(id);if(tt)activate(tt)}renderFocus();break;
   case'prev':cur=addDays(cur,-1);render();break;
@@ -340,7 +342,7 @@ document.addEventListener('click',e=>{const it=e.target.closest('[data-pal]');if
 /* ---------- clavier ---------- */
 document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});
 document.addEventListener('keydown',e=>{
- if(e.key==='Escape'){if(!$('#modal').classList.contains('hidden'))closeModal();else if(focusOn){focusOn=null;renderFocus();render()}else document.body.classList.remove('side-open');return}
+ if(e.key==='Escape'){if(!$('#modal').classList.contains('hidden'))closeModal();else if(focusOn){focusMin=focusOn;focusOn=null;renderFocus();render()}else document.body.classList.remove('side-open');return}
  if(e.target.matches('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey||focusOn||!$('#modal').classList.contains('hidden'))return;
  const k=e.key.toLowerCase();
  if(k==='n'){e.preventDefault();const i=document.querySelector('[data-keep^="add-"]');if(i)i.focus()}
