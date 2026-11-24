@@ -231,6 +231,7 @@ document.addEventListener('drop',async e=>{
  else t=T(src[1]);
  if(!t)return;
  if(dz==='cal'){const dd=z.dataset.day||cur,dt=parseYmd(dd);dt.setMinutes(calMinute(z,e.clientY));t.pinned=true;if(t.day!==dd)t.order=nextOrder(dd);const p=setBlock(t,dt,true);syncOrder(dd);save();render();await p;return}
+ if(z.dataset.pz){const to=z.dataset.pz;moveTask(t.id,to);toast(to==='backlog'?'Au backlog':'Repoussée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
  if(dz==='backlog'){if(t.day!==null){moveTask(t.id,'backlog');toast('Renvoyée au backlog')}else render();return}
  if(dz.startsWith('day:')){
   const day=dz.slice(4),before=e.target.closest('.card');

@@ -619,6 +619,21 @@ def _(c):
     t = st(pg, "S.tasks.find(t=>t.id==='old')"); assert t['day'] == d(1) and t['roll'] == 0
     assert not errs, errs; ctx.close()
 
+@test('Rituel : repousser en glissant vers Demain, 3 jours, semaine prochaine, Backlog')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.click('[data-act="plan"] >> nth=0')
+    for _ in range(4): pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
+    assert pg.locator('#sheet .pzone').count() == 4
+    first = st(pg, "dayTasks(today())[0].id")
+    pg.locator(f'#sheet [data-drag="task|{first}"]').drag_to(pg.locator('#sheet .pzone >> nth=1')); pg.wait_for_timeout(200)
+    assert st(pg, f"S.tasks.find(t=>t.id==='{first}').day") == d(3)
+    second = st(pg, "dayTasks(today())[0].id")
+    pg.locator(f'#sheet [data-drag="task|{second}"]').drag_to(pg.locator('#sheet .pzone >> nth=3')); pg.wait_for_timeout(200)
+    assert st(pg, f"S.tasks.find(t=>t.id==='{second}').day") is None
+    assert pg.locator('#sheet .pzone').count() == 4, 'le rituel doit rester ouvert'
+    assert not errs, errs; ctx.close()
+
 OLD = """localStorage.setItem('journee.v1',JSON.stringify({seeded:true,settings:{aiKey:'k',aiAuto:false},channels:[{id:'o1',name:'Perso',color:'#2f9e6a',cal:'pro@group'},{id:'o2',name:'Ménage',color:'#888'},{id:'o3',name:'Déménagement',color:'#c90'}],
  tasks:[{id:'t1',title:'Douche',channel:'o1',day:null,subtasks:[]},{id:'t2',title:'Lessive',channel:'o2',day:null,subtasks:[]},{id:'t3',title:'Truc bizarre',channel:'o1',day:null,subtasks:[]},{id:'t4',title:'Cartons salon',channel:'o3',day:null,subtasks:[]}],
  archive:[{id:'a1',t:'Natation',c:'o1',d:'2025-01-01',a:1800},{id:'a2',t:'Méditation du soir',c:'o1',d:'2025-01-02',a:600}]}))"""
