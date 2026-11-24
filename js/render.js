@@ -78,7 +78,7 @@ async function aiSplit(t){
 /* ---------- rituels ---------- */
 const RKEY='journee.rit';
 const saveRit=()=>{if(ritual)lsSet(RKEY,JSON.stringify(Object.assign({},ritual,{at:Date.now()})));else lsDel(RKEY)};
-const savedRit=()=>{try{const r=JSON.parse(lsGet(RKEY)||'null');return r&&Date.now()-r.at<12*3600e3?r:null}catch(e){return null}};
+const savedRit=()=>{try{const r=JSON.parse(lsGet(RKEY)||'null');if(r&&r.ai)for(const k in r.ai)if(r.ai[k]&&(r.ai[k].error||r.ai[k].loading))delete r.ai[k];return r&&Date.now()-r.at<12*3600e3?r:null}catch(e){return null}};
 const RIT_AI={
  plan1:{when:d=>dayTasks(d).some(t=>!t.done&&(t.roll||0)>=1),q:d=>`Rituel du matin, étape « hier ». Pour chaque tâche revenue des jours précédents, propose : la garder le ${d} (updates day=${d}), la renvoyer au backlog (day=backlog) ou l’abandonner si elle est obsolète (drop=true). Justifie en quelques mots.`},
  plan2:{when:()=>true,q:d=>`Rituel du matin, étape « choisir ». Dans le backlog et les autres jours, choisis les tâches à ajouter au ${d} (pick) en tenant compte de la charge, des rendez-vous occupés, des priorités et des objectifs de la semaine. Propose au plus 2 nouvelles tâches utiles.`},
