@@ -50,7 +50,6 @@ function openTask(id){
  <label>Jour<span class="dayrow"><input type="date" data-f="day" value="${t.day||''}">${t.day?`<button type="button" class="sm" data-act="tobacklog" data-id="${t.id}">Backlog</button>`:'<span class="mute" style="font-size:13px">Dans le backlog</span>'}</span></label>
  <label>Créneau dans l’agenda<span class="row"><input type="time" step="900" data-f="time" value="${t.block?hm(new Date(t.block.start)):''}">${t.block&&t.pinned?'<button class="sm ghost" data-act="unpin">Libérer l’heure</button>':''}${t.block&&!flowOn()?'<button class="sm ghost" data-act="unblock">Retirer</button>':''}</span></label>
  <label>Échéance<span class="row"><input type="date" data-f="due" value="${t.due||''}">${t.due?'<button class="sm ghost" data-act="nodue">Aucune</button>':''}</span></label>
- <label>Objectif de la semaine<select data-f="obj"><option value="">Aucun</option>${objs.map(o=>`<option value="${esc(o.id)}" ${o.id===t.objId?'selected':''}>${esc(o.title)}</option>`).join('')}</select></label>
  <label>Répéter<select data-f="recur"><option value="">Jamais</option>${Object.entries(RULES).map(([k,v])=>`<option value="${k}" ${r&&r.rule===k?'selected':''}>${v}</option>`).join('')}</select></label>
  <label>Priorité<span class="prow" role="radiogroup" aria-label="Priorité">${PRIOS.map(([v,l])=>`<button type="button" class="pbtn${(t.prio||'')===v?' on':''}" role="radio" aria-checked="${(t.prio||'')===v}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="${l}" title="${l}">${flagSvg(v)}</button>`).join('')}</span></label>
  <label>Temps passé (min)<input type="number" min="0" data-f="actual" value="${Math.round(actualSec(t)/60)}"></label>
@@ -81,13 +80,12 @@ const saveRit=()=>{if(ritual)lsSet(RKEY,JSON.stringify(Object.assign({},ritual,{
 const savedRit=()=>{try{const r=JSON.parse(lsGet(RKEY)||'null');if(r&&r.ai)for(const k in r.ai)if(r.ai[k]&&(r.ai[k].error||r.ai[k].loading))delete r.ai[k];return r&&Date.now()-r.at<12*3600e3?r:null}catch(e){return null}};
 const RIT_AI={
  plan1:{when:d=>dayTasks(d).some(t=>!t.done&&(t.roll||0)>=1),q:d=>`Rituel du matin, étape « hier ». Pour chaque tâche revenue des jours précédents, propose : la garder le ${d} (updates day=${d}), la renvoyer au backlog (day=backlog) ou l’abandonner si elle est obsolète (drop=true). Justifie en quelques mots.`},
- plan2:{when:()=>true,q:d=>`Rituel du matin, étape « choisir ». Dans le backlog et les autres jours, choisis les tâches à ajouter au ${d} (pick) en tenant compte de la charge, des rendez-vous occupés, des priorités et des objectifs de la semaine. Propose au plus 2 nouvelles tâches utiles.`},
+ plan2:{when:()=>true,q:d=>`Rituel du matin, étape « choisir ». Dans le backlog et les autres jours, choisis les tâches à ajouter au ${d} (pick) en tenant compte de la charge, des rendez-vous occupés, des priorités et des projets en cours. Propose au plus 2 nouvelles tâches utiles.`},
  plan4:{when:d=>dayTasks(d).some(t=>!t.done),q:d=>`Rituel du matin, étape « estimer ». Donne une durée (updates est) aux tâches du ${d} sans durée ou mal estimées d’après l’historique. Si la journée déborde, propose des reports (updates day).`},
  plan5:{when:d=>dayTasks(d).some(t=>!t.done&&!t.block),q:d=>`Rituel du matin, étape « planifier ». Propose un ordre (order) et des créneaux (blocks, HH:MM) pour les tâches non planifiées du ${d}, dans les heures de travail, sans chevaucher les rendez-vous occupés${d===today()?', à partir de maintenant':''}. Les rendez-vous « compatibles » peuvent accueillir des tâches légères.`},
  plan6:{when:()=>true,q:d=>`Rituel du matin, dernière étape. Propose une intention courte et motivante pour la journée (intent), en lien avec ce qui compte le plus.`},
  shutdown0:{when:()=>true,q:d=>`Rituel du soir. Fais un bilan bref et bienveillant de la journée du ${d} (ce qui a avancé, temps réel vs estimé) en 2-3 phrases, sans proposition.`},
  shutdown1:{when:d=>dayTasks(d).some(t=>!t.done),q:d=>`Rituel du soir. Pour chaque tâche non terminée du ${d} : demain (${addDays(d,1)}), backlog ou abandon (drop). Garde demain réaliste.`},
- weekplan1:{when:()=>true,q:d=>`Planification de la semaine. Propose 1 à 3 objectifs (objectives) pour la semaine du ${monday(d)}, à partir des tâches prévues, du backlog et des objectifs passés non atteints.`},
  weekreview0:{when:()=>true,q:d=>`Revue de la semaine du ${monday(d)}. Fais une synthèse courte (ce qui a marché, où est passé le temps) et un conseil concret pour la semaine suivante, sans proposition.`}
 };
 async function aiRitual(){
@@ -106,7 +104,7 @@ function aiBox(){
  const items=propItems(a.prop),ap=a.applied||{};
  return `<div class="aibox"><b>Claude</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="ritapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="ritapplyall">Tout appliquer</button>':''}<div class="row"><span class="sp"></span><button class="sm ghost" data-act="ritai">Nouvelle proposition</button></div></div>`;
 }
-const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Semaine passée','Objectifs','Aperçu'],weekreview:['Chiffres','Réflexion']};
+const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Projets','Aperçu'],weekreview:['Chiffres','Réflexion']};
 function startRitual(type,day){modalTask=null;const sv=savedRit();ritual=sv&&sv.type===type&&sv.day===(day||cur)?Object.assign(sv,{step:0}):{type,step:0,day:day||cur,picked:{},ai:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}
 function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<span class="${k===i?'on':k<i?'past':''}">${esc(s)}</span>`).join('')}<span class="sp" style="background:none"></span></div><div class="ritbody">${body}${aiBox()}</div><div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':''}<button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
 const durBtns=t=>`<div class="durs">${[15,30,45,60,90,120].map(v=>`<button class="sm${t.est===v?' on':''}" data-act="dur" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('')}</div>`;
@@ -170,17 +168,13 @@ function renderRitual(){
   else h=shell(`${quoteHtml(pickQuote('soir',d))}<p class="lead" style="text-align:center">La journée est close. Ce qui reste t’attend demain, rangé.</p>`,'Journée terminée');
  }else if(ritual.type==='weekplan'){
   const w=monday(d),pw=addDays(w,-7),pos=weekObjs(pw),os=weekObjs(w);
-  if(i===0)h=shell(`<h2>La semaine passée</h2><p class="lead">Tes objectifs de la semaine du ${fmtDay(pw,{day:'numeric',month:'long'})}.</p>
-   ${pos.length?`<div class="rlist">${pos.map(o=>`<div class="rrow${o.done?' sel':''}"><div><b>${esc(o.title)}</b><small>${o.done?'Atteint':'Pas atteint'}</small></div><div class="btns"><button class="sm ghost" data-act="objtoggle" data-id="${o.id}">${o.done?'Annuler':'Marquer atteint'}</button>${o.done||os.some(x=>x.title===o.title)?'':`<button class="sm" data-act="objcarry" data-id="${o.id}">Reconduire</button>`}</div></div>`).join('')}</div>`:'<p class="mute">Pas d’objectifs la semaine dernière.</p>'}`);
-  else if(i===1)h=shell(`<h2>Tes objectifs de la semaine</h2><p class="lead">1 à 3 résultats qui feraient de cette semaine une réussite.</p>
-   <form class="add" data-form="obj"><input name="t" data-keep="obj" placeholder="Ajouter un objectif…" autocomplete="off"></form>
-   <div class="rlist">${os.map(o=>`<div class="rrow sel"><div><b>${esc(o.title)}</b></div><div class="btns"><button class="sm ghost" data-act="objdel" data-id="${o.id}">Supprimer</button></div></div>`).join('')||'<p class="mute">Aucun objectif pour l’instant.</p>'}</div>`);
+  if(i===0)h=shell(`<h2>Tes projets</h2><p class="lead">Ceux qui se terminent cette semaine sont mis en avant. Rattache-leur des tâches avec <code>+projet</code>.</p>${projListHtml(w)}<div class="row" style="margin-top:10px"><button class="sm" data-act="go" data-v="settings">Gérer les projets</button></div>`);
   else h=shell(`<h2>Ta semaine</h2><p class="lead">La charge prévue jour par jour. Rééquilibre depuis la vue Semaine si un jour déborde.</p>
    <div class="bars">${[...Array(7)].map((_,k)=>{const x=addDays(w,k),L=loadInfo(x);return `<div class="brow"><span>${cap1(fmtDay(x,{weekday:'short',day:'numeric'}))}</span><div class="bt" style="--c:${L.over>0?'var(--warn)':'var(--acc)'}"><i style="width:${Math.min(100,(L.task+L.meet)/L.cap*100)}%"></i></div><span>${fmtMin(L.task+L.meet)}</span></div>`}).join('')}</div>`,'Valider ma semaine');
  }else if(ritual.type==='weekreview'){
   const w=monday(d);
   if(i===0)h=shell(`<h2>Revue de la semaine</h2><p class="lead">Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</p>${statsHtml(w)}
-   <div class="rsec">Objectifs</div><div class="rlist">${weekObjs(w).map(o=>`<div class="rrow${o.done?' sel':''}"><div><b>${esc(o.title)}</b></div><div class="btns"><button class="sm ghost" data-act="objtoggle" data-id="${o.id}">${o.done?'Atteint ✓':'Marquer atteint'}</button></div></div>`).join('')||'<p class="mute">Pas d’objectifs cette semaine.</p>'}</div>`);
+   <div class="rsec">Projets</div>${projListHtml(w)}`);
   else h=shell(`<h2>Ce que tu retiens</h2><p class="lead">Ce qui a marché, ce qui a coincé, ce que tu ajustes la semaine prochaine.</p>
    <textarea data-review rows="7">${esc((S.weeks[w]||{}).review||'')}</textarea>`,'Terminer la revue');
  }
@@ -195,7 +189,7 @@ function ritNext(){
  if(ritual.type==='plan'&&ritual.step===6){const v=sh.querySelector('[data-intent]');emit('ritual:plan',{day:d});S.days[d]=Object.assign(S.days[d]||{},{planned:true,intent:v?v.value.trim():''})}
  if(ritual.type==='shutdown'&&ritual.step===2){const v=sh.querySelector('[data-note]');S.days[d]=Object.assign(S.days[d]||{},{note:v?v.value.trim():''})}
  if(ritual.type==='shutdown'&&ritual.step===3){emit('ritual:shutdown',{day:d});S.days[d]=Object.assign(S.days[d]||{},{shutdown:true});if(S.running)stopTimer()}
- if(ritual.type==='weekplan'&&ritual.step===2){const w=monday(d);S.weeks[w]=Object.assign(S.weeks[w]||{},{planned:true})}
+ if(ritual.type==='weekplan'&&ritual.step===1){const w=monday(d);S.weeks[w]=Object.assign(S.weeks[w]||{},{planned:true})}
  if(ritual.type==='weekreview'&&ritual.step===1){const w=monday(d),v=sh.querySelector('[data-review]');S.weeks[w]=Object.assign(S.weeks[w]||{},{review:v?v.value.trim():''})}
  save();
  if(ritual.step>=n-1){const ty=ritual.type;ritual=null;lsDel(RKEY);closeModal();toast(ty==='plan'?'Journée planifiée. Bon travail !':ty==='shutdown'?'Journée clôturée. Repose-toi bien.':ty==='weekplan'?'Semaine planifiée.':'Revue enregistrée.');if(ty==='shutdown')chime(520);return}

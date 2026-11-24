@@ -203,7 +203,7 @@ function viewBacklog(){
  <div class="list" data-drop="backlog" style="gap:0">${groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.lvl===1?pillarOf(g.c.id).name+' › '+g.c.name:g.c.name)}</span>`:'Sans catégorie'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
 }
 
-/* ---------- vue Objectifs ---------- */
+/* ---------- vue Semaine (revue) : projets et chiffres ---------- */
 function weekStats(w){
  const days=[...Array(7)].map((_,i)=>addDays(w,i)),ts=S.tasks.filter(t=>t.day&&days.includes(t.day));
  const done=ts.filter(t=>t.done),sec=ts.reduce((a,t)=>a+actualSec(t),0);
@@ -223,11 +223,10 @@ function statsHtml(w){
 }
 function viewObjectives(){
  const w=monday(cur),os=weekObjs(w),wk=S.weeks[w]||{};
- return `<div class="head"><div><h1>Objectifs de la semaine</h1><div class="sub">Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</div></div>
+ return `<div class="head"><div><h1>Ta semaine</h1><div class="sub">Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</div></div>
  <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
  <div class="acts"><button class="${wk.planned?'':'pri'}" data-act="weekplan">Planifier la semaine</button><button data-act="weekreview">Revue de la semaine</button></div></div>
- <form class="add" data-form="obj"><input name="t" data-keep="obj" placeholder="Ajouter un objectif pour cette semaine…" autocomplete="off" aria-label="Nouvel objectif"></form>
- <div class="list">${os.length?os.map(o=>{const lt=S.tasks.filter(t=>t.objId===o.id),dn=lt.filter(t=>t.done).length;return `<div class="card" style="cursor:default"><button class="chk" data-act="objtoggle" data-id="${o.id}" style="${o.done?'background:var(--ok);border-color:var(--ok)':''}" aria-label="Objectif atteint">${o.done?'✓':''}</button><div class="cbody" style="cursor:default"><div class="ctitle" style="${o.done?'text-decoration:line-through':''}">${esc(o.title)}</div><div class="cmeta">${lt.length?`${dn}/${lt.length} tâches liées`:'Aucune tâche liée — relie-en depuis le détail d’une tâche'}</div></div><button class="x" data-act="objdel" data-id="${o.id}" aria-label="Supprimer l’objectif">×</button></div>`}).join(''):'<div class="empty">Fixe 1 à 3 objectifs : ce que tu veux avoir accompli d’ici dimanche.</div>'}</div>
+ <h2 style="font-size:18px;margin:8px 0 6px">Projets en cours</h2>${projListHtml(w)}
  <h2 style="font-size:18px;margin:28px 0 6px">Cette semaine en chiffres</h2>${statsHtml(w)}
  ${wk.review?`<div class="note"><b>Revue de la semaine</b>\n${esc(wk.review)}</div>`:''}`;
 }
@@ -261,7 +260,7 @@ function viewStats(){
 
 function viewReview(){
  const tab=view==='stats'?'stats':'objectives';
- const tabs=`<div class="seg revtabs"><button class="sm${tab==='objectives'?' on':''}" data-act="go" data-v="objectives">Objectifs et semaine</button><button class="sm${tab==='stats'?' on':''}" data-act="go" data-v="stats">Statistiques</button></div>`;
+ const tabs=`<div class="seg revtabs"><button class="sm${tab==='objectives'?' on':''}" data-act="go" data-v="objectives">Semaine et projets</button><button class="sm${tab==='stats'?' on':''}" data-act="go" data-v="stats">Statistiques</button></div>`;
  return tabs+(tab==='stats'?viewStats():viewObjectives());
 }
 /* ---------- vue Réglages ---------- */
@@ -308,7 +307,7 @@ function viewSettings(){
  <section><h2>Adresse de redirection</h2><p>À coller à l’identique dans la console Google et dans Azure.</p><div class="row"><code>${esc(REDIRECT)}</code><button class="sm" data-act="copyuri">Copier</button></div></section>
  <section><h2>Importer depuis Sunsama</h2><p>Dans Sunsama : Settings → Account Management → export. Les tâches terminées de plus de 30 jours vont dans l’historique (utilisé par Claude pour estimer tes durées) ; les rituels Sunsama ne sont pas importés. Tu peux réimporter sans créer de doublons.</p><input type="file" accept=".csv,text/csv" data-sunsama aria-label="Fichier d’export Sunsama">${S.archive&&S.archive.length?`<p style="margin-top:8px">Historique : ${S.archive.length} tâches archivées.</p>`:''}</section>
  <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
- <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Vide-tête</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
+ <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Vide-tête</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Semaine et projets</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
  </div></details>
  </div>`;
 }

@@ -475,11 +475,20 @@ def _(c):
     assert pg.locator('.stabs .mset').is_visible()
     assert not errs, errs; ctx.close()
 
-@test('Revue : objectifs et statistiques dans un seul onglet')
+@test('Revue : semaine et projets (plus d’objectifs), statistiques dans un seul onglet')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
+    pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn;S.projects=[{id:'pj1',name:'Stardust',end:f.addDays(f.today(),2)}];S.tasks[0].proj='pj1';window.journee.save()}")
     pg.click('#nav [data-view="review"]'); pg.wait_for_timeout(200)
-    assert pg.locator('.revtabs').count() == 1 and 'Objectifs' in pg.inner_text('#main h1')
+    assert pg.locator('.revtabs').count() == 1 and 'Ta semaine' in pg.inner_text('#main h1')
+    assert 'Stardust' in pg.inner_text('#main') and 'objectif' not in pg.inner_text('#main').lower()
+    pg.evaluate("()=>startRitual('weekplan',window.journee.fn.today())"); pg.wait_for_timeout(200)
+    assert pg.locator('#sheet .rsteps span:not(.sp)').count() == 2 and 'Stardust' in pg.inner_text('#sheet')
+    pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(150); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
+    assert st(pg, "S.weeks[monday(today())].planned") is True
+    pg.evaluate("()=>openTask(window.journee.state.tasks[0].id)"); pg.wait_for_timeout(150)
+    assert 'Objectif' not in pg.inner_text('#sheet')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     pg.click('[data-act="go"][data-v="stats"]'); pg.wait_for_timeout(200)
     assert 'Statistiques' in pg.inner_text('#main h1')
     assert pg.locator('#nav [data-view="review"].on').count() == 1

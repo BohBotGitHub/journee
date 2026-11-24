@@ -9,7 +9,6 @@ const AI_TOOL={name:'proposer',description:'Propose des changements concrets au 
  pick:{type:'array',items:{type:'string'},description:'Ids de tâches existantes (backlog, autres jours) à ajouter au jour affiché'},
  blocks:{type:'array',items:{type:'object',properties:{id:{type:'string'},start:{type:'string',description:'HH:MM'}},required:['id','start']},description:'Créneaux horaires proposés pour des tâches du jour'},
  intent:{type:'string',description:'Intention courte pour la journée'},
- objectives:{type:'array',items:{type:'string'},description:'Objectifs proposés pour la semaine'},
  new_tasks:{type:'array',items:{type:'object',properties:{title:{type:'string'},channel:{type:'string'},est:{type:'integer'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['title']}}
 },required:['message']}};
 function aiContext(){
@@ -20,7 +19,6 @@ function aiContext(){
  return `Maintenant : ${cap1(fmtDay(t0))}, ${hm(now)}. Jour affiché : ${fmtDay(d)} (${d}).
 Heures de travail : ${S.settings.workStart}h–${S.settings.workEnd}h.
 ${hasTree()?'Catégories (pilier / domaine, puis domaine › catégorie) :\n'+catPaths().join('\n'):'Catégories : '+(S.channels.map(c=>c.name).join(', ')||'aucun')}.${activeProjects().length?'\nProjets en cours : '+activeProjects().map(p=>p.name+(p.end?' (fin '+p.end+')':'')).join(', '):''}
-Objectifs de la semaine : ${weekObjs(wk).map(o=>o.title+(o.done?' (atteint)':'')).join(' ; ')||'aucun'}.
 ${(S.days[d]||{}).intent?'Intention du jour : '+S.days[d].intent+'\n':''}Réunions du jour :\n${meet.join('\n')||'- aucune connue'}
 Tâches du jour :\n${dayTasks(d).map(line).join('\n')||'- aucune'}
 En retard (jours précédents) :\n${pastUndone().slice(0,15).map(t=>line(t)+' | prévue le '+t.day).join('\n')||'- rien'}
@@ -33,7 +31,7 @@ const AI_SYS=`Tu es Claude, l'assistant de planification intégré à l'appli «
 Règles :
 - Français, tutoiement, ton chaleureux et direct, réponses courtes (3-6 phrases max).
 - Sois réaliste : tâches + rendez-vous ne doivent pas dépasser les heures de travail ; s'il y a trop, propose de reporter (updates avec day) plutôt que d'entasser.
-- Ordre conseillé : tâches importantes et exigeantes tôt, petites tâches entre les rendez-vous, liées aux objectifs de la semaine en priorité.
+- Ordre conseillé : tâches importantes et exigeantes tôt, petites tâches entre les rendez-vous, liées aux projets en cours en priorité.
 - Durées : appuie-toi sur l'historique estimé/réel quand il existe (si l'utilisateur sous-estime, corrige).
 - Catégories : uniquement des noms de la liste fournie.
 - Échéances : une tâche doit être planifiée avant sa date d’échéance ; signale celles qui sont menacées.

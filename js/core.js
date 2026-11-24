@@ -71,7 +71,7 @@ function dayHours(d){const i=S.days[d]||{},s=S.settings;const hs=typeof i.hs==='
 const hhmm=h=>pad(Math.floor(h))+':'+pad(Math.round((h%1)*60));
 const pastUndone=()=>S.tasks.filter(t=>t.day&&t.day<today()&&!t.done).sort((a,b)=>a.day<b.day?-1:1);
 const actualSec=t=>(t.actual||0)+(S.running&&S.running.taskId===t.id?(Date.now()-S.running.start)/1000:0);
-const weekObjs=w=>S.objectives.filter(o=>o.week===w);
+const weekObjs=w=>[];// objectifs de la semaine retirés (v1.0.3) : les projets les remplacent ; les anciens restent stockés
 
 stamp();
 if(!S.seeded){
@@ -207,3 +207,7 @@ function placeByPrio(t){if(!t||!t.day||t.done)return;const rk=x=>x.prio==='high'
  const L=dayTasks(t.day).filter(x=>!x.done&&x!==t),r=rk(t);let i;
  if(r===2)i=L.length;else{i=0;L.forEach((x,k)=>{if(rk(x)<r)i=k+1})}
  L.splice(i,0,t);L.forEach((x,k)=>x.order=k+1);dayTasks(t.day).filter(x=>x.done).forEach((x,k)=>x.order=L.length+k+1)}
+
+// Projets en cours : progression et échéance, pour la semaine et la revue
+function projListHtml(w){const ps=activeProjects().sort((a,b)=>(a.end||'9')<(b.end||'9')?-1:1),we=w?addDays(w,6):null;
+ return ps.length?`<div class="rlist">${ps.map(p=>{const g=projProgress(p.id),soon=we&&p.end&&p.end<=we;return `<div class="rrow${soon?' hot':''}"><div><b>${esc(p.name)}</b><small>${g.n?`${g.done}/${g.n} tâches faites`:'Aucune tâche liée — ajoute +'+esc(p.name.split(' ')[0].toLowerCase())+' en créant une tâche'}${p.end?' · fin '+fmtDay(p.end,{day:'numeric',month:'short'})+(soon?' (cette semaine)':''):''}</small></div></div>`}).join('')}</div>`:'<p class="mute">Aucun projet en cours. Crée-en un dans Réglages › Projets.</p>'}
