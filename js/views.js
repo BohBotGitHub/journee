@@ -89,7 +89,7 @@ function viewToday(){
  const h=new Date().getHours(),past=d<today();
  const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus sur la suivante','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
  return `<div class="head tight"><div class="htitle"><h1>${title}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
- <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}${layoutBtn()}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button></div></div>
+ <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}
  ${addForm(d,'Ajouter une tâche')}
  ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>`}

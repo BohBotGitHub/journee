@@ -475,3 +475,8 @@ form.add:focus-within .addhint{display:block}
 .freset{width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:transparent;color:var(--mute)}
 .freset:hover{color:var(--ink);background:var(--panel2)}
 .freset svg{width:22px;height:22px}
+/* bascule liste ⇄ agenda : exactement au même endroit dans toutes les vues (coin haut droit) */
+#main{position:relative}
+#main .head .layoutbtn{position:absolute;top:26px;right:clamp(16px,3vw,40px);height:40px}
+#main .head:has(.layoutbtn) .acts{margin-right:52px}
+#main .head:has(.layoutbtn){min-height:40px}
