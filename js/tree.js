@@ -14,7 +14,7 @@ const TREE=[
  ['batir','Bâtir','#378add',[
   ['metier','Métier',[['villette','La Villette'],['stardust','Stardust'],['formation','Formation']]],
   ['foyer','Foyer',[['menage','Ménage'],['courses','Courses'],['cuisine','Cuisine'],['bricolage','Bricolage'],['deco','Déco & aménagement']]],
-  ['gestion','Gestion',[['admin','Administratif'],['budget','Budget & épargne'],['organisation','Organisation']]]]]];
+  ['gestion','Gestion',[['admin','Administratif'],['budget','Budget & épargne'],['organisation','Organisation'],['demarches','Courses & démarches']]]]]];
 const LVL=['Pilier','Domaine','Catégorie'];
 const hasTree=()=>S.channels.some(c=>c.lvl!==undefined);
 const node=id=>S.channels.find(c=>c.id===id);
@@ -68,6 +68,7 @@ const CAT_RULES=[
  [/manif|militan|\bpetition|greve|syndic|tract/,'c-militantisme'],[/\bdon\b|dons\b|caritati|benevol|association|asso\b|resto du coeur/,'c-caritatif'],[/\bvote|elect|citoyen|mairie|conseil de quartier|civique/,'c-citoyennete'],
  [/villette|synoptique|optique|\bdevis|\bregie|fiche technique|plan de feu/,'c-villette'],[/stardust/,'c-stardust'],[/formation|\bcours\b|\btuto/,'c-formation'],
  [/menage|aspirat|lessive|linge|vaisselle|poussiere|ranger|rangement|nettoy|serpill|poubelle|draps|\blit\b|salle de bain|toilettes|vitres|lave-?(linge|vaisselle)|etendre|repass/,'c-menage'],
+ [/colis|\bposte\b|la poste|lettre recommandee|recommande|pressing|cordonnier|point relais|relais colis|mondial relay|chronopost|\bups\b|\bdhl\b|recuperer|deposer|rendre (le|la|les|un|une)|retourner (le|la|les|un|une)|\bretour\b|\bretirer\b|cle(s)? (a|chez)|double de cle/,'c-demarches'],
  [/courses|supermarche|carrefour|monoprix|franprix|lidl|picard|marche\b|drive\b/,'c-courses'],[/cuisine|cuisiner|recette|\bpatisser|gateau|\bcuire|prepar(er)? (le |un )?repas/,'c-cuisine'],
  [/bricol|\breparer|\breparation|percer|perceuse|visser|monter (le|la|les|un|une)|ampoule|plomb|joint/,'c-bricolage'],[/plantes?\b|arros|rempot/,'c-deco'],[/\bdeco|meuble|amenag|ikea|etagere|cadre|rideau|peindre (le|la|les) mur/,'c-deco'],
  [/impot|\bcaf\b|pole emploi|france travail|note de frais|papiers|assurance|mutuelle|urssaf|\bsecu\b|\bameli\b|administratif|dossier|formulaire|courrier|declaration|\bmail(s)?\b/,'c-admin'],
@@ -124,6 +125,7 @@ function applyTree(plan){
 function treeFixes(){
  S.fixes=S.fixes||{};let ch=false;
  if(!S.fixes.jardin){S.fixes.jardin=1;const j=node('c-jardin');if(j&&/jardin/i.test(j.name)){S.tasks.forEach(t=>{if(t.channel==='c-jardin'){t.channel=/tont|tond/.test(norm(t.title))?'c-routines':'d-foyer';ch=true}});(S.archive||[]).forEach(a=>{if(a.c==='c-jardin')a.c=/tont|tond/.test(norm(a.t))?'c-routines':'d-foyer'});S.channels=S.channels.filter(c=>c.id!=='c-jardin');ch=true}}
+ if(!S.fixes.demarches){S.fixes.demarches=1;if(node('d-gestion')&&!node('c-demarches')){S.channels.push({id:'c-demarches',name:'Courses & démarches',key:'demarches',lvl:2,parent:'d-gestion',o:kids('d-gestion').length});ch=true}}
  if(ch){treeColors();save()}
 }
 function ensureTree(){

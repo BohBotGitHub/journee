@@ -486,14 +486,14 @@ def _(c):
     ctx, pg, errs = new_page(c['b'])
     assert st(pg, "S.channels.filter(c=>c.lvl===0).map(c=>c.name).join(',')") == 'Être,Grandir,Relier,Bâtir'
     assert st(pg, "S.channels.filter(c=>c.lvl===1).length") == 10
-    assert st(pg, "S.channels.filter(c=>c.lvl===2).length") == 34
+    assert st(pg, "S.channels.filter(c=>c.lvl===2).length") == 35
     assert st(pg, "window.journee.fn.nodeLabel('c-jdr')") == 'Jeu › MJ de JDR'
     # agenda : catégorie > domaine > pilier
     pg.evaluate("()=>{const S=window.journee.state,n=id=>S.channels.find(c=>c.id===id);n('p-grandir').cal='A';n('d-jeu').cal='B';window.journee.save()}")
     assert st(pg, "window.journee.fn.nodeCal('c-piano')") == 'A'
     assert st(pg, "window.journee.fn.nodeCal('c-magic')") == 'B'
     pg.click('#nav [data-view="tree"]'); pg.wait_for_timeout(200)
-    assert pg.locator('.tvsvg .tvn').count() == 4 + 10 + 34, pg.locator('.tvsvg .tvn').count()
+    assert pg.locator('.tvsvg .tvn').count() == 4 + 10 + 35, pg.locator('.tvsvg .tvn').count()
     # déployer un seul arbre : seuls ses nœuds restent détaillés
     pg.click('.tvtabs [data-id="p-grandir"]'); pg.wait_for_timeout(150)
     assert pg.locator('.tvsvg .tvn').count() == 4 + 3 + 9
@@ -522,6 +522,8 @@ def _(c):
 @test('Choisir la catégorie d’une tâche : recherche, suggestions, sans catégorie')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
+    add(pg, 'Récupérer colis 10m')
+    assert st(pg, 'S.tasks.at(-1).channel') == 'c-demarches', st(pg, 'S.tasks.at(-1).channel')
     add(pg, 'Tonte barbe 10m')
     assert st(pg, 'S.tasks.at(-1).channel') == 'c-routines', 'tonte = pilosité, pas jardin'
     pg.click('#main .card:has-text("Tonte barbe") .chip.pc'); pg.wait_for_selector('#pickov')
