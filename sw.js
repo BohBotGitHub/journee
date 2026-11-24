@@ -1,5 +1,5 @@
 // Service worker : l'appli s'ouvre même hors ligne. Les appels aux API Google/Microsoft ne passent jamais par le cache.
-const CACHE = 'mydaybot-v21';
+const CACHE = 'mydaybot-v22';
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon.svg", "./icon-192.png", "./icon-512.png", "./css/app.css", "./js/ai.js", "./js/auth.js", "./js/core.js", "./js/events.js", "./js/flow.js", "./js/google.js", "./js/import.js", "./js/main.js", "./js/microsoft.js", "./js/render.js", "./js/sync.js", "./js/tree.js", "./js/treeview.js", "./js/views.js"];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -10,7 +10,7 @@ self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
+    fetch(e.request.mode === 'navigate' ? e.request.url : e.request, { cache: 'no-cache' }).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match('./index.html')))
   );
 });
