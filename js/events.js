@@ -116,12 +116,16 @@ document.addEventListener('click',async e=>{
    try{const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg){await reg.update().catch(()=>{});if(reg.waiting)reg.waiting.postMessage('skip')}}catch(err){}
    try{if(window.caches){for(const k of await caches.keys())await caches.delete(k)}}catch(err){}
    location.reload();break}
+  case'hoursreset':{const i=S.days[today()];if(i){delete i.hs;delete i.he}save();closeModal();render();break}
+  case'rollmenu':rollMenu(id);break;
+  case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();moveTask(id,addDays(today(),1));toast('Reportée à demain');break}
+  case'rolldrop':deleteTask(id);closeModal();render();toast('Tâche supprimée');break;
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
   case'mvup':closeModal();swapTask(id,-1);break;
   case'mvdown':closeModal();swapTask(id,1);break;
   case'tobacklog':{const t=T(id);if(t&&t.day){moveTask(id,'backlog');toast('Renvoyée au backlog');if(modalTask===id)openTask(id)}break}
-  case'sheetmv':closeModal();moveTask(id,b.dataset.to);toast(b.dataset.to==='backlog'?'Renvoyée au backlog':'Reportée à demain');break;
+  case'sheetmv':closeModal();{const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0}moveTask(id,b.dataset.to);toast(b.dataset.to==='backlog'?'Renvoyée au backlog':'Reportée à demain');break;
   case'sum':uiOpen=uiOpen===b.dataset.k?'':b.dataset.k;render();break;
   case'freeze':{const d=cur;S.days[d]=Object.assign(S.days[d]||{},{frozen:!(S.days[d]||{}).frozen});save();if(!$('#modal').classList.contains('hidden'))closeModal();render();toast(S.days[d].frozen?'Journée figée : les créneaux ne bougent plus avec l’heure':'Les créneaux suivent à nouveau l’heure');break}
   case'daymenu':dayMenu();break;
@@ -147,6 +151,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('[data-adv]'))advOpen=e.target.open},true);
 document.addEventListener('submit',e=>{
  const f=e.target.closest('form[data-form]');if(!f)return;e.preventDefault();
+ if(f.dataset.form==='hours'){const h=x=>{const [a,b]=String(x||'').split(':').map(Number);return isNaN(a)?null:a+(b||0)/60};const hs=h(f.s.value),he=h(f.e.value);if(hs===null||he===null||he<=hs){toast('L’heure de fin doit être après le début');return}const d=today();S.days[d]=Object.assign(S.days[d]||{},{hs,he});save();render();return}
  const inp=f.querySelector('input,textarea'),v=inp.value.trim();if(!v)return;
  const k=f.dataset.form;
  if(k==='add'){addTask(v,f.dataset.day||null);const n=document.querySelector(`[data-keep="${inp.dataset.keep}"]`);if(n)n.value='';if(ritual)renderRitual()}

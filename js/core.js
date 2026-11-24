@@ -66,6 +66,9 @@ const T=id=>S.tasks.find(t=>t.id===id);
 const ch=id=>S.channels.find(c=>c.id===id);
 const nextOrder=day=>Math.max(0,...S.tasks.filter(t=>t.day===day).map(t=>t.order||0))+1;
 const dayTasks=d=>S.tasks.filter(t=>t.day===d).sort((a,b)=>(a.done-b.done)||(a.order-b.order));
+// heures de la journée : celles choisies ce jour-là, sinon la journée type des réglages (en heures décimales)
+function dayHours(d){const i=S.days[d]||{},s=S.settings;const hs=typeof i.hs==='number'?i.hs:s.workStart,he=typeof i.he==='number'?i.he:s.workEnd;return{s:hs,e:Math.max(he,hs+0.25),set:typeof i.hs==='number'}}
+const hhmm=h=>pad(Math.floor(h))+':'+pad(Math.round((h%1)*60));
 const pastUndone=()=>S.tasks.filter(t=>t.day&&t.day<today()&&!t.done).sort((a,b)=>a.day<b.day?-1:1);
 const actualSec=t=>(t.actual||0)+(S.running&&S.running.taskId===t.id?(Date.now()-S.running.start)/1000:0);
 const weekObjs=w=>S.objectives.filter(o=>o.week===w);

@@ -30,32 +30,62 @@ function cascade(d){
 }
 function flowOn(){return S.settings.liveShift!==false}
 var flowQ=null,inFlow=false;
-function planFlow(d){
- // agenda vivant : chaque tâche du jour a un créneau, dans l'ordre de la liste, à partir de maintenant ; les créneaux épinglés et les rendez-vous occupés sont contournés
- const t0=today();if(d<t0)return 0;
- const base=+parseYmd(d),ws=base+S.settings.workStart*3600e3,now=Date.now(),r=runningTask();
- if(!(S.days[d]||{}).frozen)for(const t of dayTasks(d))if(t.pinned&&!t.done&&t.block&&+new Date(t.block.end)<=now&&t!==r)t.pinned=false;
- const frozen=(S.days[d]||{}).frozen;
- // journée figée : on ne suit plus l'heure, on enchaîne à partir du premier créneau existant
+// les tâches non faites des jours passés reviennent aujourd'hui, sans bruit ; on compte seulement les reports
+function rollOver(){
+ const t0=today();let n=0;
+ for(const t of pastUndone()){
+  if(t.recurId){deleteTask(t.id);n++;continue}
+  if(t.block)clearBlock(t,true);
+  t.roll=(t.roll||0)+1;t.pinned=false;t.day=t0;t.order=nextOrder(t0);n++;
+ }
+ return n;
+}
+// placement théorique d'une journée : [tâche, début, fin] dans l'ordre de la liste
+function simFlow(d){
+ const t0=today(),H=dayHours(d),base=+parseYmd(d),ws=base+H.s*3600e3,now=Date.now(),r=runningTask(),frozen=(S.days[d]||{}).frozen;
  let cursor=d===t0&&!frozen?Math.max(ceil5(now),ws):ws;
  if(frozen){const st=dayTasks(d).filter(t=>!t.done&&t.block&&!t.pinned).map(t=>+new Date(t.block.start));if(st.length)cursor=Math.min(...st)}
  if(r&&r.day===d&&r.block)cursor=Math.max(cursor,+new Date(r.block.end));
  const busy=busyAt(d);
  for(const t of dayTasks(d))if(t.block&&t!==r&&(t.pinned||t.done))busy.push([+new Date(t.block.start),+new Date(t.block.end)]);
- let n=0;
+ const out=[];
  for(const t of dayTasks(d).filter(t=>!t.done&&t!==r&&!t.pinned)){
   const dur=Math.max(10,(t.est||30)-(t.actual?Math.floor(t.actual/60):0))*60000;
   let ns=cursor;for(let g=0;g<60;g++){const hit=busy.find(([a,b])=>ns<b&&ns+dur>a);if(!hit)break;ns=ceil5(hit[1])}
-  const same=t.block&&Math.abs(+new Date(t.block.start)-ns)<60000&&Math.abs(+new Date(t.block.end)-(ns+dur))<60000;
-  if(!same){setRange(t,new Date(ns),new Date(ns+dur),true);n++}
-  cursor=ns+dur;
+  out.push([t,ns,ns+dur]);cursor=ns+dur;
+ }
+ return out;
+}
+function planFlow(d){
+ // agenda vivant : chaque tâche du jour a un créneau, dans l'ordre de la liste, à partir de maintenant ; les créneaux épinglés et les rendez-vous occupés sont contournés
+ const t0=today();if(d<t0)return 0;
+ const now=Date.now(),r=runningTask(),frozen=(S.days[d]||{}).frozen;
+ if(!frozen)for(const t of dayTasks(d))if(t.pinned&&!t.done&&t.block&&+new Date(t.block.end)<=now&&t!==r)t.pinned=false;
+ let n=0,plan=simFlow(d);
+ // la journée déborde : ce qui finirait après l'heure de fin glisse au lendemain, sans message.
+ // D'abord les drapeaux bas, puis les tâches normales ; jamais une priorité haute ni une échéance qui tombe ce jour-là.
+ if(!frozen){
+  const end=+parseYmd(d)+dayHours(d).e*3600e3,next=addDays(d,1),canGo=t=>t.prio!=='high'&&!(t.due&&t.due<=d);
+  for(let g=0;g<80&&plan.length&&plan[plan.length-1][2]>end;g++){
+   const over=plan.filter(p=>p[2]>end).map(p=>p[0]);
+   const pool=plan.map(p=>p[0]).filter(canGo);
+   const pick=[...pool].reverse().find(t=>t.prio==='low')||[...over].reverse().find(canGo)||null;
+   if(!pick)break;
+   if(pick.block)clearBlock(pick,true);
+   pick.day=next;pick.order=0.5;pick.slid=d;pick.roll=(pick.roll||0)+1;renorm(next);n++;
+   plan=simFlow(d);
+  }
+ }
+ for(const [t,ns,ne] of plan){
+  const same=t.block&&Math.abs(+new Date(t.block.start)-ns)<60000&&Math.abs(+new Date(t.block.end)-ne)<60000;
+  if(!same){setRange(t,new Date(ns),new Date(ne),true);n++}
  }
  return n;
 }
 function queueFlow(){if(inFlow||!flowOn())return;clearTimeout(flowQ);flowQ=setTimeout(runFlow,60)}
 function runFlow(){
  if(!flowOn())return;inFlow=true;let n=0;
- try{n+=scheduleDue();const t0=today(),days=new Set([t0]);if(cur>t0)days.add(cur);if(view==='week'){const w=monday(cur);for(let i=0;i<7;i++){const x=addDays(w,i);if(x>=t0)days.add(x)}}if(layout==='cal')bigDays().forEach(x=>{if(x>=t0)days.add(x)});for(const d of days)n+=planFlow(d)}
+ try{n+=rollOver();n+=scheduleDue();const t0=today(),days=new Set([t0,addDays(t0,1)]);if(cur>t0)days.add(cur);if(view==='week'){const w=monday(cur);for(let i=0;i<7;i++){const x=addDays(w,i);if(x>=t0)days.add(x)}}if(layout==='cal')bigDays().forEach(x=>{if(x>=t0)days.add(x)});for(const d of days)n+=planFlow(d)}
  finally{inFlow=false}
  if(n){lsSet(KEY,JSON.stringify(S));if(!rz&&!drag)render()}
 }

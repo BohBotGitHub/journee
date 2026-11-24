@@ -108,7 +108,7 @@ def test(name):
     return deco
 TESTS = []
 
-def new_page(b, w=1440, h=900, clock=None, google=None, claude=False, scheme='light', storage=None):
+def new_page(b, w=1440, h=900, clock=None, real=False, google=None, claude=False, scheme='light', storage=None):
     ctx = b.new_context(viewport={'width': w, 'height': h}, color_scheme=scheme)
     ctx.grant_permissions(['notifications'], origin=BASE.rstrip('/'))
     pg = ctx.new_page(); errs = []
@@ -118,6 +118,7 @@ def new_page(b, w=1440, h=900, clock=None, google=None, claude=False, scheme='li
     if google: pg.route('https://www.googleapis.com/**', google.route)
     if claude: pg.route('https://api.anthropic.com/**', claude_route)
     if clock: pg.clock.install(time=clock)
+    elif not real: pg.clock.set_fixed_time(at(10, 0))
     if storage is not None:
         pg.add_init_script(f"if(!sessionStorage.getItem('init')){{sessionStorage.setItem('init','1');localStorage.clear();{storage}}}")
     pg.goto(BASE); pg.wait_for_timeout(300)
@@ -428,9 +429,9 @@ def _(c):
 @test('Synchro par fusion : modifications sur deux appareils, aucune perte, suppressions respectées')
 def _(c):
     g = Google()
-    a, pa, ea = new_page(c['b'], google=g, storage=TOKEN); pa.wait_for_timeout(1500)
+    a, pa, ea = new_page(c['b'], google=g, storage=TOKEN + "localStorage.setItem('journee.v1',JSON.stringify({settings:{workEnd:24}}));", real=True); pa.wait_for_timeout(1500)
     add(pa, 'Créée sur le Mac'); pa.wait_for_timeout(4800)
-    b_, pb, eb = new_page(c['b'], google=g, storage=TOKEN); pb.wait_for_timeout(1500)
+    b_, pb, eb = new_page(c['b'], google=g, storage=TOKEN, real=True); pb.wait_for_timeout(1500)
     assert st(pb, "S.tasks.some(t=>t.title==='Créée sur le Mac')"), 'pas récupérée sur le téléphone'
     add(pb, 'Créée sur le téléphone'); pb.wait_for_timeout(300)
     add(pa, 'Autre tâche Mac'); pa.wait_for_timeout(300)
@@ -582,6 +583,29 @@ def _(c):
     pg.evaluate("()=>dueNotify(window.journee.fn.today(),Date.now(),+parseYmd(window.journee.fn.today()),window.journee.state.settings)"); tick(pg, 200)
     n = ' / '.join(pg.evaluate('window.__n||[]'))
     assert 'Rendre dossier' in n and 'Vieux devis' in n and 'Billets train' in n, n
+    assert not errs, errs; ctx.close()
+
+@test('Journée sans pression : heures du jour, glissement silencieux, reports')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(16, 0))
+    assert pg.locator('.hoursq').count() == 1, 'question des heures absente'
+    assert 'retard' not in pg.inner_text('#main')
+    # fin de journée à 17 h 30 : 45+30+30 min depuis 16 h → la dernière glisse à demain, sans message
+    pg.fill('.hoursq [name="e"]', '17:30'); pg.click('.hoursq button'); tick(pg, 400)
+    assert pg.locator('.hoursq').count() == 0
+    assert st(pg, "dayTasks(today()).length") == 2 and st(pg, "dayTasks(addDays(today(),1)).length") == 1
+    assert 'à demain' in pg.inner_text('.slidnote') and not pg.locator('#toast.show').count()
+    # une priorité haute ne glisse pas, même si elle dépasse
+    pg.evaluate("()=>{const S=window.journee.state;S.tasks.forEach(t=>{if(t.day)t.prio='high'});S.tasks.filter(t=>t.day).forEach(t=>t.day=window.journee.fn.today());window.journee.save()}"); tick(pg, 400)
+    assert st(pg, "dayTasks(today()).length") == 3
+    # tâche d'hier non faite : revient aujourd'hui en silence, compteur de reports
+    pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn;S.days[f.today()].he=23;S.tasks.push(Object.assign({},S.tasks[0],{id:'old',title:'Vieille tâche',day:f.addDays(f.today(),-1),prio:'',roll:3,block:null,done:false}));window.journee.save()}"); tick(pg, 400)
+    t = st(pg, "S.tasks.find(t=>t.id==='old')")
+    assert t['day'] == d() and t['roll'] == 4, (t['day'], t['roll'])
+    pg.click('#main .rollm'); tick(pg, 150)
+    assert pg.locator('#modal .menu button').count() == 4
+    pg.click('#modal [data-act="rolltomorrow"]'); tick(pg, 300)
+    t = st(pg, "S.tasks.find(t=>t.id==='old')"); assert t['day'] == d(1) and t['roll'] == 0
     assert not errs, errs; ctx.close()
 
 OLD = """localStorage.setItem('journee.v1',JSON.stringify({seeded:true,settings:{aiKey:'k',aiAuto:false},channels:[{id:'o1',name:'Perso',color:'#2f9e6a',cal:'pro@group'},{id:'o2',name:'Ménage',color:'#888'},{id:'o3',name:'Déménagement',color:'#c90'}],

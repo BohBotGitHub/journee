@@ -504,3 +504,9 @@ form.add:focus-within .addhint{display:block}
 #nav .navrefresh+.navset{margin-top:0}
 #nav .navrefresh.spin svg{animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* journée sans pression */
+.hoursq{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:14px;color:var(--mute)}
+.hoursq input{width:auto;min-height:34px;padding:2px 8px}
+.slidnote{background:transparent;border:0;color:var(--mute);font-size:13px;padding:6px 2px;min-height:0;margin-top:6px}
+.slidnote:hover{color:var(--ink);text-decoration:underline}
+.rollm{cursor:pointer;color:var(--mute);border-radius:6px;padding:0 4px}.rollm:hover{background:var(--panel2);color:var(--ink)}
