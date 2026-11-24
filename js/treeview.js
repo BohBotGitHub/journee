@@ -68,7 +68,7 @@ function viewTree(){
  if(!hasTree())return `<div class="head"><div><h1>Arbre des catégories</h1></div></div><div class="empty">Tes tâches utilisent encore les anciennes catégories Sunsama.<br><button class="pri" data-act="treeask" style="margin-top:10px">Passer à l’arbre</button></div>`;
  const mode=treeMode||(isNarrow()?'list':'map');
  const tabs=`<div class="seg tvtabs"><button class="sm${!treeFocus?' on':''}" data-act="tvfocus" data-id="">Tout</button>${pillars().map(p=>`<button class="sm${treeFocus&&pillarOf(treeFocus)&&pillarOf(treeFocus).id===p.id?' on':''}" data-act="tvfocus" data-id="${esc(p.id)}" style="--c:${esc(p.color)}"><i class="pdot"></i>${esc(p.name)}</button>`).join('')}</div>`;
- const refine=refineCands().length?`<div class="note tvnote"><span>${refineCands().length} tâches ne sont rangées que dans un domaine.</span><button class="sm" data-act="refine" ${aiOn()?'':'disabled title="Ajoute ta clé Claude dans Réglages"'}>Affiner avec Claude</button></div>`:'';
+ const refine=refineCands().length?`<div class="note tvnote"><span>${refineCands().length} tâches sont à classer ou rangées seulement dans un domaine.</span><button class="sm" data-act="refine" ${aiOn()?'':'disabled title="Ajoute ta clé Claude dans Réglages"'}>Affiner avec Claude</button></div>`:'';
  return `<div class="head"><div><h1>Arbre des catégories</h1><div class="sub">4 piliers → domaines → catégories. La base du futur skill tree.</div></div>
  <div class="acts"><div class="seg"><button class="sm${mode==='map'?' on':''}" data-act="tvmode" data-m="map">Diagramme</button><button class="sm${mode==='list'?' on':''}" data-act="tvmode" data-m="list">Liste</button></div></div></div>
  ${tabs}${refine}

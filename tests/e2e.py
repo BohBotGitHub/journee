@@ -77,12 +77,13 @@ class Google:
 def claude_route(route):
     body = json.loads(route.request.post_data); txt = json.dumps(body['messages'])
     if 'tools' not in body:
-        # affinage en lot : chaque tâche va dans la 1re catégorie de son domaine
+        # affinage en lot : 1re catégorie du domaine imposé, ou 1re catégorie tout court si « libre »
         prompt = body['messages'][0]['content']
-        cats = dict(re.findall(r'^([^:\n|]+) : ([^\n]+)$', prompt, re.M))
+        cats = re.findall(r'^([^\n|›(]+) › ([^\n|(]+)$', prompt, re.M)
         out = {}
         for n, dom, _t in re.findall(r'^(\d+) \| ([^|]+) \| (.+)$', prompt, re.M):
-            out[n] = cats[dom.strip()].split(', ')[0]
+            dom = dom.strip(); pick = next((d + ' › ' + c for d, c in cats if dom == 'libre' or d.strip() == dom), None)
+            out[n] = pick
         return route.fulfill(status=200, content_type='application/json',
                              body=json.dumps({'content': [{'type': 'text', 'text': json.dumps(out)}], 'usage': {'input_tokens': 900, 'output_tokens': 120}}))
     ids = re.findall(r'\[([a-z0-9-]{8,})\]', txt)
@@ -547,7 +548,7 @@ def _(c):
     assert st(pg, "S.channels.some(c=>c.lvl===0)") is False, 'rien ne doit changer avant validation'
     pg.click('[data-act="treego"]'); pg.wait_for_timeout(200)
     ch = lambda i: st(pg, f"S.tasks.find(t=>t.id==='{i}').channel")
-    assert ch('t1') == 'c-routines' and ch('t2') == 'c-menage' and ch('t3') == 'd-corps' and ch('t4') == 'd-foyer', [ch(x) for x in ['t1','t2','t3','t4']]
+    assert ch('t1') == 'c-routines' and ch('t2') == 'c-menage' and ch('t3') is None and ch('t4') == 'd-foyer', [ch(x) for x in ['t1','t2','t3','t4']]
     assert st(pg, "S.tasks.find(t=>t.id==='t4').proj") and st(pg, "S.projects[0].name") == 'Déménagement'
     assert st(pg, "S.archive.map(a=>a.c).join(',')") == 'c-natation,c-meditation'
     assert st(pg, "S.channels.some(c=>c.lvl===undefined)") is False
