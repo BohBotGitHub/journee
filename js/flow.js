@@ -72,6 +72,7 @@ function notifyTick(){
  if(now>=base+s.workEnd*3600e3&&!info.shutdown)notify('shut','Clôture ta journée','Fais le bilan et range ce qui reste pour demain.');
  const r=runningTask();
  for(const t of dayTasks(d))if(!t.done&&t.block&&t!==r){const st=+new Date(t.block.start);if(st<=now+30000&&st>now-120000)notify('t'+t.id+st,'C’est l’heure : '+t.title,(t.est?fmtMin(t.est)+' prévues':'')+(t.block?' · jusqu’à '+hm(new Date(t.block.end)):''))}
+ dueNotify(d,now,base,s);
  for(const e of timedEvents(d))if(!evFree(e)){const st=+new Date(e.start.dateTime);if(st-now<=5*60000&&st-now>-60000)notify('e'+e.id,'Dans 5 min : '+(e.summary||'rendez-vous'),hm(new Date(st))+'–'+hm(new Date(e.end.dateTime)))}
 }
 function liveTick(){
@@ -167,4 +168,17 @@ function autoBox(d){
   const dt=new Date(base);dt.setMinutes(st);setBlock(t,dt,true);busy.push([st,st+dur]);n++;
  }
  syncOrder(d);save();render();return n;
+}
+
+// rappels d'échéance : 3 jours avant (si pas de date prévue), la veille au soir, le matin du jour J, chaque matin en cas de retard
+function dueNotify(d,now,base,s){
+ const open=S.tasks.filter(t=>!t.done&&t.due),tom=addDays(d,1),morning=now>=base+s.workStart*3600e3,evening=now>=base+s.workEnd*3600e3;
+ const list=xs=>xs.slice(0,3).map(t=>t.title).join(' · ')+(xs.length>3?' · +'+(xs.length-3):'');
+ if(morning){
+  const today_=open.filter(t=>t.due===d),late=open.filter(t=>t.due<d),soon=open.filter(t=>!t.day&&t.due>d&&t.due<=addDays(d,3));
+  if(today_.length)notify('dueJ','Échéance aujourd’hui',list(today_));
+  if(late.length)notify('dueLate',late.length>1?late.length+' échéances dépassées':'Échéance dépassée',list(late));
+  if(soon.length)notify('dueSoon','Échéance dans '+(soon.length>1?'les prochains jours':'quelques jours')+', pas encore prévue',list(soon));
+ }
+ if(evening){const tm=open.filter(t=>t.due===tom);if(tm.length)notify('dueEve','Demain : échéance',list(tm))}
 }

@@ -52,7 +52,7 @@ function openTask(id){
  <label>Échéance<span class="row"><input type="date" data-f="due" value="${t.due||''}">${t.due?'<button class="sm ghost" data-act="nodue">Aucune</button>':''}</span></label>
  <label>Objectif de la semaine<select data-f="obj"><option value="">Aucun</option>${objs.map(o=>`<option value="${esc(o.id)}" ${o.id===t.objId?'selected':''}>${esc(o.title)}</option>`).join('')}</select></label>
  <label>Répéter<select data-f="recur"><option value="">Jamais</option>${Object.entries(RULES).map(([k,v])=>`<option value="${k}" ${r&&r.rule===k?'selected':''}>${v}</option>`).join('')}</select></label>
- <label>Priorité<select data-f="prio">${[['','Normale'],['low','Basse'],['high','Haute'],['urgent','Urgente']].map(([v,l])=>`<option value="${v}" ${(t.prio||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>
+ <label>Priorité<span class="prow" role="radiogroup" aria-label="Priorité">${PRIOS.map(([v,l])=>`<button type="button" class="pbtn${(t.prio||'')===v?' on':''}" role="radio" aria-checked="${(t.prio||'')===v}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="${l}" title="${l}">${flagSvg(v)}</button>`).join('')}</span></label>
  <label>Temps passé (min)<input type="number" min="0" data-f="actual" value="${Math.round(actualSec(t)/60)}"></label>
  </div>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="sub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form>${aiOn()?modalAIHtml(t):''}</div>

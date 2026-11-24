@@ -29,6 +29,7 @@ const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},runnin
 let S;
 try{S=Object.assign(defaults(),JSON.parse(lsGet(KEY)||'{}'))}catch(e){S=defaults()}
 S.settings=Object.assign(defaults().settings,S.settings||{});
+(S.tasks||[]).forEach(t=>{if(t.prio==='urgent')t.prio='high'});
 if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null,snap=null;
@@ -133,9 +134,19 @@ async function toggleDone(id){
   catch(e){toast('To Do : '+e.message)}
  }
 }
+// priorité : 'high' (drapeau plein) · '' (normale, sans drapeau) · 'low' (peut glisser)
+const PRIOS=[['high','Haute'],['','Normale'],['low','Basse']];
+const flagSvg=p=>`<svg class="flag ${p||'mid'}" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M5 4h11l-2 4 2 4H5" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="${p==='high'?'currentColor':'none'}"${p==='low'?' stroke-dasharray="2.5 2.5"':''}/></svg>`;
+// une date prévue ne peut pas dépasser l'échéance : on garde le dernier jour possible et on propose de repousser l'échéance
+function allowedDay(t,day){
+ if(!day||!t.due||day<=t.due)return day;
+ const last=t.due<today()?today():t.due;
+ toast(`Échéance le ${fmtDay(t.due,{weekday:'long',day:'numeric',month:'short'})} : la tâche reste ${last===today()?'aujourd’hui':'le '+fmtDay(last,{weekday:'long',day:'numeric'})}`,'Repousser l’échéance',()=>{t.due=day;moveTask(t.id,day)});
+ return last;
+}
 function moveTask(id,to,noRender){
  const t=T(id);if(!t)return;
- const day=to==='backlog'?null:to;
+ let day=to==='backlog'?null:to;day=allowedDay(t,day);
  if(t.block&&ymd(new Date(t.block.start))!==day)clearBlock(t,true);
  t.day=day;if(day)t.inbox=false;t.order=nextOrder(day);save();if(!noRender)render();
 }

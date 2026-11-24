@@ -1,7 +1,8 @@
 // MyDayBot — interactions : clics, glisser-déposer, palette, clavier
 /* ---------- interactions ---------- */
 let toastT;
-function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),3200)}
+let toastFn=null;
+function toast(msg,act,fn){const el=$('#toast');el.textContent=msg;toastFn=act&&fn?fn:null;if(toastFn){const b=document.createElement('button');b.className='tact';b.dataset.act='toastact';b.textContent=act;el.appendChild(b)}el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>{el.classList.remove('show');toastFn=null},toastFn?7000:3200)}
 document.addEventListener('click',async e=>{
  const nv=e.target.closest('#nav [data-view]');if(nv){go(nv.dataset.view);return}
  const sd=e.target.closest('[data-side]');if(sd){sideTab=sd.dataset.side;renderSide();return}
@@ -109,6 +110,8 @@ document.addEventListener('click',async e=>{
   case'palopen':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();openPal();break;
   case'synchide':lsSet('journee.sync.hide',today());renderSyncBar();break;
   case'timerreset':{const t=T(id);if(!t)break;const prev={a:t.actual,s:S.running&&S.running.taskId===id?S.running.start:null};t.actual=0;if(prev.s)S.running.start=Date.now();save();renderFocus();render();timerUndo={id,...prev,at:Date.now()};toast('Minuteur remis à zéro · Ctrl+Z (⌘Z) pour annuler');break}
+  case'toastact':{const f=toastFn;toastFn=null;$('#toast').classList.remove('show');if(f){f();save();render();if(modalTask)openTask(modalTask)}break}
+  case'setprio':{const t=T(id);if(t){t.prio=b.dataset.p;save();render();if(modalTask===id)openTask(id);else if(!$('#modal').classList.contains('hidden'))taskSheet(id)}break}
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
   case'mvup':closeModal();swapTask(id,-1);break;
@@ -166,10 +169,10 @@ document.addEventListener('change',async e=>{
    case'channel':t.channel=el.value||null;t.aiCat=false;if(r)r.channel=t.channel;if(t.block)pushBlock(t);break;
    case'proj':t.proj=el.value||null;break;
    case'est':setEst(t,+el.value);break;
-   case'day':{const nd=el.value||null;if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;if(nd)t.order=nextOrder(nd);break}
+   case'day':{const nd=allowedDay(t,el.value||null);if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;if(nd)t.order=nextOrder(nd);break}
    case'time':if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day)}else{t.pinned=false;if(!flowOn())clearBlock(t,true)}break;
    case'obj':t.objId=el.value||null;break;
-   case'due':t.due=el.value||null;break;
+   case'due':{t.due=el.value||null;if(t.due&&t.day&&t.day>t.due){const nd=t.due<today()?today():t.due;if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;t.order=nextOrder(nd);toast('Date prévue avancée au '+fmtDay(nd,{weekday:'long',day:'numeric'})+' pour tenir l’échéance')}break}
    case'prio':t.prio=el.value;break;
    case'recur':setRecur(t,el.value);break;
    case'actual':if(S.running&&S.running.taskId===t.id)S.running.start=Date.now();t.actual=Math.max(0,+el.value||0)*60;break;

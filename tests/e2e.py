@@ -554,6 +554,36 @@ def _(c):
     assert st(pg, "S.tasks.filter(t=>!t.day).length") == n0 + 3
     assert not errs, errs; ctx.close()
 
+@test('Priorité en drapeaux, date prévue ≤ échéance, rappels d’échéance')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 30))
+    # drapeaux dans le détail
+    pg.click('#main .card .cbody .ctitle >> nth=0'); pg.click('#modal [data-act="setprio"][data-p="high"]'); tick(pg, 150)
+    tid = st(pg, "dayTasks(today())[0].id")
+    assert st(pg, f"S.tasks.find(t=>t.id==='{tid}').prio") == 'high'
+    assert pg.locator('#modal .pbtn.on[data-p="high"]').count() == 1
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    assert pg.locator(f'#main .card[data-id="{tid}"] .pflag').count() == 1
+    # échéance demain : reporter à après-demain est bloqué, puis « Repousser l'échéance »
+    pg.evaluate(f"()=>{{const S=window.journee.state;const t=S.tasks.find(t=>t.id==='{tid}');t.due=window.journee.fn.addDays(window.journee.fn.today(),1);window.journee.save()}}")
+    pg.evaluate(f"()=>moveTask('{tid}',window.journee.fn.addDays(window.journee.fn.today(),2))"); tick(pg, 100)
+    assert st(pg, f"S.tasks.find(t=>t.id==='{tid}').day") == d(1), 'la date prévue a dépassé l’échéance'
+    assert 'Repousser' in pg.inner_text('#toast')
+    pg.click('#toast [data-act="toastact"]'); tick(pg, 100)
+    t = st(pg, f"S.tasks.find(t=>t.id==='{tid}')")
+    assert t['due'] == d(2) and t['day'] == d(2), (t['due'], t['day'])
+    # échéance avancée avant la date prévue : la date prévue suit
+    pg.click(f'#main .card[data-id] .ctitle >> nth=0') if False else None
+    pg.evaluate(f"()=>{{openTask('{tid}')}}"); tick(pg, 100)
+    pg.fill('#modal [data-f="due"]', d(1)); pg.dispatch_event('#modal [data-f="due"]', 'change'); tick(pg, 150)
+    assert st(pg, f"S.tasks.find(t=>t.id==='{tid}').day") == d(1)
+    # rappels : matin du jour J et retard
+    pg.evaluate("()=>{window.__n=[];const S=window.journee.state;S.settings.notif=true;const T=window.journee.fn.today,A=window.journee.fn.addDays;S.tasks.push(Object.assign({},S.tasks[0],{id:'dj',title:'Rendre dossier',due:T(),day:null,done:false,block:null}),Object.assign({},S.tasks[0],{id:'dl',title:'Vieux devis',due:A(T(),-2),day:null,done:false,block:null}),Object.assign({},S.tasks[0],{id:'ds',title:'Billets train',due:A(T(),3),day:null,done:false,block:null}));window.notify=(k,t,b)=>window.__n.push(t+' | '+b)}")
+    pg.evaluate("()=>dueNotify(window.journee.fn.today(),Date.now(),+parseYmd(window.journee.fn.today()),window.journee.state.settings)"); tick(pg, 200)
+    n = ' / '.join(pg.evaluate('window.__n||[]'))
+    assert 'Rendre dossier' in n and 'Vieux devis' in n and 'Billets train' in n, n
+    assert not errs, errs; ctx.close()
+
 OLD = """localStorage.setItem('journee.v1',JSON.stringify({seeded:true,settings:{aiKey:'k',aiAuto:false},channels:[{id:'o1',name:'Perso',color:'#2f9e6a',cal:'pro@group'},{id:'o2',name:'Ménage',color:'#888'},{id:'o3',name:'Déménagement',color:'#c90'}],
  tasks:[{id:'t1',title:'Douche',channel:'o1',day:null,subtasks:[]},{id:'t2',title:'Lessive',channel:'o2',day:null,subtasks:[]},{id:'t3',title:'Truc bizarre',channel:'o1',day:null,subtasks:[]},{id:'t4',title:'Cartons salon',channel:'o3',day:null,subtasks:[]}],
  archive:[{id:'a1',t:'Natation',c:'o1',d:'2025-01-01',a:1800},{id:'a2',t:'Méditation du soir',c:'o1',d:'2025-01-02',a:600}]}))"""
