@@ -582,3 +582,4 @@ input.fedit{width:5ch;font-size:clamp(48px,10vw,80px);padding:0 8px;min-height:0
 .projmeta{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-bottom:8px}.projmeta .soon{color:var(--acc)}.projmeta .warn{color:var(--warn)}
 .proj .add{margin:4px 0 8px}
 .projfin summary{cursor:pointer;color:var(--mute);margin:8px 0}
+code{white-space:nowrap}
