@@ -9,7 +9,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* VOICE: calme, posé, un carnet du matin — peu de couleurs, beaucoup d'air
    IDEA: un agenda papier ouvert : la liste du jour à gauche, la page horaire à droite
@@ -24,9 +24,9 @@
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Figtree,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-feature-settings:"cv11","ss01";-webkit-font-smoothing:antialiased;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
-button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 13px;min-height:38px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 12px;min-height:36px;font-size:14px;font-weight:500;color:var(--ink)}
 button:hover{border-color:var(--mute)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
@@ -40,33 +40,35 @@ input,select,textarea{background:var(--panel);border:1px solid var(--line);borde
 textarea{resize:vertical;line-height:1.5}
 h1,h2,h3,h4{margin:0;line-height:1.15;text-wrap:balance}
 .hidden{display:none!important}
+.sl{display:none}
 .sp{flex:1}
 .row{display:flex;gap:8px;align-items:center}
 small,.mute{color:var(--mute)}
 #app{display:grid;grid-template-columns:196px minmax(0,1fr) 360px;height:100vh;height:100dvh}
 #nav{border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:4px;background:var(--panel2)}
-.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;padding:0 8px 16px}
+.brand{display:flex;align-items:center;gap:9px;font-family:Figtree,Inter,sans-serif;font-weight:800;font-size:19px;padding:0 8px 16px}
 .brand svg{width:28px;height:28px;flex:none}
 #nav button[data-view]{border:0;background:transparent;text-align:left;font-weight:500;display:flex;align-items:center;gap:10px}
 #nav button[data-view] svg{width:18px;height:18px;flex:none;opacity:.7}
 #nav button[data-view].on{background:var(--panel);box-shadow:var(--sh);font-weight:700}
 #runchip{margin-top:auto}
 .tip{border:0;background:transparent;text-align:left;font-size:12px;color:var(--mute);display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:8px;min-height:0}.tip:empty{display:none}.tip kbd{color:var(--ink)}
-kbd.k{margin-left:6px;opacity:.75;font-size:11px;background:transparent;border-color:currentColor}
+kbd.k{margin-left:6px;font-size:10.5px;background:transparent;border:0;padding:0;opacity:0;width:0;display:inline-block;overflow:hidden;vertical-align:middle;transition:opacity .15s}
+button:hover kbd.k{opacity:.6;width:auto}
 .runbox{background:var(--acc2);border-radius:10px;padding:10px;font-size:13px;cursor:pointer}
 .runbox b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
 .runbox .t{font-variant-numeric:tabular-nums;font-weight:700;color:var(--acc)}
 #nav #sidebtn{display:none}
 #main{overflow:auto;padding:26px clamp(16px,3vw,40px) 80px}
 .head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;margin-bottom:18px}
-.head h1{font-size:clamp(26px,3.4vw,36px);font-weight:800;letter-spacing:-.01em}
-.head .sub{color:var(--mute);margin-top:4px;font-size:15px}
+.head h1{font-family:Figtree,Inter,sans-serif;font-size:clamp(26px,3.2vw,34px);font-weight:800;letter-spacing:-.015em}
+.head .sub{color:var(--mute);margin-top:4px;font-size:14px}
 .dnav{display:flex;gap:4px}
 .dnav button{min-width:38px;padding:6px 10px}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
 .banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--acc2);border-radius:12px;padding:10px 14px;margin-bottom:14px}
 .objs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.obj{border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:13px;background:var(--panel)}
+.obj{border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:13px;background:var(--panel);color:var(--mute)}
 .obj.done{text-decoration:line-through;color:var(--mute)}
 .load{margin:4px 0 16px}
 .lbar{height:8px;border-radius:99px;background:var(--panel2);overflow:hidden;display:flex}
@@ -79,17 +81,19 @@ form.add{margin-bottom:10px}
 form.add input{background:var(--panel);border-style:dashed}
 .list{display:flex;flex-direction:column;gap:7px;min-height:60px;border-radius:12px;padding:2px}
 .list.over,.tlin.over,.wcol .list.over{background:var(--acc2)}
-.card{display:flex;align-items:flex-start;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 12px;box-shadow:var(--sh);cursor:grab}
+.card{display:flex;align-items:flex-start;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;box-shadow:0 1px 1px rgba(0,0,0,.03);cursor:grab;transition:border-color .12s}
+.card:hover{border-color:color-mix(in srgb,var(--ink) 22%,var(--line))}
 .card.dragging{opacity:.4}
-.card.done{opacity:.6}
+.card.done{opacity:.55;box-shadow:none;background:transparent}
 .card.done .ctitle{text-decoration:line-through}
 .card.running{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc2)}
-.chk{width:22px;height:22px;min-height:22px;padding:0;border-radius:50%;border:1.5px solid var(--mute);flex:none;margin-top:1px;font-size:13px;line-height:1;color:#fff}
+.chk{width:20px;height:20px;min-height:20px;padding:0;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--mute) 70%,transparent);flex:none;margin-top:1px;font-size:12px;line-height:1;color:#fff;background:transparent}
+.chk:hover{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent)}
 .card.done .chk{background:var(--ok);border-color:var(--ok)}
 .cbody{flex:1;cursor:pointer}
 .prio{color:var(--acc);font-weight:800;margin-right:5px}.prio.u{color:var(--warn)}
-.ctitle{font-weight:600;overflow-wrap:anywhere}
-.cmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px;font-size:12.5px;color:var(--mute);align-items:center}
+.ctitle{font-weight:500;font-size:15px;line-height:1.35;overflow-wrap:anywhere}
+.cmeta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-size:12.5px;color:var(--mute);align-items:center;line-height:1.3}
 .chip{display:inline-flex;align-items:center;gap:5px}
 .chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
 .src{font-size:11.5px;border:1px solid var(--line);border-radius:5px;padding:0 5px}
@@ -100,12 +104,15 @@ form.add input{background:var(--panel);border-style:dashed}
 .foot{color:var(--mute);font-size:13px;margin-top:12px}
 .note{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:16px;white-space:pre-wrap}
 /* semaine */
-.week{display:grid;grid-template-columns:repeat(7,minmax(190px,1fr));gap:10px;overflow-x:auto;padding-bottom:10px}
+.week{display:grid;grid-template-columns:repeat(7,minmax(215px,1fr));gap:10px;overflow-x:auto;padding-bottom:10px}
 .wcol{background:var(--panel2);border-radius:13px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:300px}
 .wcol.today{box-shadow:inset 0 0 0 2px var(--acc)}
 .wcol h3{font-size:15px;display:flex;justify-content:space-between;gap:6px;cursor:pointer}
 .wcol h3 small{font-weight:500}
-.wcol .card{padding:8px 9px;gap:8px}
+.wcol .card{padding:7px 9px;gap:8px}
+.wcol .ctitle{font-size:13.5px}
+.wcol .cmeta{font-size:11.5px}
+.wcol .chk{width:17px;height:17px;min-height:17px}
 .wcol .ctime{display:none}
 .wcol form input{min-height:34px;font-size:14px;padding:5px 9px}
 /* backlog */
@@ -125,24 +132,28 @@ form.add input{background:var(--panel);border-style:dashed}
 .tl{position:relative;padding:8px 10px 20px 52px}
 .tlin{position:relative;border-radius:8px}
 .hr{position:absolute;left:0;right:0;border-top:1px solid var(--line)}
-.hr span{position:absolute;left:-46px;top:-9px;font-size:11.5px;color:var(--mute);font-variant-numeric:tabular-nums}
+.hr span{position:absolute;left:-46px;top:-8px;font-size:11px;color:var(--mute);font-variant-numeric:tabular-nums}
 .work{position:absolute;left:0;right:0;background:var(--acc2);opacity:.35;pointer-events:none}
-.ev,.blk{position:absolute;border-radius:7px;padding:3px 7px;font-size:12.5px;overflow:hidden;line-height:1.25;text-decoration:none}
+.ev,.blk{position:absolute;border-radius:6px;padding:3px 8px;font-size:12.5px;overflow:hidden;line-height:1.3;text-decoration:none}
 .ev{background:var(--ev);color:var(--evi);border-left:3px solid var(--evi)}
 .blk{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--acc));box-shadow:var(--sh);cursor:grab;color:var(--ink)}
 .blk.active{box-shadow:0 0 0 2px var(--acc),var(--sh);background:var(--acc2)}
 .blk.active small::after{content:' · en cours';font-weight:700;color:var(--acc)}
 .blk.done{opacity:.55;text-decoration:line-through}
-.ev b,.blk b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev b,.blk b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev small,.blk small{font-size:11px}
-.short{display:flex;gap:6px;align-items:center;padding-top:1px;padding-bottom:1px}.short b{flex:1;order:2}.short small{order:1;flex:none}
+.short{display:flex;gap:6px;align-items:center;padding-top:0;padding-bottom:0}.short b{flex:1;order:2}.short small{order:1;flex:none;font-variant-numeric:tabular-nums;opacity:.75}
+.short .bchk{top:50%;margin-top:-8px}
 .now{position:absolute;left:-6px;right:0;border-top:2px solid var(--warn);z-index:2;pointer-events:none}
 .now::before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--warn)}
-.blk{display:block}.blk .bchk{position:absolute;right:4px;top:3px;width:18px;height:18px;min-height:18px;padding:0;border-radius:50%;border:1.5px solid var(--mute);background:var(--panel);font-size:10px;line-height:1;color:#fff}
+.blk{display:block}
+.blk.short,.ev.short{display:flex}.blk .bchk{position:absolute;right:4px;top:3px;width:16px;height:16px;min-height:16px;opacity:0;padding:0;border-radius:50%;border:1.5px solid var(--mute);background:var(--panel);font-size:10px;line-height:1;color:#fff}
+.blk:hover .bchk,.blk.done .bchk{opacity:1}
 .blk.done .bchk{background:var(--ok);border-color:var(--ok)}
-.blk b{padding-right:20px}
+.blk:hover b{padding-right:18px}
 .blk .rz{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:ns-resize}
-.blk .rz::after{content:"";position:absolute;left:50%;bottom:2px;width:22px;height:3px;margin-left:-11px;border-radius:2px;background:var(--line)}
+.blk .rz::after{content:"";position:absolute;left:50%;bottom:2px;width:22px;height:3px;margin-left:-11px;border-radius:2px;background:var(--line);opacity:0}
+.blk:hover .rz::after{opacity:1}
 .hl{outline:2px solid var(--acc)!important;outline-offset:1px}
 .ghostblk{position:absolute;left:2px;right:2px;border-radius:7px;background:var(--acc2);border:2px dashed var(--acc);pointer-events:none;z-index:4;font-size:12px;padding:2px 7px;color:var(--ink)}
 .ctime .est{cursor:pointer;border-radius:6px;padding:1px 4px}.ctime .est:hover{background:var(--panel2)}
@@ -191,7 +202,7 @@ label.full{margin-top:12px}
 .rsteps span{font-size:12.5px;padding:3px 10px;border-radius:99px;background:var(--panel2);color:var(--mute)}
 .rsteps span.on{background:var(--acc);color:#fff;font-weight:600}
 .rsteps span.past{color:var(--ink)}
-.rit h2{font-size:24px;font-weight:800;margin-bottom:6px}
+.rit h2{font-family:Figtree,Inter,sans-serif;font-size:24px;font-weight:800;margin-bottom:6px}
 .lead{color:var(--mute);margin:0 0 14px}
 .rlist{display:flex;flex-direction:column;gap:6px;margin:10px 0;max-height:46vh;overflow:auto}
 .rrow{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex-wrap:wrap}
@@ -216,7 +227,7 @@ label.full{margin-top:12px}
 .fwrap{width:min(620px,100%);display:flex;flex-direction:column;gap:16px}
 .ftop{display:flex;align-items:center;gap:10px}
 .ftop .x{margin-left:auto;font-size:14px}
-.ftitle{font-size:clamp(28px,5vw,44px);font-weight:800;letter-spacing:-.01em}
+.ftitle{font-family:Figtree,Inter,sans-serif;font-size:clamp(28px,5vw,44px);font-weight:800;letter-spacing:-.01em}
 .fclock{font-size:clamp(56px,12vw,96px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1;color:var(--acc)}
 .fsub{color:var(--mute)}
 .fbtns{display:flex;flex-wrap:wrap;gap:10px}
@@ -280,7 +291,8 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
  #nav{grid-row:2;flex-direction:row;border-right:0;border-top:1px solid var(--line);padding:6px;gap:2px;overflow-x:auto}
  .brand,#runchip .runbox span{display:none}
- #nav button[data-view]{flex-direction:column;gap:2px;font-size:11px;padding:6px 8px;flex:1;align-items:center}
+ #nav button[data-view]{flex-direction:column;gap:3px;font-size:10.5px;padding:6px 2px;flex:1;align-items:center;white-space:nowrap;min-width:0}
+ #nav .ll{display:none}#nav .sl{display:inline}
  #runchip{margin:0}
  .runbox{padding:6px 8px}
  #main{padding:18px 14px 30px}
@@ -296,13 +308,13 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 <div id="app">
  <nav id="nav">
   <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#e8590c"/><path d="M7 21a9 9 0 0 1 18 0" fill="#fff"/><rect x="5" y="22.5" width="22" height="2.4" rx="1.2" fill="#fff"/></svg>Journée</div>
-  <button data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Aujourd'hui</button>
-  <button data-view="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Semaine</button>
-  <button data-view="dump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.2 3.4 2 4.5.6.8 1 1.6 1 2.5h6c0-.9.4-1.7 1-2.5.8-1.1 2-2.3 2-4.5a6 6 0 0 0-6-6z"/><path d="M9 20h6"/></svg>Vide-tête</button>
-  <button data-view="backlog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Backlog</button>
-  <button data-view="objectives"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Objectifs</button>
-  <button data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
-  <button data-view="side" id="sidebtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg>Agenda</button>
+  <button data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="ll">Aujourd'hui</span><span class="sl">Jour</span></button>
+  <button data-view="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span class="ll">Semaine</span><span class="sl">Semaine</span></button>
+  <button data-view="dump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.2 3.4 2 4.5.6.8 1 1.6 1 2.5h6c0-.9.4-1.7 1-2.5.8-1.1 2-2.3 2-4.5a6 6 0 0 0-6-6z"/><path d="M9 20h6"/></svg><span class="ll">Vide-tête</span><span class="sl">Idées</span></button>
+  <button data-view="backlog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="ll">Backlog</span><span class="sl">Backlog</span></button>
+  <button data-view="objectives"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><span class="ll">Objectifs</span><span class="sl">Buts</span></button>
+  <button data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="ll">Réglages</span><span class="sl">Réglages</span></button>
+  <button data-view="side" id="sidebtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg><span class="ll">Agenda</span><span class="sl">Agenda</span></button>
   <div id="runchip"></div>
   <button id="tip" class="tip" data-act="keys" title="Voir tous les raccourcis (touche ?)"></button>
  </nav>
@@ -1163,7 +1175,7 @@ function viewSettings(){
 }
 
 /* ---------- panneau latéral : agenda ---------- */
-const PX=56;
+const PX=76;
 function calGeom(){const st=S.settings.dayStart,en=Math.max(S.settings.dayEnd,st+1);return{st,en,H:(en-st)*PX}}
 function calCol(d){
  const s=S.settings,{st,en,H}=calGeom();
@@ -1175,8 +1187,8 @@ function calCol(d){
  const y=dt=>((dt.getHours()-st)*60+dt.getMinutes()+(ymd(dt)!==d?(dt>parseYmd(d)?1440:-1440):0))/60*PX;
  const hrs=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
  const blocksHtml=out.map(it=>{
-  const top=Math.max(0,y(it.s)),h=Math.max(20,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
-  const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<36?' short':'';
+  const top=Math.max(0,y(it.s)),h=Math.max(22,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
+  const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<40?' short':'';
   if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
   const t=it.t,c=ch(t.channel),act=S.running&&S.running.taskId===t.id;return `<div class="blk${t.done?' done':''}${act?' active':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${t.pinned?'📌 ':''}${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
  }).join('');
