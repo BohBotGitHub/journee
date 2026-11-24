@@ -523,3 +523,7 @@ form.add:focus-within .addhint{display:block}
 .rrow.hot{box-shadow:inset 3px 0 0 var(--mute)}
 .phare{color:#b8860b;margin-right:6px}
 .phareline{font-weight:600;margin:0 0 10px}
+#nav button.navrefresh{border:0;background:transparent;text-align:left;font-weight:500;display:flex;align-items:center;gap:10px;min-height:0;padding:8px 10px;color:var(--mute)}
+#nav button.navrefresh svg{width:18px;height:18px;flex:none;opacity:.7}
+#nav button.navrefresh:hover{color:var(--ink);background:var(--panel)}
+#nav button.navrefresh .sl{display:none}

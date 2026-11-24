@@ -30,4 +30,4 @@ function pickQuote(kind,d){
  let h=0;for(const c of d+kind)h=(h*31+c.charCodeAt(0))>>>0;
  return pool[h%pool.length];
 }
-const quoteHtml=q=>`<figure class="quote"><blockquote>${q.kind==='idea'?esc(q.t):'« '+esc(q.t)+' »'}</blockquote><figcaption>${esc(q.a)} · <span>${esc(q.w)}</span></figcaption></figure>`;
+const quoteHtml=q=>`<figure class="quote"><blockquote>${q.kind==='idea'?esc(q.t):'«\u00a0'+esc(q.t)+'\u00a0»'}</blockquote><figcaption>${esc(q.a)} · <span>${esc(q.w)}</span></figcaption></figure>`;
