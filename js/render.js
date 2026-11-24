@@ -52,7 +52,7 @@ function openTask(id){
  <label>Créneau dans l’agenda<span class="row"><input type="time" step="900" data-f="time" value="${t.block?hm(new Date(t.block.start)):''}">${t.block&&t.pinned?'<button class="sm ghost" data-act="unpin">Libérer l’heure</button>':''}${t.block&&!flowOn()?'<button class="sm ghost" data-act="unblock">Retirer</button>':''}</span></label>
  <label>Échéance<span class="row"><input type="date" data-f="due" value="${t.due||''}">${t.due?'<button class="sm ghost" data-act="nodue">Aucune</button>':''}</span></label>
  <label>Répéter<select data-f="recur"><option value="">Jamais</option>${Object.entries(RULES).map(([k,v])=>`<option value="${k}" ${r&&r.rule===k?'selected':''}>${v}</option>`).join('')}</select></label>
- <label>Priorité<span class="prow" role="radiogroup" aria-label="Priorité">${PRIOS.map(([v,l])=>`<button type="button" class="pbtn${(t.prio||'')===v?' on':''}" role="radio" aria-checked="${(t.prio||'')===v}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="${l}" title="${l}">${flagSvg(v)}</button>`).join('')}</span></label>
+ <label>Priorité<span class="prow" role="radiogroup" aria-label="Priorité">${PRIOS.map(([v,l])=>`<button type="button" class="pbtn${(t.prio||'')===v?' on':''}" role="radio" aria-checked="${(t.prio||'')===v}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="${l}" title="${l}">${flagSvg(v)}</button>`).join('')}</span></label><label>Lieu<span class="seg wseg">${WHERES.map(([v,l])=>`<button type="button" class="sm${(t.where||'')===v?' on':''}" data-act="setwhere" data-id="${t.id}" data-v="${v}" title="${v?l:'Selon la catégorie : '+WHERES.find(x=>x[0]===catWhere(t.channel))[1]}">${v?l:'Auto · '+WHERES.find(x=>x[0]===catWhere(t.channel))[1]}</button>`).join('')}</span></label>
  <label>Temps passé (min)<input type="number" min="0" data-f="actual" value="${Math.round(actualSec(t)/60)}"></label>
  </div>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="sub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form>${aiOn()?modalAIHtml(t):''}</div>
@@ -105,7 +105,7 @@ function aiBox(){
  const items=propItems(a.prop),ap=a.applied||{};
  return `<div class="aibox"><b>Claude</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="ritapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="ritapplyall">Tout appliquer</button>':''}<div class="row"><span class="sp"></span><button class="sm ghost" data-act="ritai">Nouvelle proposition</button></div></div>`;
 }
-const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Projets','Aperçu'],weekreview:['Chiffres','Réflexion']};
+const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Boulot','Projets','Aperçu'],weekreview:['Chiffres','Réflexion']};
 function startRitual(type,day){modalTask=null;const sv=savedRit();ritual=sv&&sv.type===type&&sv.day===(day||cur)?Object.assign(sv,{step:0}):{type,step:0,day:day||cur,picked:{},ai:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}
 function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<span class="${k===i?'on':k<i?'past':''}">${esc(s)}</span>`).join('')}<span class="sp" style="background:none"></span></div><div class="ritbody">${body}${aiBox()}</div><div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':''}<button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
 const durBtns=t=>`<div class="durs">${[15,30,45,60,90,120].map(v=>`<button class="sm${t.est===v?' on':''}" data-act="dur" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('')}</div>`;
@@ -121,6 +121,7 @@ function renderRitual(){
   if(i===0){
    h=shell(`${quoteHtml(pickQuote('matin',d))}<h2>Ta journée</h2><p class="lead">${cap1(dl)}. Quand commences-tu et quand t’arrêtes-tu ? Ce qui ne tient pas glissera tout seul à demain.</p>
    <div class="hoursrow"><label>Début<input type="time" step="900" data-rh="s" value="${hhmm(H.s)}"></label><span>→</span><label>Fin<input type="time" step="900" data-rh="e" value="${hhmm(H.e)}"></label></div>
+   <div class="rsec">Boulot aujourd’hui</div>${jobPicker(d)}
    <div class="rsec">Ton énergie</div><div class="seg energy">${[['low','Basse','Journée allégée : fin effective 1 h plus tôt'],['','Normale',''],['high','Haute','Tu peux viser un peu plus']].map(([v,l,tt])=>`<button class="sm${(info.energy||'')===v?' on':''}" data-act="energy" data-v="${v}" title="${tt}">${l}</button>`).join('')}</div>
    <p class="mute" style="font-size:13px;margin-top:6px">${info.energy==='low'?'Énergie basse : on garde une heure de marge en fin de journée.':info.energy==='high'?'Énergie haute : la journée garde ses heures.':'Choisis selon ta forme du moment.'}</p>`);
   }else if(i===1){const back=dayTasks(d).filter(t=>!t.done&&(t.roll||0)>=1).sort((a,b)=>(b.roll||0)-(a.roll||0));
@@ -169,7 +170,8 @@ function renderRitual(){
   else h=shell(`${quoteHtml(pickQuote('soir',d))}<p class="lead" style="text-align:center">La journée est close. Ce qui reste t’attend demain, rangé.</p>`,'Journée terminée');
  }else if(ritual.type==='weekplan'){
   const w=monday(d),pw=addDays(w,-7),pos=weekObjs(pw),os=weekObjs(w);
-  if(i===0)h=shell(`<h2>Tes projets</h2><p class="lead">Ceux qui se terminent cette semaine sont mis en avant. Rattache-leur des tâches avec <code>+projet</code>.</p>${projListHtml(w)}<div class="row" style="margin-top:10px"><button class="sm" data-act="go" data-v="settings">Gérer les projets</button></div>`);
+  if(i===0)h=shell(`<h2>Tes journées de boulot</h2><p class="lead">Pour chaque jour : libre, boulot sans pause ou boulot en veille. Les tâches se placent en conséquence.</p><div class="jobweek">${[...Array(7)].map((_,k)=>{const x=addDays(w,k);return `<div class="jobday"><b>${cap1(fmtDay(x,{weekday:'long',day:'numeric'}))}</b>${jobPicker(x,true)}</div>`}).join('')}</div>`);
+  else if(i===1)h=shell(`<h2>Tes projets</h2><p class="lead">Ceux qui se terminent cette semaine sont mis en avant. Rattache-leur des tâches avec <code>+projet</code>.</p>${projListHtml(w)}<div class="row" style="margin-top:10px"><button class="sm" data-act="go" data-v="settings">Gérer les projets</button></div>`);
   else h=shell(`<h2>Ta semaine</h2><p class="lead">La charge prévue jour par jour. Rééquilibre depuis la vue Semaine si un jour déborde.</p>
    <div class="bars">${[...Array(7)].map((_,k)=>{const x=addDays(w,k),L=loadInfo(x);return `<div class="brow"><span>${cap1(fmtDay(x,{weekday:'short',day:'numeric'}))}</span><div class="bt" style="--c:${L.over>0?'var(--warn)':'var(--acc)'}"><i style="width:${Math.min(100,(L.task+L.meet)/L.cap*100)}%"></i></div><span>${fmtMin(L.task+L.meet)}</span></div>`}).join('')}</div>`,'Valider ma semaine');
  }else if(ritual.type==='weekreview'){
@@ -190,7 +192,7 @@ function ritNext(){
  if(ritual.type==='plan'&&ritual.step===6){const v=sh.querySelector('[data-intent]');emit('ritual:plan',{day:d});S.days[d]=Object.assign(S.days[d]||{},{planned:true,intent:v?v.value.trim():''})}
  if(ritual.type==='shutdown'&&ritual.step===2){const v=sh.querySelector('[data-note]');S.days[d]=Object.assign(S.days[d]||{},{note:v?v.value.trim():''})}
  if(ritual.type==='shutdown'&&ritual.step===3){emit('ritual:shutdown',{day:d});S.days[d]=Object.assign(S.days[d]||{},{shutdown:true});if(S.running)stopTimer()}
- if(ritual.type==='weekplan'&&ritual.step===1){const w=monday(d);S.weeks[w]=Object.assign(S.weeks[w]||{},{planned:true})}
+ if(ritual.type==='weekplan'&&ritual.step===2){const w=monday(d);S.weeks[w]=Object.assign(S.weeks[w]||{},{planned:true})}
  if(ritual.type==='weekreview'&&ritual.step===1){const w=monday(d),v=sh.querySelector('[data-review]');S.weeks[w]=Object.assign(S.weeks[w]||{},{review:v?v.value.trim():''})}
  save();
  if(ritual.step>=n-1){const ty=ritual.type;ritual=null;lsDel(RKEY);closeModal();toast(ty==='plan'?'Journée planifiée. Bon travail !':ty==='shutdown'?'Journée clôturée. Repose-toi bien.':ty==='weekplan'?'Semaine planifiée.':'Revue enregistrée.');if(ty==='shutdown')chime(520);return}

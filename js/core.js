@@ -25,7 +25,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 const KEY='journee.v1';
 const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
  channels:[],projects:[],
- settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true,aiBudget:3,notif:false},chat:[],archive:[],templates:[]});
+ settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,jobStart:9,jobEnd:18,travel:60,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true,aiBudget:3,notif:false},chat:[],archive:[],templates:[]});
 let S;
 try{S=Object.assign(defaults(),JSON.parse(lsGet(KEY)||'{}'))}catch(e){S=defaults()}
 S.settings=Object.assign(defaults().settings,S.settings||{});
@@ -213,3 +213,16 @@ function projListHtml(w){const ps=activeProjects().sort((a,b)=>(a.end||'9')<(b.e
  return ps.length?`<div class="rlist">${ps.map(p=>{const g=projProgress(p.id),soon=we&&p.end&&p.end<=we;return `<div class="rrow${soon?' hot':''}"><div><b>${esc(p.name)}</b><small>${g.n?`${g.done}/${g.n} tâches faites`:'Aucune tâche liée — ajoute +'+esc(p.name.split(' ')[0].toLowerCase())+' en créant une tâche'}${p.end?' · fin '+fmtDay(p.end,{day:'numeric',month:'short'})+(soon?' (cette semaine)':''):''}</small></div></div>`}).join('')}</div>`:'<p class="mute">Aucun projet en cours. Crée-en un dans Réglages › Projets.</p>'}
 
 const projKey=p=>norm(p.name).replace(/[^a-z0-9]+/g,'').slice(0,20)||'projet';
+
+// ---------- moteur : journées de boulot et lieux ----------
+// type de journée : '' libre (chez moi) · 'busy' boulot sans pause (aucune tâche) · 'watch' boulot en veille (seulement le faisable n'importe où)
+const JOBMODES=[['','Libre','Chez toi : tout peut être placé'],['busy','Boulot sans pause','Aucune tâche pendant le boulot'],['watch','Boulot en veille','Seulement ce qui se fait n’importe où']];
+function jobOf(d){const i=S.days[d]||{},s=S.settings;if(!i.job)return null;return{mode:i.job,s:typeof i.js==='number'?i.js:(s.jobStart??9),e:typeof i.je==='number'?i.je:(s.jobEnd??18)}}
+const jobLabel=d=>{const j=jobOf(d);if(!j)return 'Journée libre';return (j.mode==='busy'?'Boulot sans pause':'Boulot en veille')+' '+hhmm(j.s).replace(':00','h').replace(':','h')+'–'+hhmm(j.e).replace(':00','h').replace(':','h')};
+// lieu d'une tâche : 'any' n'importe où (faisable au boulot) · 'home' chez moi · 'out' dehors
+const WHERES=[['','Auto'],['any','N’importe où'],['home','Chez moi'],['out','Dehors']];
+const CAT_WHERE={'d-corps':'home','c-natation':'out','d-foyer':'home','c-courses':'out','c-demarches':'out','c-piano':'home','c-art':'home','c-lego':'home','c-evenements':'out'};
+function catWhere(id){const p=typeof pathOf==='function'?pathOf(id):[];for(let k=p.length-1;k>=0;k--){if(p[k].where)return p[k].where;if(CAT_WHERE[p[k].id])return CAT_WHERE[p[k].id]}return 'any'}
+const whereOf=t=>t.where||catWhere(t.channel);
+function jobPicker(d,compact){const j=jobOf(d),m=j?j.mode:'',h=v=>hhmm(v);
+ return `<div class="jobpick"><div class="seg">${JOBMODES.map(([v,l,tt])=>`<button class="sm${m===v?' on':''}" data-act="setjob" data-d="${d}" data-v="${v}" title="${tt}">${l}</button>`).join('')}</div>${j?`<div class="hoursrow jobh"><label>Boulot de<input type="time" step="900" data-jh="s" data-d="${d}" value="${h(j.s)}"></label><span>→</span><label>à<input type="time" step="900" data-jh="e" data-d="${d}" value="${h(j.e)}"></label></div>${compact?'':`<p class="mute" style="font-size:13px;margin:6px 0 0">${j.mode==='busy'?'Aucune tâche pendant le boulot.':'Pendant le boulot, seulement les tâches faisables n’importe où.'} Trajet de ${S.settings.travel??60} min bloqué avant et après ; ce qui se fait chez toi ou dehors est placé avant ou après.</p>`}`:''}</div>`}

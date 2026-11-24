@@ -1,5 +1,8 @@
 // Diem — icônes : chaque action se reconnaît d'un coup d'œil, le texte vient en appui
 const IC={
+ case:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',
+ home:'<path d="M4 11l8-7 8 7M6 9.5V20h12V9.5"/>',
+ walk:'<circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2-6 3 3v3M9 12l2-4 3 1 2 3M11 8l-2 1-1 3"/>',
  play:'<path d="M8 5v14l11-7z"/>',
  tray:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5 5h14l2 8v6H3v-6z"/>',
  next:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M10 15h6M14 13l2 2-2 2"/>',

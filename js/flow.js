@@ -3,6 +3,10 @@
 const M5=3e5,ceil5=x=>Math.ceil(x/M5)*M5,floor5=x=>Math.floor(x/M5)*M5;
 const runningTask=()=>{const r=S.running&&T(S.running.taskId);return r&&!r.done?r:null};
 function busyAt(d){return timedEvents(d).filter(e=>!evFree(e)).map(e=>[+new Date(e.start.dateTime),+new Date(e.end.dateTime)])}
+// créneaux où une tâche de ce lieu ne peut pas être placée : trajet avant/après le boulot, et le boulot lui-même (sauf « n'importe où » en veille)
+function locBusy(d,where){const j=jobOf(d);if(!j)return[];const base=+parseYmd(d),ws=base+j.s*3600e3,we=base+j.e*3600e3,tr=(S.settings.travel??60)*60000,out=[];
+ if(tr>0){out.push([ws-tr,ws]);out.push([we,we+tr])}
+ if(j.mode==='busy'||where!=='any')out.push([ws,we]);return out}
 function activate(t){
  const now=Date.now(),d=today();
  if(t.day!==d){t.day=d}
@@ -48,12 +52,16 @@ function simFlow(d){
  if(r&&r.day===d&&r.block)cursor=Math.max(cursor,+new Date(r.block.end));
  const busy=busyAt(d);
  for(const t of dayTasks(d))if(t.block&&t!==r&&(t.pinned||t.done))busy.push([+new Date(t.block.start),+new Date(t.block.end)]);
- const out=[];
- for(const t of dayTasks(d).filter(t=>!t.done&&t!==r&&!t.pinned)){
-  const dur=Math.max(10,(t.est||30)-(t.actual?Math.floor(t.actual/60):0))*60000;
-  let ns=cursor;for(let g=0;g<60;g++){const hit=busy.find(([a,b])=>ns<b&&ns+dur>a);if(!hit)break;ns=ceil5(hit[1])}
-  out.push([t,ns,ns+dur]);cursor=ns+dur;
+ const out=[],pend=dayTasks(d).filter(t=>!t.done&&t!==r&&!t.pinned),lb={};
+ const D=t=>Math.max(10,(t.est||30)-(t.actual?Math.floor(t.actual/60):0))*60000;
+ const fit=(t,cur,loc)=>{const dur=D(t),bz=loc?busy.concat(lb[whereOf(t)]=lb[whereOf(t)]||locBusy(d,whereOf(t))):busy;let ns=cur;for(let g=0;g<80;g++){const hit=bz.find(([a,b])=>ns<b&&ns+dur>a);if(!hit)break;ns=ceil5(hit[1])}return ns};
+ // dans l'ordre de la liste ; une tâche qui attend d'être chez toi laisse passer celles qui peuvent se faire avant
+ while(pend.length){
+  let k=0,ns=fit(pend[0],cursor,true);
+  if(ns!==fit(pend[0],cursor,false))for(let i=1;i<pend.length;i++){const x=fit(pend[i],cursor,true);if(x<ns){ns=x;k=i}}
+  const t=pend.splice(k,1)[0],ne=ns+D(t);out.push([t,ns,ne]);busy.push([ns,ne]);if(k===0)cursor=ne;
  }
+ out.sort((a,b)=>a[1]-b[1]);
  return out;
 }
 function planFlow(d){

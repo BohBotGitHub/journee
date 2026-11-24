@@ -483,7 +483,9 @@ def _(c):
     assert pg.locator('.revtabs').count() == 1 and 'Ta semaine' in pg.inner_text('#main h1')
     assert 'Stardust' in pg.inner_text('#main') and 'objectif' not in pg.inner_text('#main').lower()
     pg.evaluate("()=>startRitual('weekplan',window.journee.fn.today())"); pg.wait_for_timeout(200)
-    assert pg.locator('#sheet .rsteps span:not(.sp)').count() == 2 and 'Stardust' in pg.inner_text('#sheet')
+    assert pg.locator('#sheet .rsteps span:not(.sp)').count() == 3 and pg.locator('#sheet .jobday').count() == 7
+    pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(150)
+    assert 'Stardust' in pg.inner_text('#sheet')
     pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(150); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
     assert st(pg, "S.weeks[monday(today())].planned") is True
     pg.evaluate("()=>openTask(window.journee.state.tasks[0].id)"); pg.wait_for_timeout(150)
@@ -797,6 +799,27 @@ def _(c):
     assert '+spectaclevillette' in pg.inner_text('#main')
     pg.click('#nav [data-view="settings"]'); pg.wait_for_timeout(150)
     assert pg.locator('#main [data-pn]').count() == 0
+    assert not errs, errs; ctx.close()
+
+@test('Moteur : boulot en veille / sans pause, lieu des tâches, trajet')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn,d=f.today();S.tasks=S.tasks.filter(t=>t.day!==d);S.days[d]={hs:7,he:23};S.settings.travel=60;[['A','any'],['B','home'],['C','any'],['D','']].forEach(([n,w],i)=>S.tasks.push({id:'m'+n,title:'T'+n,day:d,order:i+1,est:30,prio:'high',done:false,subtasks:[],where:w,channel:n==='D'?'c-menage':null}));window.journee.save()}")
+    plan = lambda: st(pg, "Object.fromEntries(simFlow(today()).map(([t,s])=>[t.id,new Date(s).getHours()+':'+String(new Date(s).getMinutes()).padStart(2,'0')]))")
+    p = plan(); assert p['mA'] == '10:00' and p['mB'] == '10:30', p
+    pg.evaluate("()=>{const S=window.journee.state;S.days[window.journee.fn.today()].job='watch';S.days[window.journee.fn.today()].js=9;S.days[window.journee.fn.today()].je=18}")
+    p = plan(); assert p['mA'] == '10:00' and p['mC'] == '10:30' and p['mB'] == '19:00' and p['mD'] == '19:30', p
+    pg.evaluate("()=>{window.journee.state.days[window.journee.fn.today()].job='busy'}")
+    p = plan(); assert p['mA'] == '19:00' and p['mB'] == '19:30', p
+    assert st(pg, "whereOf(T('mD'))") == 'home' if st(pg, "!!node('c-menage')") else True
+    # interface : choix dans le rituel du matin et lieu dans la tâche
+    pg.evaluate("()=>startRitual('plan',window.journee.fn.today())"); tick(pg, 200)
+    pg.click('#sheet [data-act="setjob"][data-v="watch"]'); tick(pg, 100)
+    assert st(pg, "S.days[today()].job") == 'watch' and pg.locator('#sheet [data-jh="s"]').count() == 1
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    pg.evaluate("()=>openTask('mA')"); tick(pg, 100)
+    pg.click('#sheet [data-act="setwhere"][data-v="out"]'); tick(pg, 100)
+    assert st(pg, "T('mA').where") == 'out'
     assert not errs, errs; ctx.close()
 
 def main():
