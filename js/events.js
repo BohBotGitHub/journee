@@ -10,7 +10,7 @@ document.addEventListener('click',async e=>{
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,id=b.dataset.id;
  switch(a){
-  case'toggle':await toggleDone(id);if(ritual)renderRitual();break;
+  case'toggle':{await toggleDone(id);if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
   case'open':if(!e.target.closest('.chk'))openTask(id);break;
   case'play':openFocus(id);break;
   case'openfocus':openFocus(id);break;
@@ -29,6 +29,7 @@ document.addEventListener('click',async e=>{
   case'weekplan':startRitual('weekplan',cur);break;
   case'weekreview':startRitual('weekreview',cur);break;
   case'ritnext':ritNext();break;
+  case'ritgo':ritGo(+b.dataset.i);break;
   case'ritback':ritual.step--;renderRitual();break;
   case'ritauto':{const n=autoBox(ritual.day);toast(n?n+' tâche'+(n>1?'s':'')+' placée'+(n>1?'s':''):'Pas de créneau libre assez long dans tes heures de travail');renderRitual();break}
   case'ritunblock':{const t=T(id);if(t)clearBlock(t);renderRitual();break}
@@ -126,7 +127,7 @@ document.addEventListener('click',async e=>{
   case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();if(ritual)renderRitual();break}
   case'setwhere':{const t=T(id);if(t){t.where=b.dataset.v||'';save();render();openTask(id)}break}
   case'accent':{S.settings.accent=b.dataset.v;save();render();break}
-  case'ritdone':{await toggleDone(id);if(ritual)renderRitual();break}
+  case'ritdone':{await toggleDone(id);if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
   case'keep':{const t=T(id);if(t){t.roll=0;save()}if(ritual)renderRitual();break}
   case'phare':{const dd=ritual?ritual.day:cur,info=S.days[dd]=S.days[dd]||{},t=T(id);if(!t)break;if(info.phare===id){info.phare=null}else{info.phare=id;t.prio='high';t.order=0;renorm(dd)}save();render();if(ritual)renderRitual();break}
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
@@ -363,3 +364,6 @@ document.addEventListener('keydown',e=>{if(timerUndo&&Date.now()-timerUndo.at<15
 
 // clic droit sur une tâche : le même menu que l'appui long sur téléphone (monter, reporter, backlog, heure…)
 document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data-id],.blk[data-id]');if(!c||e.target.closest('input,textarea'))return;const t=T(c.dataset.id);if(!t||t.done)return;e.preventDefault();taskSheet(t.id)});
+
+// petite récompense visuelle quand une tâche est cochée
+function celebrate(id){requestAnimationFrame(()=>{document.querySelectorAll(`[data-id="${id}"] .chk, .chk[data-id="${id}"]`).forEach(c=>{c.classList.remove('burst');void c.offsetWidth;c.classList.add('burst');setTimeout(()=>c.classList.remove('burst'),700)});const r=document.querySelector('.dayring');if(r){r.classList.remove('bump');void r.offsetWidth;r.classList.add('bump')}})}

@@ -410,13 +410,14 @@ def _(c):
     assert any('C’est l’heure' in n or 'Planifie' in n for n in pg.evaluate('window.__n')), pg.evaluate('window.__n')
     assert not errs, errs; ctx.close()
 
-@test('Raccourcis : ? affiche la liste, rappel tournant')
+@test('Raccourcis : ? affiche la liste ; bas de la barre rangé (minuteur, Réglages, Actualiser, version)')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
     pg.keyboard.press('?'); pg.wait_for_timeout(200)
     assert 'Raccourcis clavier' in pg.inner_text('#sheet')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(1200)
-    assert pg.locator('#tip kbd').count() == 1
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
+    assert order == ['runchip', 'navset', 'navrefresh', 'navver'], order
     assert not errs, errs; ctx.close()
 
 @test('Mise en page : aucune vue ne déborde (ordinateur, téléphone, sombre)')
@@ -483,7 +484,7 @@ def _(c):
     assert pg.locator('.revtabs').count() == 1 and 'Ta semaine' in pg.inner_text('#main h1')
     assert 'Stardust' in pg.inner_text('#main') and 'objectif' not in pg.inner_text('#main').lower()
     pg.evaluate("()=>startRitual('weekplan',window.journee.fn.today())"); pg.wait_for_timeout(200)
-    assert pg.locator('#sheet .rsteps span:not(.sp)').count() == 3 and pg.locator('#sheet .jobday').count() == 7
+    assert pg.locator('#sheet .rsteps .rtab').count() == 3 and pg.locator('#sheet .jobday').count() == 7
     pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(150)
     assert 'Stardust' in pg.inner_text('#sheet')
     pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(150); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
@@ -756,7 +757,7 @@ def _(c):
         pg.click('[data-act="ritnext"]'); tick(pg, 150)
         pg.click('[data-act="close"] >> nth=-1'); tick(pg, 150)
         pg.evaluate(f"()=>startRitual('{ty}',window.journee.fn.today())"); tick(pg, 150)
-        assert pg.locator('#sheet .rsteps span').nth(0).get_attribute('class') == 'on', ty
+        assert 'on' in pg.locator('#sheet .rsteps .rtab').nth(0).get_attribute('class'), ty
         pg.keyboard.press('Escape'); tick(pg, 100)
     assert not errs, errs; ctx.close()
 
@@ -843,6 +844,18 @@ def _(c):
     pg.evaluate("()=>startRitual('plan',window.journee.fn.today())"); tick(pg, 200)
     pg.click('#sheet [data-act="setjob"][data-v="auto"]'); tick(pg, 100)
     assert st(pg, "S.days[today()].job===undefined") is True and pg.locator('#sheet .jobseg').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('Rituels : onglets cliquables, heures gardées, heures invalides bloquent')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.evaluate("()=>startRitual('plan',window.journee.fn.today())"); tick(pg, 200)
+    pg.fill('[data-rh="e"]', '20:00')
+    pg.click('#sheet .rtab[data-i="4"]'); tick(pg, 150)
+    assert st(pg, "ritual.step") == 4 and st(pg, "S.days[today()].he") == 20
+    pg.click('#sheet .rtab[data-i="0"]'); tick(pg, 150)
+    pg.fill('[data-rh="e"]', '06:00'); pg.click('#sheet .rtab[data-i="2"]'); tick(pg, 150)
+    assert st(pg, "ritual.step") == 0, 'des heures invalides ne doivent pas laisser partir'
     assert not errs, errs; ctx.close()
 
 def main():

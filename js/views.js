@@ -86,11 +86,12 @@ function viewToday(){
  const d=cur,isT=d===today(),ts=dayTasks(d),info=S.days[d]||{};
  const title=isT?'Aujourd’hui':d===addDays(today(),1)?'Demain':d===addDays(today(),-1)?'Hier':cap1(fmtDay(d,{weekday:'long'}));
  const done=ts.filter(t=>t.done),r=savedRit();
- const planLbl=r&&r.type==='plan'&&r.day===d?'Reprendre ('+(r.step+1)+'/5)':info.planned?'Replanifier':'Planifier ma journée';
+ const planLbl=r&&r.type==='plan'&&r.day===d?'Reprendre':info.planned?'Replanifier':'Planifier ma journée';
  // une seule action mise en avant, selon le moment ; les autres sont dans •••
  const h=new Date().getHours(),past=d<today();
  const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
- return `<div class="head tight"><div class="htitle"><h1>${title}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
+ const pct=ts.length?Math.round(done.length/ts.length*100):0,ring=ts.length?`<span class="dayring${pct===100?' full':''}" title="${done.length}/${ts.length} tâches faites" aria-label="${done.length} sur ${ts.length} tâches faites"><svg viewBox="0 0 36 36"><circle class="rbg" cx="18" cy="18" r="15.9"/><circle class="rfg" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="${pct} 100"/>${pct===100?'<g class="rsun"><circle cx="18" cy="18" r="5"/><path d="M18 8.5v2.5M18 25v2.5M8.5 18h2.5M25 18h2.5M11.3 11.3l1.8 1.8M22.9 22.9l1.8 1.8M24.7 11.3l-1.8 1.8M13.1 22.9l-1.8 1.8"/></g>':`<text x="18" y="21.5">${done.length}</text>`}</svg></span>`:'';
+ return `<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
  <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}
 
