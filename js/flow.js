@@ -102,6 +102,7 @@ function notifyTick(){
  if(now>=base+s.workStart*3600e3&&now<base+(s.workStart+3)*3600e3&&!info.planned)notify('plan','Planifie ta journée','Quelques minutes pour choisir et ordonner tes tâches du jour.');
  if(now>=base+s.workEnd*3600e3&&!info.shutdown)notify('shut','Clôture ta journée','Fais le bilan et range ce qui reste pour demain.');
  const r=runningTask();
+ if(r&&r.est&&actualSec(r)>=r.est*60)notify('est'+r.id+'-'+r.est,'Temps estimé atteint : '+r.title,fmtMin(r.est)+' prévues. Tu continues, ou tu passes à la suite ?');
  for(const t of dayTasks(d))if(!t.done&&t.block&&t!==r){const st=+new Date(t.block.start);if(st<=now+30000&&st>now-120000)notify('t'+t.id+st,'C’est l’heure : '+t.title,(t.est?fmtMin(t.est)+' prévues':'')+(t.block?' · jusqu’à '+hm(new Date(t.block.end)):''))}
  dueNotify(d,now,base,s);
  for(const e of timedEvents(d))if(!evFree(e)){const st=+new Date(e.start.dateTime);if(st-now<=5*60000&&st-now>-60000)notify('e'+e.id,'Dans 5 min : '+(e.summary||'rendez-vous'),hm(new Date(st))+'–'+hm(new Date(e.end.dateTime)))}

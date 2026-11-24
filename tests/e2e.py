@@ -758,6 +758,30 @@ def _(c):
         pg.keyboard.press('Escape'); tick(pg, 100)
     assert not errs, errs; ctx.close()
 
+@test('Minuteur : remise à zéro = pause, ±5 min, saisie directe, annulation')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
+    pg.evaluate(f"()=>openFocus('{tid}')")
+    tick(pg, 200)
+    pg.evaluate(f"()=>{{const t=window.journee.state.tasks.find(x=>x.id==='{tid}');t.actual=600;window.journee.save()}}"); tick(pg, 100)
+    assert st(pg, f"!!(S.running&&S.running.taskId==='{tid}')") is True
+    pg.click('#focus [data-act="timerreset"]'); tick(pg, 150)
+    assert st(pg, "S.running") is None, 'la remise à zéro doit mettre en pause'
+    assert st(pg, f"Math.round(actualSec(T('{tid}')))") == 0
+    pg.click('#toast [data-act="toastact"]'); tick(pg, 150)
+    assert st(pg, f"!!(S.running&&S.running.taskId==='{tid}')") is True and st(pg, f"Math.round(actualSec(T('{tid}'))/60)") == 10
+    pg.click('#focus [data-act="timeradj"][data-v="5"]'); tick(pg, 100)
+    assert st(pg, f"Math.round(actualSec(T('{tid}'))/60)") == 15
+    pg.click('#focus [data-act="timeradj"][data-v="-5"]'); pg.click('#focus [data-act="timeradj"][data-v="-5"]'); pg.click('#focus [data-act="timeradj"][data-v="-5"]'); pg.click('#focus [data-act="timeradj"][data-v="-5"]'); tick(pg, 100)
+    assert st(pg, f"Math.round(actualSec(T('{tid}')))") < 5
+    pg.click('#focus [data-act="timeredit"]'); tick(pg, 100)
+    pg.fill('#focus [data-fedit]', '1h20'); pg.press('#focus [data-fedit]', 'Enter'); tick(pg, 150)
+    assert st(pg, f"Math.round(actualSec(T('{tid}'))/60)") == 80, st(pg, f"actualSec(T('{tid}'))")
+    run = st(pg, "!!S.running"); pg.keyboard.press('Space'); tick(pg, 100)
+    assert st(pg, "!!S.running") is (not run), 'Espace doit mettre en pause / reprendre'
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

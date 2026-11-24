@@ -109,7 +109,9 @@ document.addEventListener('click',async e=>{
   case'archcopy':{const a=(S.archive||[]).find(x=>x.id===id);if(a){S.tasks.push(mk({title:a.t,channel:a.c,est:a.e||Math.round((a.a||0)/60)||0,day:today(),order:nextOrder(today())}));save();closeModal();go('today');toast('Ajoutée à aujourd’hui')}break}
   case'palopen':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();openPal();break;
   case'synchide':lsSet('journee.sync.hide',today());renderSyncBar();break;
-  case'timerreset':{const t=T(id);if(!t)break;const prev={a:t.actual,s:S.running&&S.running.taskId===id?S.running.start:null};t.actual=0;if(prev.s)S.running.start=Date.now();save();renderFocus();render();timerUndo={id,...prev,at:Date.now()};toast('Minuteur remis à zéro · Ctrl+Z (⌘Z) pour annuler');break}
+  case'timerreset':{const t=T(id);if(!t)break;const run=!!(S.running&&S.running.taskId===id);if(run)stopTimer();const prev={a:t.actual||0,run};t.actual=0;save();renderFocus();render();timerUndo={id,...prev,at:Date.now()};toast('Minuteur remis à zéro et en pause',run||prev.a?'Annuler':null,()=>undoTimer());break}
+  case'timeradj':{const t=T(id);if(!t)break;const nv=Math.max(0,Math.round(actualSec(t)+(+b.dataset.v)*60));if(S.running&&S.running.taskId===id)S.running.start=Date.now();t.actual=nv;save();renderFocus();break}
+  case'timeredit':{focusEdit=focusEdit===id?null:id;renderFocus();const i=document.querySelector('[data-fedit]');if(i){i.focus();i.select()}break}
   case'toastact':{const f=toastFn;toastFn=null;$('#toast').classList.remove('show');if(f){f();save();render();if(modalTask)openTask(modalTask)}break}
   case'setprio':{const t=T(id);if(t){const was=t.prio||'';t.prio=b.dataset.p;if(was!==(t.prio||''))placeByPrio(t);save();render();if(modalTask===id)openTask(id);else if(!$('#modal').classList.contains('hidden'))taskSheet(id)}break}
   case'hardrefresh':{b.classList.add('spin');try{save();await Promise.race([driveSync(),new Promise(r=>setTimeout(r,4000))])}catch(err){}
@@ -178,6 +180,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',async e=>{
  const el=e.target,f=el.dataset.f;
+ if(el.hasAttribute('data-fedit')){const t=T(el.dataset.fedit);const m=String(el.value).trim().match(/^(?:(\d+)\s*[h:]\s*)?(\d+)?\s*(?:min)?$/i);if(t&&m&&(m[1]||m[2])){const sec=((+m[1]||0)*60+(+m[2]||0))*60;if(S.running&&S.running.taskId===t.id)S.running.start=Date.now();t.actual=sec;save()}focusEdit=null;renderFocus();render();return}
  if(f&&modalTask){const t=T(modalTask);if(!t)return;const r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
   switch(f){
    case'channel':t.channel=el.value||null;t.aiCat=false;if(r)r.channel=t.channel;if(t.block)pushBlock(t);break;
@@ -246,7 +249,7 @@ document.addEventListener('drop',async e=>{
 });
 
 /* ---------- interactions fluides liste ↔ agenda ---------- */
-const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
 let tipI=0;
 function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
@@ -350,7 +353,9 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&
 
 // annuler la remise à zéro du minuteur (Ctrl/⌘+Z dans les 10 s)
 let timerUndo=null;
-document.addEventListener('keydown',e=>{if(timerUndo&&Date.now()-timerUndo.at<15000&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){const t=T(timerUndo.id);if(t){t.actual=timerUndo.a;if(timerUndo.s&&S.running&&S.running.taskId===t.id)S.running.start=timerUndo.s;save();renderFocus();render();toast('Minuteur rétabli')}timerUndo=null;e.preventDefault()}});
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&focusOn&&!$('#focus').classList.contains('hidden')&&!e.target.matches('input,textarea,select,button')){e.preventDefault();const id=focusOn;if(S.running&&S.running.taskId===id){stopTimer();render()}else startTimer(id);renderFocus()}});
+function undoTimer(){if(!timerUndo)return;const t=T(timerUndo.id);if(t){t.actual=timerUndo.a;if(timerUndo.run)startTimer(t.id);save();renderFocus();render();toast('Minuteur rétabli')}timerUndo=null}
+document.addEventListener('keydown',e=>{if(timerUndo&&Date.now()-timerUndo.at<15000&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){undoTimer();e.preventDefault()}});
 
 // clic droit sur une tâche : le même menu que l'appui long sur téléphone (monter, reporter, backlog, heure…)
 document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data-id],.blk[data-id]');if(!c||e.target.closest('input,textarea'))return;const t=T(c.dataset.id);if(!t||t.done)return;e.preventDefault();taskSheet(t.id)});
