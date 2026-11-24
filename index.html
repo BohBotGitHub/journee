@@ -85,6 +85,7 @@ form.add input{background:var(--panel);border-style:dashed}
 .chk{width:22px;height:22px;min-height:22px;padding:0;border-radius:50%;border:1.5px solid var(--mute);flex:none;margin-top:1px;font-size:13px;line-height:1;color:#fff}
 .card.done .chk{background:var(--ok);border-color:var(--ok)}
 .cbody{flex:1;cursor:pointer}
+.prio{color:var(--acc);font-weight:800;margin-right:5px}.prio.u{color:var(--warn)}
 .ctitle{font-weight:600;overflow-wrap:anywhere}
 .cmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px;font-size:12.5px;color:var(--mute);align-items:center}
 .chip{display:inline-flex;align-items:center;gap:5px}
@@ -304,7 +305,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 const KEY='journee.v1';
 const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
  channels:[{id:'c1',name:'Travail',color:'#3b6fd8'},{id:'c2',name:'Perso',color:'#2f9e6a'},{id:'c3',name:'Admin',color:'#c99a06'}],
- settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,pomo:25,brk:5,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true},chat:[]});
+ settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,pomo:25,brk:5,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true},chat:[],archive:[]});
 let S;
 try{S=Object.assign(defaults(),JSON.parse(lsGet(KEY)||'{}'))}catch(e){S=defaults()}
 S.settings=Object.assign(defaults().settings,S.settings||{});
@@ -312,7 +313,7 @@ if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null;
 const save=()=>{S.updatedAt=Date.now();lsSet(KEY,JSON.stringify(S));clearTimeout(pushT);pushT=setTimeout(()=>driveSync(),4000)};
-const mk=o=>Object.assign({id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null},o);
+const mk=o=>Object.assign({id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null,prio:''},o);
 const T=id=>S.tasks.find(t=>t.id===id);
 const ch=id=>S.channels.find(c=>c.id===id);
 const nextOrder=day=>Math.max(0,...S.tasks.filter(t=>t.day===day).map(t=>t.order||0))+1;
@@ -625,7 +626,7 @@ const AI_TOOL={name:'proposer',description:'Propose des changements concrets au 
  new_tasks:{type:'array',items:{type:'object',properties:{title:{type:'string'},channel:{type:'string'},est:{type:'integer'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['title']}}
 },required:['message']}};
 function aiContext(){
- const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | canal '+ch(t.channel).name:' | sans canal'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}`;
+ const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.prio?' | priorité '+t.prio:''}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | canal '+ch(t.channel).name:' | sans canal'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}`;
  const hist=S.tasks.filter(t=>t.done&&t.day&&t.day>=addDays(t0,-14)&&t.est&&t.actual).slice(-25).map(t=>`- ${t.title} : estimé ${t.est} min, réel ${Math.round(t.actual/60)} min`);
  const meet=timedEvents(d).map(e=>`- ${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))} ${e.summary||'(sans titre)'}`);
  const wk=monday(d),days=[...Array(7)].map((_,i)=>addDays(wk,i));
@@ -638,7 +639,8 @@ Tâches du jour :\n${dayTasks(d).map(line).join('\n')||'- aucune'}
 En retard (jours précédents) :\n${pastUndone().slice(0,15).map(t=>line(t)+' | prévue le '+t.day).join('\n')||'- rien'}
 Reste de la semaine :\n${days.filter(x=>x!==d&&x>=t0).map(x=>dayTasks(x).filter(t=>!t.done).map(t=>line(t)+' | '+x).join('\n')).filter(Boolean).join('\n')||'- rien'}
 Backlog :\n${S.tasks.filter(t=>!t.day&&!t.done).slice(0,40).map(line).join('\n')||'- vide'}
-Historique estimé/réel :\n${hist.join('\n')||'- pas encore de données'}`;
+Historique estimé/réel :\n${hist.join('\n')||'- pas encore de données'}
+Habitudes passées (archive, durée réelle moyenne) :\n${archivePatterns()||'- aucune'}`;
 }
 const AI_SYS=`Tu es Claude, l'assistant de planification intégré à l'appli « Journée » (équivalent de Sunsama). Tu aides l'utilisateur à organiser son temps : ordre des tâches, catégorie (canal), durée réaliste, répartition dans la semaine, et nouvelles tâches utiles (préparer une réunion, un suivi, une étape vers un objectif de la semaine).
 Règles :
@@ -714,6 +716,63 @@ function viewAI(){
  <form class="aiform" data-form="ai"><textarea name="t" data-keep="ai" rows="1" placeholder="Écris à Claude…" aria-label="Message à Claude"></textarea><button class="pri" type="submit">Envoyer</button></form>`;
 }
 
+/* ---------- import Sunsama (export CSV : Settings → Account Management) ---------- */
+function archivePatterns(){
+ const m={};for(const a of S.archive||[]){if(!a.a)continue;const k=a.t.toLowerCase();(m[k]=m[k]||{t:a.t,n:0,s:0,c:a.c});m[k].n++;m[k].s+=a.a}
+ return Object.values(m).filter(x=>x.n>=3).sort((a,b)=>b.n-a.n).slice(0,25).map(x=>`- ${x.t} : ${x.n} fois, ~${Math.round(x.s/x.n/60)} min${ch(x.c)?' | '+ch(x.c).name:''}`).join('\n');
+}
+function parseCSV(txt){
+ const rows=[];let row=[],f='',q=false;
+ for(let i=0;i<txt.length;i++){const c=txt[i];
+  if(q){if(c==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+  else if(c==='"')q=true;else if(c===','){row.push(f);f=''}else if(c==='\n'){row.push(f);rows.push(row);row=[];f=''}else if(c!=='\r')f+=c}
+ if(f||row.length){row.push(f);rows.push(row)}
+ const h=rows.shift().map(x=>x.replace(/^﻿/,''));return rows.filter(r=>r.length>1).map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i]||''])));
+}
+const htmlText=h=>{if(!h)return'';const x=h.replace(/<li>/g,'<li>- ').replace(/<\/(p|li|h\d)>|<br\s*\/?>/g,'\n');return strip(x).replace(/\n{3,}/g,'\n\n').trim()};
+const jparse=(v,d)=>{try{return JSON.parse(v)}catch(e){return d}};
+function importSunsama(txt){
+ const rows=parseCSV(txt);if(!rows.length||!('sequenceRule' in rows[0]))throw new Error('ce fichier ne ressemble pas à un export Sunsama');
+ const t0=today(),stale=addDays(t0,-30),RIT=/^(daily planning|daily shutdown|weekly planning|weekly review)$/i;
+ const CTX={Perso:'#2f9e6a',Pro:'#3b6fd8',Art:'#9b4dca','Déménagement':'#c99a06'};
+ const shade=(hex,i)=>{const n=parseInt(hex.slice(1),16),k=(i%4)*18-18,cl=v=>Math.max(0,Math.min(255,v+k));return '#'+[n>>16,(n>>8)&255,n&255].map(v=>cl(v).toString(16).padStart(2,'0')).join('')};
+ const st={tasks:0,archive:0,channels:0,objectives:0,recurring:0,skipped:0,dup:0};
+ S.tasks=S.tasks.filter(t=>!/^Exemple : /.test(t.title));
+ const chIdx={},perCtx={};
+ for(const r of rows){const name=(r.channel||'').replace(/^#/,'').trim();if(!name||chIdx[name])continue;const ctx=(r.context||'').replace(/^#/,'').trim();
+  let c=S.channels.find(x=>x.name.toLowerCase()===name.toLowerCase());perCtx[ctx]=(perCtx[ctx]||0)+1;
+  if(!c){c={id:'sun-c-'+name.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g,'-'),name,color:shade(CTX[ctx]||'#8a8f98',perCtx[ctx])};S.channels.push(c);st.channels++}
+  c.ctx=ctx;chIdx[name]=c.id}
+ S.channels=S.channels.filter(c=>!(['c1','c3'].includes(c.id)&&!S.tasks.some(t=>t.channel===c.id)));
+ const rec={},recMap={};
+ for(const r of rows){if(!r.sequenceRule)continue;const k=r.text+'|'+r.sequenceRule;(rec[k]=rec[k]||[]).push(r)}
+ const DAYS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+ for(const [k,list] of Object.entries(rec)){const last=list.map(r=>r.startDate).filter(Boolean).sort().pop();if(!last||last<addDays(t0,-60))continue;
+  const r0=list[0],rule=r0.sequenceRule;const tpl={id:'sun-r-'+r0.id,title:r0.text,channel:chIdx[(r0.channel||'').replace(/^#/,'')]||null,est:+r0.timeEstimate||0,notes:'',subs:[],from:addDays(last,1),skip:[]};
+  let m;
+  if(/every day/.test(rule))tpl.rule='daily';else if((m=rule.match(/every week on (\w+)/i))){tpl.rule='weekly';tpl.dow=DAYS.indexOf(m[1].toLowerCase())}else if((m=rule.match(/every month on the (\d+)/))){tpl.rule='monthly';tpl.dom=+m[1]}else continue;
+  if(!S.recurring.some(x=>x.id===tpl.id)){S.recurring.push(tpl);st.recurring++}recMap[k]=tpl.id}
+ const objMap={};S.archive=S.archive||[];
+ const have=new Set(S.tasks.map(t=>t.id)),haveA=new Set(S.archive.map(a=>a.id));
+ for(const r of rows){
+  const id='sun-'+r.id;if(have.has(id)||haveA.has(id)){st.dup++;continue}
+  if(!r.text||RIT.test(r.text.trim())){st.skipped++;continue}
+  const done=!!r.completedDate;let day=r.startDate||null;const chId=chIdx[(r.channel||'').replace(/^#/,'')]||null;
+  const actual=+r.actualTimeSeconds||0,est=+r.timeEstimate||0;
+  if(done&&day&&day<stale){const a={id,t:r.text,c:chId,d:day,e:est,a:actual};if(r.objective)a.o=r.objective;S.archive.push(a);st.archive++;continue}
+  if(!done&&day&&day<stale)day=null;
+  const subs=jparse(r.subtasks,[]).map(x=>({id:uid(),t:x.title||'',d:!!x.completedDate})).filter(x=>x.t);
+  const t=mk({id,title:r.text,notes:htmlText(r.notes),channel:chId,est,actual,day,done,doneAt:done?Date.parse(r.completedDate):null,subtasks:subs,order:r.createdAt?Date.parse(r.createdAt)/1e12:0,
+   prio:{Urgent:'urgent',Priority:'high','Low Priority':'low'}[r.latestDailyPriority]||'',recurId:recMap[r.text+'|'+r.sequenceRule]||null});
+  const sch=jparse(r.scheduledTime,[])[0];if(!done&&day&&day>=t0&&sch&&sch.startDate&&sch.endDate)t.block={start:sch.startDate,end:sch.endDate,gcalId:null,title:t.title};
+  if(r.objective&&day&&day>=stale){const w=monday(day),k=w+'|'+r.objective;if(!objMap[k]){let o=S.objectives.find(o=>o.week===w&&o.title===r.objective);if(!o){o={id:'sun-o-'+uid(),week:w,title:r.objective,done:false};S.objectives.push(o);st.objectives++}objMap[k]=o}t.objId=objMap[k].id}
+  S.tasks.push(t);st.tasks++;
+ }
+ for(const o of Object.values(objMap)){const lt=S.tasks.filter(t=>t.objId===o.id);if(lt.length&&lt.every(t=>t.done))o.done=true}
+ for(const d of new Set(S.tasks.filter(t=>t.day).map(t=>t.day)))renorm(d);
+ genRecurring();save();render();emit('import:sunsama',st);return st;
+}
+
 /* ---------- rendu : morceaux communs ---------- */
 function card(t){
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
@@ -721,7 +780,7 @@ function card(t){
  const act=actualSec(t);
  return `<div class="card${t.done?' done':''}${run?' running':''}" draggable="true" data-drag="task|${t.id}" data-id="${t.id}">
  <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
- <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${esc(t.title)}</div>
+ <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${t.prio==='urgent'?'<span class="prio u" title="Urgent">!!</span>':t.prio==='high'?'<span class="prio" title="Prioritaire">!</span>':''}${esc(t.title)}</div>
  <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}${t.block?`<span>${hm(new Date(t.block.start))}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?ch(t.aiSug.channel).name:'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
  <div class="ctime"><span data-live="t-${t.id}" title="Temps passé / estimé">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'—'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
 }
@@ -822,6 +881,7 @@ function viewSettings(){
  <section><h2>Canaux</h2><p>Des catégories pour classer tes tâches et voir où passe ton temps. Tape <code>#nom</code> en créant une tâche pour l’y ranger.</p>
   ${S.channels.map(c=>`<div class="chrow"><input type="color" data-chc="${esc(c.id)}" value="${esc(c.color)}" aria-label="Couleur"><input data-chn="${esc(c.id)}" value="${esc(c.name)}" aria-label="Nom du canal"><button class="danger sm" data-act="chdel" data-id="${esc(c.id)}">Supprimer</button></div>`).join('')}
   <button class="sm" data-act="chadd">+ Ajouter un canal</button></section>
+ <section><h2>Importer depuis Sunsama</h2><p>Dans Sunsama : Settings → Account Management → export. Les tâches terminées de plus de 30 jours vont dans l’historique (utilisé par Claude pour estimer tes durées) ; les rituels Sunsama ne sont pas importés. Tu peux réimporter sans créer de doublons.</p><input type="file" accept=".csv,text/csv" data-sunsama aria-label="Fichier d’export Sunsama">${S.archive&&S.archive.length?`<p style="margin-top:8px">Historique : ${S.archive.length} tâches archivées.</p>`:''}</section>
  <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
  <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus sur la prochaine tâche</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
  </div>`;
@@ -918,6 +978,7 @@ function openTask(id){
  <label>Créneau dans l’agenda<span class="row"><input type="time" step="900" data-f="time" value="${t.block?hm(new Date(t.block.start)):''}">${t.block?'<button class="sm ghost" data-act="unblock">Retirer</button>':''}</span></label>
  <label>Objectif de la semaine<select data-f="obj"><option value="">Aucun</option>${objs.map(o=>`<option value="${esc(o.id)}" ${o.id===t.objId?'selected':''}>${esc(o.title)}</option>`).join('')}</select></label>
  <label>Répéter<select data-f="recur"><option value="">Jamais</option>${Object.entries(RULES).map(([k,v])=>`<option value="${k}" ${r&&r.rule===k?'selected':''}>${v}</option>`).join('')}</select></label>
+ <label>Priorité<select data-f="prio">${[['','Normale'],['low','Basse'],['high','Haute'],['urgent','Urgente']].map(([v,l])=>`<option value="${v}" ${(t.prio||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>
  <label>Temps passé (min)<input type="number" min="0" data-f="actual" value="${Math.round(actualSec(t)/60)}"></label>
  </div>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="sub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form></div>
@@ -1125,6 +1186,7 @@ document.addEventListener('change',async e=>{
    case'day':{const nd=el.value||null;if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;if(nd)t.order=nextOrder(nd);break}
    case'time':if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);setBlock(t,dt,true)}else clearBlock(t,true);break;
    case'obj':t.objId=el.value||null;break;
+   case'prio':t.prio=el.value;break;
    case'recur':setRecur(t,el.value);break;
    case'actual':if(S.running&&S.running.taskId===t.id)S.running.start=Date.now();t.actual=Math.max(0,+el.value||0)*60;break;
    default:return;
@@ -1136,6 +1198,7 @@ document.addEventListener('change',async e=>{
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
  if(el.dataset.chn){const c=ch(el.dataset.chn);if(c){c.name=el.value.trim()||c.name;save()}return}
  if(el.hasAttribute('data-todolist')){todo.listId=el.value;S.settings.todoList=el.value;save();renderSide();return}
+ if(el.hasAttribute('data-sunsama')&&el.files[0]){try{const st=importSunsama(await el.files[0].text());showModal(`<div class="rit"><h2>Import Sunsama terminé</h2><div class="stat"><div><b>${st.tasks}</b><small>tâches actives ou récentes</small></div><div><b>${st.archive}</b><small>tâches dans l’historique</small></div><div><b>${st.channels}</b><small>canaux créés</small></div></div><p class="lead">${st.objectives} objectifs, ${st.recurring} récurrence(s) active(s), ${st.skipped} rituels ignorés${st.dup?', '+st.dup+' déjà importées':''}.</p><div class="mfoot"><span class="sp"></span><button class="pri" data-act="close">Voir ma journée</button></div></div>`);view='today';cur=today();render()}catch(err){toast('Import impossible : '+err.message)}return}
  if(el.hasAttribute('data-import')&&el.files[0]){try{const j=JSON.parse(await el.files[0].text());if(!Array.isArray(j.tasks))throw new Error('format inconnu');S=Object.assign(defaults(),j);S.settings=Object.assign(defaults().settings,j.settings||{});save();render();toast('Sauvegarde importée')}catch(err){toast('Import impossible : '+err.message)}}
 });
 
