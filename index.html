@@ -342,7 +342,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 const KEY='journee.v1';
 const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
  channels:[{id:'c1',name:'Travail',color:'#3b6fd8'},{id:'c2',name:'Perso',color:'#2f9e6a'},{id:'c3',name:'Admin',color:'#c99a06'}],
- settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true},chat:[],archive:[]});
+ settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true,aiBudget:3,notif:false},chat:[],archive:[]});
 let S;
 try{S=Object.assign(defaults(),JSON.parse(lsGet(KEY)||'{}'))}catch(e){S=defaults()}
 S.settings=Object.assign(defaults().settings,S.settings||{});
@@ -458,12 +458,24 @@ const REDIRECT=location.origin+location.pathname;
 const calId=()=>encodeURIComponent(S.settings.calendarId||'primary');
 function gTok(){try{const o=JSON.parse(lsGet('journee.g')||'null');return o&&o.exp>Date.now()+30000?o.t:null}catch(e){return null}}
 const gWas=()=>!!lsGet('journee.g.on');
-function gLogin(){
+function gLogin(silent){
  if(!S.settings.googleClientId){toast('Ajoute d’abord ton identifiant client Google dans Réglages');go('settings');return}
- const p=new URLSearchParams({client_id:S.settings.googleClientId.trim(),redirect_uri:REDIRECT,response_type:'token',scope:'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata',include_granted_scopes:'true',state:'g',prompt:'consent'});
+ const hint=lsGet('journee.g.email');
+ const p=new URLSearchParams({client_id:S.settings.googleClientId.trim(),redirect_uri:REDIRECT,response_type:'token',scope:'email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata',include_granted_scopes:'true',state:(silent?'gs':'g')+'|'+view+'|'+cur,prompt:silent?'none':'consent'});
+ if(hint)p.set('login_hint',hint);
+ if(silent)lsSet('journee.g.last',String(Date.now()));
  location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p;
 }
-function gLogout(){lsDel('journee.g');lsDel('journee.g.on');gEvents={};render()}
+function gSilent(){
+ // renouvelle la session Google sans clic (aller-retour éclair) quand elle a expiré et que tu n'es pas en train de saisir
+ if(gTok()||!gWas()||document.hidden||!S.settings.googleClientId)return;
+ if(!$('#modal').classList.contains('hidden')||focusOn||drag||rz)return;
+ const a=document.activeElement;if(a&&a.matches('input,textarea,select')&&a.value)return;
+ const last=+(lsGet('journee.g.last')||0),fail=+(lsGet('journee.g.fail')||0);
+ if(Date.now()-last<3*60000||Date.now()-fail<30*60000)return;
+ gLogin(true);
+}
+function gLogout(){lsDel('journee.g');lsDel('journee.g.on');lsDel('journee.g.email');gEvents={};render()}
 async function gFetch(path,opts={}){
  const t=gTok();if(!t)throw new Error('session expirée, reconnecte Google');
  const r=await fetch('https://www.googleapis.com/calendar/v3'+path,{...opts,headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'}});
@@ -586,7 +598,23 @@ function runFlow(){
  finally{inFlow=false}
  if(n){lsSet(KEY,JSON.stringify(S));if(!rz&&!drag)render()}
 }
+const notifOk=()=>S.settings.notif&&'Notification' in window&&Notification.permission==='granted';
+function notify(key,title,body){
+ const d=today();let n;try{n=JSON.parse(lsGet('journee.notified')||'{}')}catch(e){n={}}if(n.d!==d)n={d,k:[]};if(n.k.includes(key))return;n.k.push(key);lsSet('journee.notified',JSON.stringify(n));
+ const opt={body,icon:'icon-192.png',badge:'icon-192.png',tag:key};
+ if(navigator.serviceWorker&&navigator.serviceWorker.controller)navigator.serviceWorker.ready.then(r=>r.showNotification(title,opt)).catch(()=>{try{new Notification(title,opt)}catch(e){}});
+ else{try{new Notification(title,opt)}catch(e){}}
+}
+function notifyTick(){
+ if(!notifOk())return;const d=today(),now=Date.now(),s=S.settings,info=S.days[d]||{},base=+parseYmd(d);
+ if(now>=base+s.workStart*3600e3&&now<base+(s.workStart+3)*3600e3&&!info.planned)notify('plan','Planifie ta journée','Quelques minutes pour choisir et ordonner tes tâches du jour.');
+ if(now>=base+s.workEnd*3600e3&&!info.shutdown)notify('shut','Clôture ta journée','Fais le bilan et range ce qui reste pour demain.');
+ const r=runningTask();
+ for(const t of dayTasks(d))if(!t.done&&t.block&&t!==r){const st=+new Date(t.block.start);if(st<=now+30000&&st>now-120000)notify('t'+t.id+st,'C’est l’heure : '+t.title,(t.est?fmtMin(t.est)+' prévues':'')+(t.block?' · jusqu’à '+hm(new Date(t.block.end)):''))}
+ for(const e of timedEvents(d))if(!evFree(e)){const st=+new Date(e.start.dateTime);if(st-now<=5*60000&&st-now>-60000)notify('e'+e.id,'Dans 5 min : '+(e.summary||'rendez-vous'),hm(new Date(st))+'–'+hm(new Date(e.end.dateTime)))}
+}
 function liveTick(){
+ notifyTick();
  if(flowOn()){const r=runningTask(),now=Date.now();if(r&&r.block&&r.day===today()&&+new Date(r.block.end)<now+60000){inFlow=true;setRange(r,new Date(r.block.start),new Date(ceil5(now)+M5),true);inFlow=false}runFlow();return}
  const d=today(),now=Date.now();let ch=false;const r=runningTask();
  if(r&&r.day===d){if(!r.block){activate(r);return}if(+new Date(r.block.end)<now+60000){setRange(r,new Date(r.block.start),new Date(ceil5(now)+M5),true);ch=true}}
@@ -767,10 +795,14 @@ async function syncTodo(){
 /* ---------- retour de connexion OAuth ---------- */
 (function handleAuth(){
  const h=new URLSearchParams(location.hash.slice(1));
- if(h.get('state')==='g'){
-  if(h.get('access_token')){lsSet('journee.g',JSON.stringify({t:h.get('access_token'),exp:Date.now()+(+h.get('expires_in')||3600)*1000,scope:h.get('scope')||''}));lsSet('journee.g.on','1');setTimeout(()=>toast('Google Agenda connecté'),300)}
-  else if(h.get('error'))setTimeout(()=>toast('Google : '+h.get('error')),300);
-  history.replaceState(null,'',REDIRECT);
+ const gst=(h.get('state')||'').split('|');
+ if(gst[0]==='g'||gst[0]==='gs'){
+  const silent=gst[0]==='gs';
+  if(gst[1]&&VIEWS.includes(gst[1]))view=gst[1];if(/^\d{4}-\d\d-\d\d$/.test(gst[2]||''))cur=gst[2];
+  if(h.get('access_token')){const tok=h.get('access_token');lsSet('journee.g',JSON.stringify({t:tok,exp:Date.now()+(+h.get('expires_in')||3600)*1000,scope:h.get('scope')||''}));lsSet('journee.g.on','1');lsDel('journee.g.fail');if(!silent)setTimeout(()=>toast('Google Agenda connecté'),300);
+   fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+tok}}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.email)lsSet('journee.g.email',j.email)}).catch(()=>{})}
+  else if(h.get('error')){if(silent)lsSet('journee.g.fail',String(Date.now()));else setTimeout(()=>toast('Google : '+h.get('error')),300)}
+  history.replaceState(null,'',REDIRECT+'#'+view);
  }
  const q=new URLSearchParams(location.search);
  if(q.get('state')==='m'){
@@ -780,7 +812,7 @@ async function syncTodo(){
    .catch(e=>toast('Connexion Microsoft impossible : '+e.message));
   else if(q.get('error'))setTimeout(()=>toast('Microsoft : '+(q.get('error_description')||q.get('error'))),300);
  }
- const v=location.hash.slice(1);if(VIEWS.includes(v))view=v;
+ {const v=location.hash.slice(1);if(VIEWS.includes(v))view=v}
 })();
 
 /* ---------- assistant Claude (API Anthropic, clé de l'utilisateur) ---------- */
@@ -822,11 +854,20 @@ Règles :
 - Canaux : uniquement des noms de la liste fournie.
 - Nouvelles tâches : maximum 3, seulement si vraiment utiles, avec une raison courte.
 - Dès que tu suggères un changement concret, utilise l'outil « proposer » : l'utilisateur validera chaque élément. Ne prétends jamais avoir modifié quelque chose toi-même.`;
+// coût en dollars par million de jetons (tarifs publics Anthropic ; Haiku : prompts ≤ 100 000 jetons)
+const PRICES={'claude-haiku-5-5':[0.10,0.50],'claude-sonnet-5-5':[2,10]};
+const monthKey=()=>today().slice(0,7);
+function usageNow(){let u=S.aiUsage||{};if(u.m!==monthKey())u={m:monthKey(),usd:0,calls:0,inT:0,outT:0};return u}
+function trackUsage(us,model){if(!us)return;const u=usageNow(),[pi,po]=PRICES[model]||PRICES['claude-haiku-5-5'];const inT=(us.input_tokens||0)+(us.cache_creation_input_tokens||0)+(us.cache_read_input_tokens||0);u.inT+=inT;u.outT+=us.output_tokens||0;u.calls++;u.usd+=inT/1e6*pi+(us.output_tokens||0)/1e6*po;S.aiUsage=u;save();const el=document.querySelector('[data-live="aicost"]');if(el)el.textContent=costTxt()}
+const usd=v=>v<0.01?'< 0,01 $':v.toFixed(2).replace('.',',')+' $';
+function costTxt(){const u=usageNow(),b=+S.settings.aiBudget||0;return `Ce mois-ci : ${usd(u.usd)}${b?' sur '+usd(b):''} · ${u.calls} requête${u.calls>1?'s':''}`}
 async function callClaude(messages,force){
+ {const b=+S.settings.aiBudget||0;if(b&&usageNow().usd>=b)throw new Error(`plafond mensuel atteint (${usd(b)}) — modifiable dans Réglages`)}
  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':S.settings.aiKey.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
   body:JSON.stringify({model:S.settings.aiModel||'claude-haiku-5-5',max_tokens:1600,system:AI_SYS,tools:[AI_TOOL],tool_choice:force?{type:'tool',name:'proposer'}:{type:'auto'},messages})});
  const j=await r.json().catch(()=>({}));
  if(!r.ok)throw new Error(r.status===401?'clé API refusée':(j.error&&j.error.message)||('erreur '+r.status));
+ trackUsage(j.usage,S.settings.aiModel||'claude-haiku-5-5');
  let text='',prop=null;
  for(const b of j.content||[]){if(b.type==='text')text+=b.text;if(b.type==='tool_use'&&b.name==='proposer')prop=b.input}
  if(prop&&prop.message){text=(text?text+'\n':'')+prop.message}
@@ -893,6 +934,7 @@ function viewAI(){
  return `<div class="chat">${msgs||'<div class="sinfo" style="padding:0"><span>Demande-moi d’organiser ta journée, ou pose une question.</span></div>'}</div>
  ${aiBusy?'<div class="thinking">Claude réfléchit…</div>':''}
  <div class="aibar"><button data-act="aiq" data-q="Organise ma journée : ordre, durées et catégories.">Organise ma journée</button><button data-act="aiq" data-q="Qu’est-ce que j’oublie cette semaine ? Suggère des tâches.">Qu’est-ce que j’oublie ?</button><button data-act="aiq" data-q="Je suis débordé, aide-moi à alléger ma journée.">Je suis débordé</button><button data-act="aiq" data-q="Répartis mon backlog sur la semaine.">Répartis mon backlog</button></div>
+ <div class="sinfo" style="padding:0 14px 6px;font-size:12px" data-live="aicost">${costTxt()}</div>
  <form class="aiform" data-form="ai"><textarea name="t" data-keep="ai" rows="1" placeholder="Écris à Claude…" aria-label="Message à Claude"></textarea><button class="pri" type="submit">Envoyer</button></form>`;
 }
 
@@ -1053,15 +1095,19 @@ function viewSettings(){
   <label>Identifiant client OAuth (…apps.googleusercontent.com)<input data-set="googleClientId" value="${esc(s.googleClientId)}" placeholder="1234-abcd.apps.googleusercontent.com" autocomplete="off"></label>
   <div class="grid2"><label>Agenda où créer les créneaux<input data-set="calendarId" value="${esc(s.calendarId)}" placeholder="primary"></label></div>
   ${gCals?`<p style="margin:12px 0 4px">Agendas affichés :</p>${gCals.map(c=>`<label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" data-cal="${esc(c.id)}" ${calOn(c)?'checked':''} style="width:auto;min-height:0"><span class="chip" style="--c:${esc(c.color||'#888')}">${esc(c.name)}</span></label>`).join('')}`:''}
-  <p style="margin:10px 0 0">Google sert aussi à <b>synchroniser tes tâches entre ton téléphone et ton Mac</b> (fichier caché dans ton Drive). <span data-live="sync">${esc(syncState)}</span></p>
+  <p style="margin:10px 0 0">Quand la session expire (toutes les heures), Journée la renouvelle toute seule par un aller-retour éclair, sans clic. Google sert aussi à <b>synchroniser tes tâches entre ton téléphone et ton Mac</b> (fichier caché dans ton Drive). <span data-live="sync">${esc(syncState)}</span></p>
   <div class="row" style="margin-top:12px"><span class="status${gTok()?' on':''}">${gTok()?'Connecté':gWas()?'Session expirée':'Non connecté'}</span><span class="sp"></span>${gWas()?'<button class="ghost" data-act="gout">Déconnecter</button>':''}<button class="pri" data-act="gin">${gWas()?'Reconnecter':'Connecter Google'}</button></div></section>
  <section><h2>Microsoft To Do</h2><p>Importe tes tâches dans ta journée ; quand tu les termines ici, elles sont cochées dans To Do (et inversement à la synchro).</p>
   <label>ID d’application (client) Azure<input data-set="msClientId" value="${esc(s.msClientId)}" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off"></label>
   <div class="row" style="margin-top:12px"><span class="status${msOn()?' on':''}">${msOn()?'Connecté':'Non connecté'}</span><span class="sp"></span>${msOn()?'<button class="ghost" data-act="mout">Déconnecter</button>':''}<button class="pri" data-act="min">${msOn()?'Reconnecter':'Connecter Microsoft'}</button></div></section>
+ <section><h2>Notifications</h2><p>Début de chaque créneau, rendez-vous occupé dans 5 minutes, rappel de planifier le matin et de clôturer le soir. Elles s’affichent tant que Journée est ouverte (onglet ou appli installée, même en arrière-plan sur ordinateur). Sur téléphone, le système peut mettre l’appli en pause quand elle n’est pas à l’écran.</p>
+  <div class="row"><span class="status${notifOk()?' on':''}">${notifOk()?'Activées':('Notification' in window&&Notification.permission==='denied')?'Bloquées par le navigateur':'Désactivées'}</span><span class="sp"></span>${notifOk()?'<button class="ghost sm" data-act="notifoff">Désactiver</button><button class="sm" data-act="notiftest">Tester</button>':'<button class="pri" data-act="notifon">Activer les notifications</button>'}</div></section>
  <section><h2>Claude (assistant)</h2><p>Colle ici ta clé API Anthropic (console.anthropic.com → API Keys). Elle reste uniquement sur cet appareil et n’est jamais synchronisée. Coût : quelques centimes par jour avec Haiku.</p>
   <label>Clé API<input type="password" data-set="aiKey" value="${esc(s.aiKey)}" placeholder="sk-ant-…" autocomplete="off"></label>
   <div class="grid2"><label>Modèle<select data-set="aiModel"><option value="claude-haiku-5-5" ${s.aiModel==='claude-haiku-5-5'?'selected':''}>Haiku — rapide et économique</option><option value="claude-sonnet-5-5" ${s.aiModel==='claude-sonnet-5-5'?'selected':''}>Sonnet — plus fin</option></select></label>
   <label>En arrière-plan<select data-set="aiAuto"><option value="1" ${s.aiAuto?'selected':''}>Suggestions automatiques</option><option value="" ${s.aiAuto?'':'selected'}>Seulement quand je demande</option></select></label></div>
+  <div class="grid2"><label>Plafond mensuel ($, 0 = aucun)<input type="number" min="0" step="0.5" data-set="aiBudget" value="${esc(s.aiBudget)}"></label></div>
+  <p style="margin:10px 0 0"><b data-live="aicost">${costTxt()}</b> — estimation d’après les jetons consommés ; le montant exact est sur console.anthropic.com.</p>
   <div class="row" style="margin-top:12px"><span class="status${aiOn()?' on':''}">${aiOn()?'Clé enregistrée':'Pas de clé'}</span><span class="sp"></span><button class="ghost sm" data-act="aiclear">Effacer la conversation</button></div></section>
  <section><h2>Adresse de redirection</h2><p>À coller à l’identique dans la console Google et dans Azure.</p><div class="row"><code>${esc(REDIRECT)}</code><button class="sm" data-act="copyuri">Copier</button></div></section>
  <section><h2>Journée type</h2><div class="grid2">${num('workStart','Début du travail (h)',0,23)}${num('workEnd','Fin du travail (h)',1,24)}${num('dayStart','Agenda : première heure',0,23)}${num('dayEnd','Agenda : dernière heure',1,24)}<label>Agenda vivant<select data-set="liveShift"><option value="1" ${s.liveShift!==false?'selected':''}>Vivant : toutes les tâches du jour ont un créneau, dans l’ordre de la liste, et suivent le temps</option><option value="" ${s.liveShift===false?'selected':''}>Manuel : je place moi-même mes créneaux</option></select></label></div></section>
@@ -1406,6 +1452,9 @@ document.addEventListener('click',async e=>{
   case'chadd':S.channels.push({id:uid(),name:'Nouveau canal',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;
   case'unpin':{const t=T(modalTask);if(t){t.pinned=false;save();openTask(t.id)}break}
+  case'notifon':{if(!('Notification' in window)){toast('Ce navigateur ne gère pas les notifications');break}const pm=await Notification.requestPermission();S.settings.notif=pm==='granted';save();render();toast(pm==='granted'?'Notifications activées':'Notifications refusées par le navigateur');break}
+  case'notifoff':S.settings.notif=false;save();render();break;
+  case'notiftest':{let n;try{n=JSON.parse(lsGet('journee.notified')||'{}')}catch(err){n={}}notify('test'+Date.now(),'Journée','Les notifications fonctionnent.');break}
   case'keys':showKeys();break;
   case'layout':toggleLayout();break;
   case'span':calSpan=+b.dataset.n;lsSet('journee.span',String(calSpan));render();break;
@@ -1467,7 +1516,7 @@ document.addEventListener('change',async e=>{
   save();render();if(['day','time','recur','est'].includes(f))openTask(t.id);return;
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(ritual.day)}else clearBlock(t,true);save();render();renderRitual()}return}
- if(el.dataset.set){const k=el.dataset.set;S.settings[k]=(k==='aiAuto'||k==='liveShift')?!!el.value:el.type==='number'?+el.value:el.value.trim();save();if(el.type==='number'||k==='aiKey')render();return}
+ if(el.dataset.set){const k=el.dataset.set;S.settings[k]=(k==='aiAuto'||k==='liveShift')?!!el.value:el.type==='number'?+el.value:el.value.trim();if(k==='aiBudget'){const c=document.querySelector('[data-live="aicost"]');if(c)c.textContent=costTxt()}save();if(el.type==='number'||k==='aiKey')render();return}
  if(el.hasAttribute('data-tips')){lsSet('journee.tips',el.checked?'on':'off');renderTip();return}
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
@@ -1535,6 +1584,7 @@ document.addEventListener('pointerup',()=>{if(!rz)return;const {t,m}=rz;rz=null;
 setInterval(()=>{if(!document.hidden&&gTok()&&$('#modal').classList.contains('hidden')){const a=document.activeElement;if(a&&a.matches('input,textarea'))return;const w=monday(cur);view==='week'?ensureRange(w,addDays(w,6),true):ensureRange(cur,cur,true)}},5*60*1000);
 
 setInterval(liveTick,30000);setTimeout(liveTick,3000);
+setInterval(gSilent,60000);setTimeout(gSilent,2000);
 /* ---------- clavier ---------- */
 document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});
 document.addEventListener('keydown',e=>{
@@ -1559,7 +1609,7 @@ if(msOn()&&S.settings.msClientId)setTimeout(syncTodo,1500);
 setTimeout(driveSync,800);
 setTimeout(aiMorning,1500);
 {const r=savedRit();if(r&&Date.now()-r.at<3*3600e3&&r.day>=today()){cur=r.day;setTimeout(()=>{if(!ritual&&$('#modal').classList.contains('hidden')){ritual=r;renderRitual()}},400)}}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){driveSync();if(msOn())syncTodo();if(gTok()){gEvents={};render()}}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){setTimeout(gSilent,800);liveTick();driveSync();if(msOn())syncTodo();if(gTok()){gEvents={};render()}}});
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 }
 </script>
