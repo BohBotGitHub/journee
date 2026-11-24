@@ -57,6 +57,16 @@ document.addEventListener('click',async e=>{
   case'todoreload':todo.lists=null;todo.tasks={};renderSide();syncTodo();break;
   case'todoadd':{const l=b.dataset.l,x=(todo.tasks[l]||[]).find(x=>x.id===b.dataset.t);if(x){importTodo(l,x,b.dataset.day||cur);render();if(ritual)renderRitual();toast('Ajoutée au '+fmtDay(b.dataset.day||cur,{weekday:'long',day:'numeric'}))}break}
   case'copyuri':try{await navigator.clipboard.writeText(REDIRECT);toast('Adresse copiée')}catch(err){toast('Copie impossible : sélectionne l’adresse à la main')}break;
+  case'treeask':showModal(treeMigrationHtml());break;
+  case'treego':applyTree();closeModal();render();relocateBlocks();toast('Tâches rangées dans l’arbre');break;
+  case'nodemenu':nodeMenu(id);break;
+  case'nodeadd':{const n=nodeAdd(id);render();if(n)setTimeout(()=>{const i=document.querySelector(`[data-nn="${n.id}"]`);if(i){i.focus();i.select()}},50);break}
+  case'nodedel':nodeDel(id);closeModal();render();break;
+  case'nodeup':nodeShift(id,-1);render();break;
+  case'nodedown':nodeShift(id,1);render();break;
+  case'projadd':S.projects=S.projects||[];S.projects.push({id:uid(),name:'Nouveau projet',end:null,done:false});save();render();break;
+  case'refine':{if(!aiOn())break;b.disabled=true;b.textContent='Claude range…';try{refineProp=await aiRefine((a,n)=>{b.textContent=`Claude range… ${a}/${n}`});if(!refineProp.length){toast('Claude n’a rien trouvé à affiner');render()}else showModal(refineHtml())}catch(err){toast('Claude : '+err.message);render()}break}
+  case'refineok':{const skip=new Set([...document.querySelectorAll('[data-refine]')].filter(x=>!x.checked).map(x=>x.dataset.refine));const n=applyRefine(skip);closeModal();render();toast(n+' tâches rangées');break}
   case'chadd':S.channels.push({id:uid(),name:'Nouveau canal',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;
   case'unpin':{const t=T(modalTask);if(t){t.pinned=false;save();openTask(t.id)}break}
@@ -85,6 +95,8 @@ document.addEventListener('click',async e=>{
   case'tplsug':{const x=tplSuggestions().find(z=>z.c===b.dataset.c);if(x){S.templates=S.templates||[];S.templates.push({id:uid(),name:'Routine '+ch(x.c).name,items:x.items});save();render();toast('Routine créée')}break}
   case'archcopy':{const a=(S.archive||[]).find(x=>x.id===id);if(a){S.tasks.push(mk({title:a.t,channel:a.c,est:a.e||Math.round((a.a||0)/60)||0,day:today(),order:nextOrder(today())}));save();closeModal();go('today');toast('Ajoutée à aujourd’hui')}break}
   case'palopen':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();openPal();break;
+  case'synchide':lsSet('journee.sync.hide',today());renderSyncBar();break;
+  case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
   case'mvup':closeModal();swapTask(id,-1);break;
   case'mvdown':closeModal();swapTask(id,1);break;
@@ -137,7 +149,8 @@ document.addEventListener('change',async e=>{
  const el=e.target,f=el.dataset.f;
  if(f&&modalTask){const t=T(modalTask);if(!t)return;const r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
   switch(f){
-   case'channel':t.channel=el.value||null;if(r)r.channel=t.channel;if(t.block)pushBlock(t);break;
+   case'channel':t.channel=el.value||null;t.aiCat=false;if(r)r.channel=t.channel;if(t.block)pushBlock(t);break;
+   case'proj':t.proj=el.value||null;break;
    case'est':setEst(t,+el.value);break;
    case'day':{const nd=el.value||null;if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;if(nd)t.order=nextOrder(nd);break}
    case'time':if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day)}else{t.pinned=false;if(!flowOn())clearBlock(t,true)}break;
@@ -155,6 +168,14 @@ document.addEventListener('change',async e=>{
  if(el.hasAttribute('data-tips')){lsSet('journee.tips',el.checked?'on':'off');renderTip();return}
  if(el.dataset.sheettime){const t=T(el.dataset.sheettime);if(t&&el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day);save();closeModal();render();toast('Heure fixée à '+el.value)}return}
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
+ if(el.dataset.ncal!==undefined){const n=node(el.dataset.ncal);if(n){n.cal=el.value||null;save();relocateBlocks();toast('Agenda de « '+n.name+' » enregistré')}return}
+ if(el.dataset.nc){const n=node(el.dataset.nc);if(n){n.color=el.value;treeColors();save();render()}return}
+ if(el.dataset.nn){const n=node(el.dataset.nn);if(n){n.name=el.value.trim()||n.name;save()}return}
+ if(el.dataset.nk!==undefined){const n=node(el.dataset.nk);if(n){n.key=norm(el.value).replace(/[^a-z0-9]/g,'');el.value=n.key;save()}return}
+ if(el.dataset.nmove){nodeMove(el.dataset.nmove,el.value);closeModal();render();return}
+ if(el.dataset.pn){const p=proj(el.dataset.pn);if(p){p.name=el.value.trim()||p.name;save()}return}
+ if(el.dataset.pe){const p=proj(el.dataset.pe);if(p){p.end=el.value||null;save()}return}
+ if(el.dataset.pd){const p=proj(el.dataset.pd);if(p){p.done=el.checked;save();render()}return}
  if(el.dataset.ctxcal!==undefined){S.settings.ctxCal=S.settings.ctxCal||{};S.settings.ctxCal[el.dataset.ctxcal]=el.value;save();relocateBlocks();toast('Agenda du contexte enregistré');return}
  if(el.dataset.chcal!==undefined){const c=ch(el.dataset.chcal);if(c){c.cal=el.value;save();relocateBlocks();toast('Agenda de « '+c.name+' » enregistré')}return}
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
@@ -293,3 +314,4 @@ document.addEventListener('keydown',e=>{
  else if(k==='f'){const t=dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,(view==='week'||view==='objectives')?7*s:s);render()}
 });
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('brand')){e.preventDefault();e.target.click()}});

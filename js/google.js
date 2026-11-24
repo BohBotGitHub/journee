@@ -3,7 +3,7 @@
 const REDIRECT=location.origin+location.pathname;
 const calId=()=>encodeURIComponent(S.settings.calendarId||'primary');
 // agenda cible d'une tâche : celui de son canal, sinon celui de son contexte, sinon l'agenda par défaut
-function taskCal(t){const c=ch(t.channel);return (c&&c.cal)||(c&&c.ctx&&(S.settings.ctxCal||{})[c.ctx])||S.settings.calendarId||'primary'}
+function taskCal(t){const c=ch(t.channel);if(c&&c.lvl!==undefined)return nodeCal(c.id)||S.settings.calendarId||'primary';return (c&&c.cal)||(c&&c.ctx&&(S.settings.ctxCal||{})[c.ctx])||S.settings.calendarId||'primary'}
 const blkCal=t=>encodeURIComponent((t.block&&t.block.cal)||S.settings.calendarId||'primary');
 function gTok(){try{const o=JSON.parse(lsGet('journee.g')||'null');return o&&o.exp>Date.now()+30000?o.t:null}catch(e){return null}}
 const gWas=()=>!!lsGet('journee.g.on');

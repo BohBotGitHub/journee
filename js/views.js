@@ -7,7 +7,7 @@ function card(t){
  return `<div class="card${t.done?' done':''}${run?' running':''}" draggable="true" data-drag="task|${t.id}" data-id="${t.id}">
  <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
  <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${t.prio==='urgent'?'<span class="prio u" title="Urgent">!!</span>':t.prio==='high'?'<span class="prio" title="Prioritaire">!</span>':''}${esc(t.title)}</div>
- <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}${t.block?`<span title="${t.pinned?'Heure fixée':'Suit l’ordre de la liste'}">${hm(new Date(t.block.start))}${t.pinned?' 📌':''}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${dueLabel(t)}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?ch(t.aiSug.channel).name:'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
+ <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}"${t.aiCat?' title="Catégorie devinée par Claude"':''}>${esc(nodeLabel(c.id))}${t.aiCat?' ✦':''}</span>`:''}${t.proj&&proj(t.proj)?`<span class="pchip">◆ ${esc(proj(t.proj).name)}</span>`:''}${t.block?`<span title="${t.pinned?'Heure fixée':'Suit l’ordre de la liste'}">${hm(new Date(t.block.start))}${t.pinned?' 📌':''}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${dueLabel(t)}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?nodeLabel(t.aiSug.channel):'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
  <div class="ctime"><span class="est" data-act="estmenu" data-id="${t.id}" data-live="t-${t.id}" title="Temps passé / estimé — clique pour changer la durée">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'—'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
 }
 function loadInfo(d){const ts=dayTasks(d);const task=ts.reduce((a,t)=>a+(t.est||0),0),meet=meetingMin(d),cap=Math.max(60,(S.settings.workEnd-S.settings.workStart)*60);return{task,meet,cap,over:task+meet-cap}}
@@ -87,7 +87,7 @@ function viewToday(){
  <div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>
  <div class="acts"><button class="${!info.planned&&d>=today()?'pri':''}" data-act="plan">${planLbl}<kbd class="k">P</kbd></button><button data-act="focusnext">Focus<kbd class="k">F</kbd></button><button class="ghost more" data-act="daymenu" aria-label="Plus d’actions">•••</button></div></div>
  ${summaryHtml(d,isT)}
- ${addForm(d,'Ajouter une tâche… (« Appeler la banque 30m #perso demain »)')}
+ ${addForm(d,'Ajouter une tâche… (« Natation 45m #natation demain »)')}
  ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>`}
  ${ts.length?`<div class="foot">${done.length}/${ts.length} terminée${done.length>1?'s':''} · ${fmtMin(ts.reduce((a,t)=>a+actualSec(t),0)/60)} suivies</div>`:''}
  ${info.note?`<div class="note"><b>Fin de journée</b>\n${esc(info.note)}</div>`:''}`;
@@ -178,20 +178,25 @@ function tplHtml(){
 /* ---------- vue Backlog ---------- */
 function viewBacklog(){
  const ts=S.tasks.filter(t=>!t.day&&!t.done).sort((a,b)=>a.order-b.order);
- const groups=[...S.channels.map(c=>({c,items:ts.filter(t=>t.channel===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length);
+ const gkey=t=>{const p=pathOf(t.channel);return p.length?(p[1]||p[0]).id:null};const groups=hasTree()?[...S.channels.filter(c=>c.lvl===1).sort((a,b)=>(pillarOf(a.id).o-pillarOf(b.id).o)||(a.o-b.o)).map(c=>({c,items:ts.filter(t=>gkey(t)===c.id)})),...pillars().map(c=>({c,items:ts.filter(t=>gkey(t)===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length):[...S.channels.map(c=>({c,items:ts.filter(t=>t.channel===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length);
  return `<div class="head"><div><h1>Backlog</h1><div class="sub">${ts.length} tâche${ts.length>1?'s':''} en attente d’un jour</div></div></div>
  ${tplHtml()}
  ${addForm(null,'Ajouter au backlog… (ex. « Réserver le garage 1h #admin »)')}
- <div class="list" data-drop="backlog" style="gap:0">${groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.name)}</span>`:'Sans canal'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
+ <div class="list" data-drop="backlog" style="gap:0">${groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.lvl===1?pillarOf(g.c.id).name+' › '+g.c.name:g.c.name)}</span>`:'Sans catégorie'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
 }
 
 /* ---------- vue Objectifs ---------- */
 function weekStats(w){
  const days=[...Array(7)].map((_,i)=>addDays(w,i)),ts=S.tasks.filter(t=>t.day&&days.includes(t.day));
  const done=ts.filter(t=>t.done),sec=ts.reduce((a,t)=>a+actualSec(t),0);
- const per=[...S.channels,{id:null,name:'Sans canal',color:'#8a8f98'}].map(c=>({c,sec:ts.filter(t=>(c.id?t.channel===c.id:!ch(t.channel))).reduce((a,t)=>a+actualSec(t),0)})).filter(x=>x.sec>0);
+ const per=groupSec(ts.map(t=>({c:t.channel,a:actualSec(t)})));
  const estDone=done.reduce((a,t)=>a+(t.est||0),0),actDone=done.reduce((a,t)=>a+actualSec(t),0)/60;
  return{ts,done,sec,per,estDone,actDone};
+}
+// temps par domaine (ou par ancien canal) : [{c:{name,color},sec}]
+function groupSec(xs){
+ const m={};for(const x of xs){if(!x.a)continue;const p=pathOf(x.c);const n=p.length?(hasTree()?(p[1]||p[0]):p[p.length-1]):null;const k=n?n.id:'';m[k]=m[k]||{c:n?{id:n.id,name:n.lvl===1?n.name:n.name,color:n.color}:{id:null,name:'Sans catégorie',color:'#8a8f98'},sec:0};m[k].sec+=x.a}
+ return Object.values(m).sort((a,b)=>b.sec-a.sec);
 }
 function statsHtml(w){
  const s=weekStats(w),max=Math.max(1,...s.per.map(p=>p.sec));
@@ -221,7 +226,7 @@ function viewStats(){
  const weeks=[...Array(12)].map((_,i)=>addDays(monday(t0),-7*(11-i)));
  const wk=weeks.map(w=>{const e=addDays(w,6),xs=all.filter(x=>x.d>=w&&x.d<=e);return{w,sec:xs.reduce((a,x)=>a+x.a,0),n:xs.length}});
  const maxW=Math.max(1,...wk.map(x=>x.sec));
- const per={};for(const x of last30){const k=x.c||'';per[k]=per[k]||{sec:0,n:0,e:0,ea:0};per[k].sec+=x.a;per[k].n++;if(x.e&&x.a){per[k].e+=x.e*60;per[k].ea+=x.a}}
+ const per={};for(const x of last30){const p=pathOf(x.c),n=p.length?(hasTree()?(p[1]||p[0]):p[p.length-1]):null;const k=n?n.id:'';per[k]=per[k]||{sec:0,n:0,e:0,ea:0};per[k].sec+=x.a;per[k].n++;if(x.e&&x.a){per[k].e+=x.e*60;per[k].ea+=x.a}}
  const perL=Object.entries(per).map(([c,v])=>({c:ch(c),...v})).sort((a,b)=>b.sec-a.sec),maxC=Math.max(1,...perL.map(x=>x.sec));
  const acc=last30.filter(x=>x.e&&x.a),ratio=acc.length?acc.reduce((a,x)=>a+x.a,0)/acc.reduce((a,x)=>a+x.e*60,0):0;
  let streak=0;const doneDays=new Set(all.map(x=>x.d));for(let d=t0;doneDays.has(d)||(d===t0&&doneDays.has(addDays(d,-1))&&!doneDays.has(d));d=addDays(d,-1)){if(doneDays.has(d))streak++;else if(d!==t0)break}
@@ -232,7 +237,7 @@ function viewStats(){
  return `<div class="head"><div><h1>Statistiques</h1><div class="sub">30 derniers jours · historique depuis le ${fmtDay(first,{day:'numeric',month:'long',year:'numeric'})}</div></div></div>
  <div class="kpis"><div><b>${fh(last30.reduce((a,x)=>a+x.a,0))}</b><small>temps suivi (30 j)</small></div><div><b>${last30.length}</b><small>tâches terminées (30 j)</small></div><div><b>${ratio?pct(ratio):'—'}</b><small>réel / estimé ${ratio?(ratio>1.15?'· tu sous-estimes':ratio<0.85?'· tu surestimes':'· estimations justes'):''}</small></div><div><b>${streak} j</b><small>série de jours avec au moins une tâche faite</small></div></div>
  <section class="stsec"><h2>Temps suivi par semaine</h2><div class="wkbars">${wk.map(x=>`<div class="wkb" title="${fh(x.sec)} · ${x.n} tâches"><i style="height:${Math.max(2,x.sec/maxW*100)}%"></i><small>${fmtDay(x.w,{day:'numeric',month:'short'})}</small><b>${x.sec?fh(x.sec):''}</b></div>`).join('')}</div></section>
- <section class="stsec"><h2>Par canal (30 jours)</h2>${perL.length?`<div class="bars">${perL.map(x=>`<div class="brow"><span>${esc(x.c?x.c.name:'Sans canal')}</span><div class="bt" style="--c:${esc(x.c?x.c.color:'#8a8f98')}"><i style="width:${x.sec/maxC*100}%"></i></div><span>${fh(x.sec)}${x.e?' · '+pct(x.ea/x.e):''}</span></div>`).join('')}</div><p class="mute" style="font-size:13px">Le pourcentage compare le temps réel au temps estimé.</p>`:'<p class="mute">Pas encore de temps suivi ce mois-ci.</p>'}</section>
+ ${hasTree()?(()=>{const pp={};for(const x of last30){const p=pillarOf(x.c);if(p)pp[p.id]=(pp[p.id]||0)+x.a}const tot=Object.values(pp).reduce((a,v)=>a+v,0);return tot?`<section class="stsec"><h2>Par pilier (30 jours)</h2><div class="pilbar">${pillars().filter(p=>pp[p.id]).map(p=>`<i style="--c:${esc(p.color)};flex:${pp[p.id]}" title="${esc(p.name)} · ${fh(pp[p.id])}"><span>${esc(p.name)} ${Math.round(pp[p.id]/tot*100)} %</span></i>`).join('')}</div></section>`:''})():''}<section class="stsec"><h2>${hasTree()?'Par domaine':'Par canal'} (30 jours)</h2>${perL.length?`<div class="bars">${perL.map(x=>`<div class="brow"><span>${esc(x.c?(x.c.lvl===1?pillarOf(x.c.id).name+' › '+x.c.name:x.c.name):'Sans catégorie')}</span><div class="bt" style="--c:${esc(x.c?x.c.color:'#8a8f98')}"><i style="width:${x.sec/maxC*100}%"></i></div><span>${fh(x.sec)}${x.e?' · '+pct(x.ea/x.e):''}</span></div>`).join('')}</div><p class="mute" style="font-size:13px">Le pourcentage compare le temps réel au temps estimé.</p>`:'<p class="mute">Pas encore de temps suivi ce mois-ci.</p>'}</section>
  <section class="stsec"><h2>Là où passe ton temps (depuis le début)</h2><p class="mute" style="margin:0 0 8px">${fh(total)} suivies au total sur ${all.length} tâches (les chronos oubliés de plus de 12 h sont ignorés).</p><div class="bars">${topL.map(x=>`<div class="brow"><span title="${esc(x.t)}">${esc(x.t)}</span><div class="bt" style="--c:var(--acc)"><i style="width:${x.sec/Math.max(1,topL[0].sec)*100}%"></i></div><span>${fh(x.sec)} · ${x.n}×</span></div>`).join('')}</div></section>`;
 }
 
@@ -248,10 +253,13 @@ function viewSettings(){
  return `<div class="head"><div><h1>Réglages</h1><div class="sub">L’essentiel ici ; le reste dans « Réglages avancés » en bas.</div></div></div>
  <div class="set">
  <section><h2>Journée type</h2><div class="grid2">${num('workStart','Début du travail (h)',0,23)}${num('workEnd','Fin du travail (h)',1,24)}${num('dayStart','Agenda : première heure',0,23)}${num('dayEnd','Agenda : dernière heure',1,24)}<label>Agenda vivant<select data-set="liveShift"><option value="1" ${s.liveShift!==false?'selected':''}>Vivant : suit la liste et l’heure</option><option value="" ${s.liveShift===false?'selected':''}>Manuel : je place mes créneaux</option></select></label></div></section>
- <section><h2>Canaux</h2><p>Des catégories pour classer tes tâches et voir où passe ton temps. Tape <code>#nom</code> en créant une tâche pour l’y ranger.</p>
-  ${S.channels.map(c=>`<div class="chrow"><input type="color" data-chc="${esc(c.id)}" value="${esc(c.color)}" aria-label="Couleur"><input data-chn="${esc(c.id)}" value="${esc(c.name)}" aria-label="Nom du canal"><button class="danger sm" data-act="chdel" data-id="${esc(c.id)}">Supprimer</button></div>`).join('')}
-  <button class="sm" data-act="chadd">+ Ajouter un canal</button>
+ <section><h2>Arbre des catégories</h2><p>4 piliers, leurs domaines et leurs catégories. Tape <code>#raccourci</code> en créant une tâche pour la ranger (sinon MyDayBot devine), <code>+projet</code> pour l’associer à un projet. L’agenda Google choisi pour un pilier vaut pour tout ce qu’il contient, sauf si un domaine ou une catégorie en a un autre.</p>
+  ${treeEditorHtml()}
+  ${hasTree()&&refineCands().length?`<div class="row" style="margin-top:12px"><span class="mute">${refineCands().length} tâches rangées seulement au niveau du domaine.</span><span class="sp"></span><button class="sm" data-act="refine" ${aiOn()?'':'disabled title="Ajoute ta clé Claude plus bas"'}>Affiner avec Claude</button></div>`:''}
   </section>
+ <section><h2>Projets</h2><p>Des étiquettes qui traversent l’arbre, avec une date de fin. Les tâches d’un projet restent rangées dans leur catégorie.</p>
+  ${(S.projects||[]).map(p=>{const g=projProgress(p.id);return `<div class="chrow"><input data-pn="${esc(p.id)}" value="${esc(p.name)}" aria-label="Nom du projet"><input type="date" data-pe="${esc(p.id)}" value="${esc(p.end||'')}" aria-label="Date de fin" style="max-width:160px"><span class="mute" style="white-space:nowrap">${g.done}/${g.n}</span><label style="flex-direction:row;align-items:center;gap:6px;white-space:nowrap"><input type="checkbox" data-pd="${esc(p.id)}" ${p.done?'checked':''} style="width:auto;min-height:0">Terminé</label></div>`}).join('')}
+  <button class="sm" data-act="projadd">+ Nouveau projet</button></section>
  <section><h2>Connexions</h2>
   <div class="connrow"><b>Google</b><span class="mute">Agenda et synchro téléphone ↔ Mac</span><span class="sp"></span><span class="status${gTok()?' on':''}">${gTok()?'Connecté':gWas()?'Session expirée':'Non connecté'}</span>${gTok()?'':`<button class="sm pri" data-act="gin">${gWas()?'Reconnecter':'Connecter'}</button>`}</div>
   <p class="mute" style="margin:2px 0 10px;font-size:13px" data-live="sync">${esc(syncState)}</p>
@@ -273,13 +281,7 @@ function viewSettings(){
   ${gCals?`<p style="margin:12px 0 4px">Agendas affichés :</p>${gCals.map(c=>`<label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" data-cal="${esc(c.id)}" ${calOn(c)?'checked':''} style="width:auto;min-height:0"><span class="chip" style="--c:${esc(c.color||'#888')}">${esc(c.name)}</span></label>`).join('')}`:''}
   <p style="margin:10px 0 0">Quand la session expire (toutes les heures), MyDayBot la renouvelle toute seule par un aller-retour éclair, sans clic. Google sert aussi à <b>synchroniser tes tâches entre ton téléphone et ton Mac</b> (fichier caché dans ton Drive). <span data-live="sync">${esc(syncState)}</span></p>
   <div class="row" style="margin-top:12px"><span class="status${gTok()?' on':''}">${gTok()?'Connecté':gWas()?'Session expirée':'Non connecté'}</span><span class="sp"></span>${gWas()?'<button class="ghost" data-act="gout">Déconnecter</button>':''}<button class="pri" data-act="gin">${gWas()?'Reconnecter':'Connecter Google'}</button></div></section>
- <section><h2>Agenda Google de chaque catégorie</h2>
-  
-  <p>Les créneaux d’une tâche sont créés dans l’agenda de son canal, sinon de son contexte, sinon dans l’agenda par défaut. Changer le canal d’une tâche déplace son créneau.</p>
-  ${!gTok()?'<p class="mute">Connecte Google pour choisir les agendas.</p>':!gCals?(loadCals().then(()=>{if(view==='settings')render()}),'<p class="mute">Chargement des agendas…</p>'):(()=>{const opts=sel=>`<option value="">Agenda par défaut</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${sel===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}`;const ctxs=[...new Set(S.channels.map(c=>c.ctx).filter(Boolean))];
-   return `${ctxs.length?`<div class="calmap">${ctxs.map(x=>`<label>Contexte ${esc(x)}<select data-ctxcal="${esc(x)}"><option value="">Agenda par défaut</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${(S.settings.ctxCal||{})[x]===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>`).join('')}</div>`:''}
-   <div class="calmap">${S.channels.map(c=>`<label><span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span><select data-chcal="${esc(c.id)}">${opts(c.cal||'')}</select></label>`).join('')}</div>`})()}
-  </section>
+
  <section><h2>Microsoft To Do : identifiant</h2><p>Importe tes tâches dans ta journée ; quand tu les termines ici, elles sont cochées dans To Do (et inversement à la synchro).</p>
   <label>ID d’application (client) Azure<input data-set="msClientId" value="${esc(s.msClientId)}" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off"></label>
   <div class="row" style="margin-top:12px"><span class="status${msOn()?' on':''}">${msOn()?'Connecté':'Non connecté'}</span><span class="sp"></span>${msOn()?'<button class="ghost" data-act="mout">Déconnecter</button>':''}<button class="pri" data-act="min">${msOn()?'Reconnecter':'Connecter Microsoft'}</button></div></section>

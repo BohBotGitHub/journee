@@ -7,7 +7,7 @@ function render(){
  const m=$('#main'),st=m.scrollTop,bc0=document.querySelector('.bigcal'),bst=bc0?bc0.scrollTop:null;
  m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='settings'?viewSettings():viewToday();
  m.scrollTop=st;
- renderSide();renderRun();
+ renderSide();renderRun();renderSyncBar();
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
  if(layout==='cal'&&(view==='today'||view==='week')){const bd=bigDays();ensureRange(bd[0],bd[bd.length-1])}else if(view==='week'){const w=monday(cur);ensureRange(w,addDays(w,6))}else{ensureRange(cur,addDays(cur,6))}
  {const bc=document.querySelector('.bigcal');if(bc){if(!scrolledBig||bst===null){scrolledBig=true;const n=new Date();bc.scrollTop=Math.max(0,(Math.max(S.settings.dayStart,n.getHours()-1)-S.settings.dayStart)*PX)}else bc.scrollTop=bst}}
@@ -43,7 +43,7 @@ function openTask(id){
  const ests=[0,10,15,20,30,45,60,75,90,120,150,180,240];if(!ests.includes(t.est))ests.push(t.est),ests.sort((a,b)=>a-b);
  showModal(`<div class="mhead"><input class="mtitle" data-f="title" value="${esc(t.title)}" aria-label="Titre"><button class="x" data-act="close" aria-label="Fermer">×</button></div>
  <div class="grid2">
- <label>Canal<select data-f="channel"><option value="">Aucun</option>${S.channels.map(c=>`<option value="${esc(c.id)}" ${c.id===t.channel?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
+ <label>Catégorie<select data-f="channel">${treeOptions(t.channel,'Aucune')}</select></label><label>Projet<select data-f="proj"><option value="">Aucun</option>${(S.projects||[]).filter(p=>!p.done||p.id===t.proj).map(p=>`<option value="${esc(p.id)}" ${p.id===t.proj?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
  <label>Durée estimée<select data-f="est">${ests.map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${v?fmtMin(v):'—'}</option>`).join('')}</select></label>
  <label>Jour (vide = backlog)<input type="date" data-f="day" value="${t.day||''}"></label>
  <label>Créneau dans l’agenda<span class="row"><input type="time" step="900" data-f="time" value="${t.block?hm(new Date(t.block.start)):''}">${t.block&&t.pinned?'<button class="sm ghost" data-act="unpin">Libérer l’heure</button>':''}${t.block&&!flowOn()?'<button class="sm ghost" data-act="unblock">Retirer</button>':''}</span></label>
@@ -118,7 +118,7 @@ function renderRitual(){
    h=shell(`<h2>Qu’est-ce qui compte ${d===today()?'aujourd’hui':'ce jour-là'} ?</h2><p class="lead">${cap1(dl)}. Choisis ce que tu veux vraiment faire.</p>${objChips(monday(d))}
    ${addForm(d,'Ajouter une tâche… (ex. « Relire le devis 20m »)','rit-add')}
    <div class="rsec">Prévu (${ts.length})</div><div class="rlist">${ts.length?ts.map(t=>`<div class="rrow sel"><div><b>${esc(t.title)}</b>${t.src?' <span class="src">To Do</span>':''}</div><div class="btns"><button class="sm ghost" data-act="mv" data-id="${t.id}" data-to="backlog">Retirer</button></div></div>`).join(''):'<p class="mute">Rien pour l’instant.</p>'}</div>
-   ${bl.length?`<div class="rsec">Depuis le backlog</div><div class="rlist">${bl.map(t=>`<div class="rrow"><div><b>${esc(t.title)}</b><small>${ch(t.channel)?esc(ch(t.channel).name):''}${t.est?' · '+fmtMin(t.est):''}</small></div><div class="btns"><button class="sm" data-act="mv" data-id="${t.id}" data-to="${d}">Ajouter</button></div></div>`).join('')}</div>`:''}
+   ${bl.length?`<div class="rsec">Depuis le backlog</div><div class="rlist">${bl.map(t=>`<div class="rrow"><div><b>${esc(t.title)}</b><small>${ch(t.channel)?esc(nodeLabel(t.channel)):''}${t.est?' · '+fmtMin(t.est):''}</small></div><div class="btns"><button class="sm" data-act="mv" data-id="${t.id}" data-to="${d}">Ajouter</button></div></div>`).join('')}</div>`:''}
    ${td.length?`<div class="rsec">Depuis Microsoft To Do</div><div class="rlist">${td.filter(x=>!S.tasks.some(t=>t.src&&t.src.taskId===x.id&&t.day===d)).map(x=>`<div class="rrow"><div><b>${esc(x.title)}</b></div><div class="btns"><button class="sm" data-act="todoadd" data-l="${esc(todo.listId)}" data-t="${esc(x.id)}" data-day="${d}">Ajouter</button></div></div>`).join('')}</div>`:''}`);
   }else if(i===2){const ts=dayTasks(d).filter(t=>!t.done),L=loadInfo(d);
    h=shell(`<h2>Combien de temps ?</h2><p class="lead">Estime chaque tâche. ${gTok()?'Tes réunions sont comptées.':'Connecte Google Agenda pour compter aussi tes réunions.'}</p>${loadBar(d)}

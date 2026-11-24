@@ -31,6 +31,8 @@ class Google:
         self.events = {'primary': [], 'pro@group': []}
         self.calls = []
         self.drive = None
+        self.ver = 0
+        self.downloads = 0
         self.add('primary', 'Réunion équipe', at(14), at(15))
         self.add('primary', 'Déjeuner', at(12, 30), at(13, 30), transparent=True)
         self.add('primary', 'Dentiste', at(10, 0, 1), at(11, 0, 1))
@@ -56,8 +58,9 @@ class Google:
             return J({'id': eid or 'x'}) if m != 'DELETE' else route.fulfill(status=204, body='')
         if 'oauth2/v3/userinfo' in req.url: return J({'email': 'test@example.com'})
         if '/drive/v3/files' in path and m == 'GET' and 'alt=media' not in req.url:
-            return J({'files': [{'id': 'f1'}] if self.drive else []})
-        if 'alt=media' in req.url: return J(self.drive or {})
+            return J({'files': [{'id': 'f1', 'modifiedTime': f'2026-01-01T00:00:{self.ver:02d}Z'}] if self.drive else []})
+        if 'alt=media' in req.url:
+            self.downloads += 1; return J(self.drive or {})
         if '/upload/drive/v3/files' in path:
             data = req.post_data or ''
             ct = req.headers.get('content-type') or ''
@@ -66,17 +69,26 @@ class Google:
                 parts = [x for x in data.split('--' + bnd) if x.strip() and x.strip() != '--']
                 j = parts[-1].split('\r\n\r\n', 1)[1].rsplit('\r\n', 1)[0]
             else: j = data
-            try: self.drive = json.loads(j)
+            try: self.drive = json.loads(j); self.ver += 1
             except Exception: pass
-            return J({'id': 'f1'})
+            return J({'id': 'f1', 'modifiedTime': f'2026-01-01T00:00:{self.ver:02d}Z'})
         return J({})
 
 def claude_route(route):
     body = json.loads(route.request.post_data); txt = json.dumps(body['messages'])
+    if 'tools' not in body:
+        # affinage en lot : chaque tâche va dans la 1re catégorie de son domaine
+        prompt = body['messages'][0]['content']
+        cats = dict(re.findall(r'^([^:\n|]+) : ([^\n]+)$', prompt, re.M))
+        out = {}
+        for n, dom, _t in re.findall(r'^(\d+) \| ([^|]+) \| (.+)$', prompt, re.M):
+            out[n] = cats[dom.strip()].split(', ')[0]
+        return route.fulfill(status=200, content_type='application/json',
+                             body=json.dumps({'content': [{'type': 'text', 'text': json.dumps(out)}], 'usage': {'input_tokens': 900, 'output_tokens': 120}}))
     ids = re.findall(r'\[([a-z0-9-]{8,})\]', txt)
     inp = {'message': 'Proposition de test.'}
     if ids:
-        inp['updates'] = [{'id': ids[0], 'est': 25, 'channel': 'Perso'}]
+        inp['updates'] = [{'id': ids[0], 'est': 25, 'channel': 'Corps › Natation'}]
         inp['order'] = ids[:3][::-1]
     inp['new_tasks'] = [{'title': 'Tâche proposée', 'est': 15, 'day': 'backlog'}]
     route.fulfill(status=200, content_type='application/json',
@@ -130,14 +142,22 @@ def _(c):
     assert st(pg, 'S.tasks.length') == 5
     ctx.close()
 
-@test('Saisie rapide : durée, canal, date')
+@test('Saisie rapide : durée, catégorie, projet, date')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
-    add(pg, 'Appeler la banque 30m #perso demain')
+    add(pg, 'Longueurs 30m #natation demain')
     t = st(pg, 'S.tasks.at(-1)')
-    assert t['title'] == 'Appeler la banque', t['title']
+    assert t['title'] == 'Longueurs', t['title']
     assert t['est'] == 30 and t['day'] == d(1), (t['est'], t['day'])
-    assert st(pg, "S.channels.find(c=>c.id===S.tasks.at(-1).channel).name") == 'Perso'
+    assert t['channel'] == 'c-natation', t['channel']
+    # raccourci partiel et accents ignorés, projet avec +
+    pg.evaluate("()=>{const S=window.journee.state;S.projects.push({id:'pr1',name:'Déménagement',end:null,done:false});window.journee.save()}")
+    add(pg, 'Cartons cuisine #villet +demen')
+    t = st(pg, 'S.tasks.at(-1)'); assert t['channel'] == 'c-villette' and t['proj'] == 'pr1' and t['title'] == 'Cartons cuisine', t
+    # sans # : MyDayBot devine par mots-clés
+    add(pg, 'Passer l’aspirateur 20m')
+    assert st(pg, 'S.tasks.at(-1).channel') == 'c-menage'
+    assert 'Foyer › Ménage' in pg.inner_text('#main .list')
     add(pg, 'Rapport mensuel 1h30 lundi')
     t = st(pg, 'S.tasks.at(-1)'); assert t['est'] == 90
     assert datetime.date.fromisoformat(t['day']).weekday() == 0
@@ -311,14 +331,14 @@ def _(c):
     load1 = st(pg, 'loadInfo(today()).meet')
     pg.click('.evrow:has-text("Réunion équipe") [data-act="evtoggle"]'); tick(pg)
     assert st(pg, 'loadInfo(today()).meet') < load1
-    # correspondance canal Travail -> agenda Pro
-    pg.evaluate("()=>{const S=window.journee.state;S.channels.find(c=>c.name==='Travail').cal='pro@group';window.journee.save()}")
-    add(pg, 'Préparer offre 30m #travail'); tick(pg, 1500)
+    # agenda du pilier Bâtir -> Pro ; hérité par La Villette
+    pg.evaluate("()=>{const S=window.journee.state;S.channels.find(c=>c.id==='p-batir').cal='pro@group';window.journee.save()}")
+    add(pg, 'Préparer offre 30m #villette'); tick(pg, 1500)
     posts = [p for m, p in g.calls if m == 'POST' and p.endswith('/events')]
     assert any('pro%40group' in p or 'pro@group' in p for p in posts), posts
     t = st(pg, "S.tasks.find(t=>t.title==='Préparer offre')")
     assert t['block']['cal'] == 'pro@group', t['block']
-    pg.evaluate("()=>{const S=window.journee.state;const t=S.tasks.find(t=>t.title==='Préparer offre');t.channel=S.channels.find(c=>c.name==='Perso').id;window.journee.save()}")
+    pg.evaluate("()=>{const S=window.journee.state;const t=S.tasks.find(t=>t.title==='Préparer offre');t.channel='c-natation';window.journee.save()}")
     pg.evaluate("()=>window.journee.fn.pushBlock(window.journee.state.tasks.find(t=>t.title==='Préparer offre'))"); tick(pg, 800)
     assert any(p.endswith('/move') for m, p in g.calls), 'pas de déplacement d’agenda'
     pg.goto(BASE + '#today'); tick(pg, 1500)
@@ -452,6 +472,82 @@ def _(c):
     pg.click('[data-act="go"][data-v="stats"]'); pg.wait_for_timeout(200)
     assert 'Statistiques' in pg.inner_text('#main h1')
     assert pg.locator('#nav [data-view="review"].on').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('Arbre : 4 piliers, héritage des agendas, éditeur')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    assert st(pg, "S.channels.filter(c=>c.lvl===0).map(c=>c.name).join(',')") == 'Être,Grandir,Relier,Bâtir'
+    assert st(pg, "S.channels.filter(c=>c.lvl===1).length") == 10
+    assert st(pg, "S.channels.filter(c=>c.lvl===2).length") == 35
+    assert st(pg, "window.journee.fn.nodeLabel('c-jdr')") == 'Jeu › MJ de JDR'
+    # agenda : catégorie > domaine > pilier
+    pg.evaluate("()=>{const S=window.journee.state,n=id=>S.channels.find(c=>c.id===id);n('p-grandir').cal='A';n('d-jeu').cal='B';window.journee.save()}")
+    assert st(pg, "window.journee.fn.nodeCal('c-piano')") == 'A'
+    assert st(pg, "window.journee.fn.nodeCal('c-magic')") == 'B'
+    pg.click('#nav [data-view="settings"]'); pg.wait_for_timeout(200)
+    assert pg.locator('.tpil').count() == 4
+    pg.click('.tnode[data-node="d-jeu"] ~ .tcats [data-act="nodeadd"]'); pg.wait_for_timeout(200)
+    nid = st(pg, "S.channels.at(-1).id")
+    assert st(pg, "S.channels.at(-1).parent") == 'd-jeu'
+    pg.fill(f'[data-nn="{nid}"]', 'Jeux vidéo'); pg.keyboard.press('Tab'); pg.wait_for_timeout(100)
+    pg.fill(f'[data-nk="{nid}"]', 'JV'); pg.keyboard.press('Tab'); pg.wait_for_timeout(100)
+    assert st(pg, f"window.journee.fn.findNode('jv').id") == nid
+    # supprimer une catégorie remonte ses tâches au domaine
+    pg.evaluate(f"()=>{{const S=window.journee.state;S.tasks[0].channel='{nid}';window.journee.save()}}")
+    pg.click(f'.tnode[data-node="{nid}"] [data-act="nodemenu"]'); pg.click('[data-act="nodedel"]'); pg.wait_for_timeout(100)
+    assert st(pg, "S.tasks[0].channel") == 'd-jeu'
+    assert not errs, errs; ctx.close()
+
+OLD = """localStorage.setItem('journee.v1',JSON.stringify({seeded:true,settings:{aiKey:'k',aiAuto:false},channels:[{id:'o1',name:'Perso',color:'#2f9e6a',cal:'pro@group'},{id:'o2',name:'Ménage',color:'#888'},{id:'o3',name:'Déménagement',color:'#c90'}],
+ tasks:[{id:'t1',title:'Douche',channel:'o1',day:null,subtasks:[]},{id:'t2',title:'Lessive',channel:'o2',day:null,subtasks:[]},{id:'t3',title:'Truc bizarre',channel:'o1',day:null,subtasks:[]},{id:'t4',title:'Cartons salon',channel:'o3',day:null,subtasks:[]}],
+ archive:[{id:'a1',t:'Natation',c:'o1',d:'2025-01-01',a:1800},{id:'a2',t:'Méditation du soir',c:'o1',d:'2025-01-02',a:600}]}))"""
+
+@test('Migration des anciens canaux vers l’arbre, puis affinage par Claude')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], claude=True, storage=OLD)
+    pg.wait_for_selector('[data-act="treego"]')
+    assert 'Corps › Routines' in pg.inner_text('#modal')
+    assert st(pg, "S.channels.some(c=>c.lvl===0)") is False, 'rien ne doit changer avant validation'
+    pg.click('[data-act="treego"]'); pg.wait_for_timeout(200)
+    ch = lambda i: st(pg, f"S.tasks.find(t=>t.id==='{i}').channel")
+    assert ch('t1') == 'c-routines' and ch('t2') == 'c-menage' and ch('t3') == 'd-corps' and ch('t4') == 'd-foyer', [ch(x) for x in ['t1','t2','t3','t4']]
+    assert st(pg, "S.tasks.find(t=>t.id==='t4').proj") and st(pg, "S.projects[0].name") == 'Déménagement'
+    assert st(pg, "S.archive.map(a=>a.c).join(',')") == 'c-natation,c-meditation'
+    assert st(pg, "S.channels.some(c=>c.lvl===undefined)") is False
+    assert pg.evaluate("!!localStorage.getItem('journee.backup.pretree')")
+    pg.click('#nav [data-view="settings"]'); pg.wait_for_timeout(200)
+    pg.click('[data-act="refine"]'); pg.wait_for_selector('[data-act="refineok"]')
+    pg.click('[data-act="refineok"]'); pg.wait_for_timeout(200)
+    assert ch('t3') == 'c-callisthenie' and ch('t4') == 'c-menage', (ch('t3'), ch('t4'))
+    assert not errs, errs; ctx.close()
+
+@test('Synchro immédiate : envoi rapide, vérification légère, bandeau si non connecté')
+def _(c):
+    g = Google()
+    ctx, pg, errs = new_page(c['b'], google=g, storage=TOKEN)
+    pg.wait_for_timeout(1200); add(pg, 'Vite synchronisée'); pg.wait_for_timeout(2500)
+    assert g.drive and any(t['title'] == 'Vite synchronisée' for t in g.drive['tasks']), 'pas envoyé en moins de 2,5 s'
+    n = g.downloads
+    pg.evaluate("()=>window.dispatchEvent(new Event('focus'))"); pg.wait_for_timeout(500)
+    assert g.downloads == n, 'téléchargement inutile alors que rien n’a changé'
+    # un autre appareil modifie : la vérification récupère
+    g.drive['tasks'].append({'id': 'remote1', 'title': 'Venue du téléphone', 'day': None, 'subtasks': [], 'u': 9e15}); g.ver += 1
+    pg.evaluate("()=>window.dispatchEvent(new Event('focus'))"); pg.wait_for_timeout(800)
+    assert st(pg, "S.tasks.some(t=>t.title==='Venue du téléphone')"), 'modif distante non récupérée'
+    ctx.close()
+    ctx2, pg2, errs2 = new_page(c['b'], storage="localStorage.setItem('journee.sync.test','1')")
+    assert pg2.locator('#syncbar:not(.hidden) [data-act="gin"]').count() == 1, 'bandeau absent'
+    pg2.click('[data-act="synchide"]'); assert pg2.locator('#syncbar.hidden').count() == 1
+    assert not errs and not errs2, (errs, errs2); ctx2.close()
+
+@test('Le nom MyDayBot ramène à Aujourd’hui')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.click('#nav [data-view="backlog"]'); pg.click('[data-act="next"]') if pg.locator('[data-act="next"]').count() else None
+    pg.click('.brand'); pg.wait_for_timeout(200)
+    assert pg.evaluate('location.hash') == '#today'
+    assert st(pg, 'true') and 'Aujourd' in pg.inner_text('#main h1'), pg.inner_text('#main h1')
     assert not errs, errs; ctx.close()
 
 def main():

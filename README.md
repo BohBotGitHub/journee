@@ -81,3 +81,12 @@ La session Microsoft se renouvelle seule pendant 24 h, puis demande un clic pour
 ## Tests
 
 `python3 tests/e2e.py [export_sunsama.csv]` lance 22 scénarios de bout en bout dans Chrome (Playwright), avec Google, Claude et l'horloge simulés. `ONLY=palette python3 tests/e2e.py` pour n'en lancer qu'un.
+
+## Arbre des catégories
+
+Les tâches sont rangées dans un arbre à 4 piliers (Être, Grandir, Relier, Bâtir), puis en domaines et en catégories. Cet arbre servira de base au skill tree.
+- **Ranger une tâche** : `#raccourci` à la saisie. Sans raccourci, MyDayBot devine par mots-clés, puis Claude affine.
+- **Projets** : `+projet` associe la tâche à une étiquette transversale.
+- **Agendas** : l'agenda Google se règle par pilier dans Réglages. Un domaine ou une catégorie peut le remplacer.
+- **Anciens canaux Sunsama** : ils sont migrés après validation, avec une sauvegarde dans `journee.backup.pretree`.
+- **Synchro** : envoi 1,5 s après chaque modification, vérification toutes les 15 s et au retour sur l'appli. Chaque appareil doit être connecté à Google.

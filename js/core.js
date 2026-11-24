@@ -24,7 +24,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 /* ---------- données ---------- */
 const KEY='journee.v1';
 const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
- channels:[{id:'c1',name:'Travail',color:'#3b6fd8'},{id:'c2',name:'Perso',color:'#2f9e6a'},{id:'c3',name:'Admin',color:'#c99a06'}],
+ channels:[],projects:[],
  settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true,aiBudget:3,notif:false},chat:[],archive:[],templates:[]});
 let S;
 try{S=Object.assign(defaults(),JSON.parse(lsGet(KEY)||'{}'))}catch(e){S=defaults()}
@@ -33,7 +33,7 @@ if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null,snap=null;
 /* ---------- horodatage par élément (base de la synchro par fusion) ---------- */
-const COLL=['tasks','objectives','templates','recurring','channels'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage'];
+const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage'];
 function scalJson(k){if(k==='settings'){const {aiKey,...r}=S.settings||{};return JSON.stringify(r)}return JSON.stringify(S[k]===undefined?null:S[k])}
 function stamp(){
  const now=Date.now(),prev=snap,next={};S.deleted=S.deleted||{};S.su=S.su||{};
@@ -57,8 +57,8 @@ function mergeState(L,R){
  out.deleted=del;out.seeded=true;return out;
 }
 const dataJson=x=>{const {running,syncedAt,updatedAt,...r}=x;r.settings=Object.assign({},r.settings||{},{aiKey:''});return JSON.stringify(r)};
-const save=()=>{S.updatedAt=Date.now();stamp();lsSet(KEY,JSON.stringify(S));clearTimeout(pushT);pushT=setTimeout(()=>driveSync(),4000);if(typeof queueFlow==='function')queueFlow()};
-const mk=o=>Object.assign({id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null,prio:'',due:null},o);
+const save=()=>{S.updatedAt=Date.now();stamp();lsSet(KEY,JSON.stringify(S));clearTimeout(pushT);pushT=setTimeout(()=>driveSync(),1500);if(typeof queueFlow==='function')queueFlow()};
+const mk=o=>Object.assign({id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null,prio:'',due:null,proj:null},o);
 const T=id=>S.tasks.find(t=>t.id===id);
 const ch=id=>S.channels.find(c=>c.id===id);
 const nextOrder=day=>Math.max(0,...S.tasks.filter(t=>t.day===day).map(t=>t.order||0))+1;
@@ -70,7 +70,7 @@ const weekObjs=w=>S.objectives.filter(o=>o.week===w);
 stamp();
 if(!S.seeded){
  S.seeded=true;const d=today();
- [['Exemple : préparer la réunion de lundi',d,'c1',45],['Exemple : répondre aux mails importants',d,'c1',30],['Exemple : courses pour le week-end',d,'c2',30],['Exemple : renouveler l’assurance auto',null,'c3',20],['Exemple : trier les photos de vacances',null,'c2',60]]
+ [['Exemple : préparer la réunion de lundi',d,'c-organisation',45],['Exemple : répondre aux mails importants',d,'c-admin',30],['Exemple : courses pour le week-end',d,'c-courses',30],['Exemple : renouveler l’assurance auto',null,'c-admin',20],['Exemple : trier les photos de vacances',null,'c-deco',60]]
   .forEach(([title,day,channel,est],i)=>S.tasks.push(mk({title,day,channel,est,order:i+1})));
  save();
 }
@@ -84,7 +84,7 @@ const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,t
 /* ---------- bus d'événements (point d'accroche des futurs modules : gamification, import…) ---------- */
 const bus=new EventTarget();
 const emit=(type,detail)=>{try{bus.dispatchEvent(new CustomEvent(type,{detail}))}catch(e){}};
-window.journee={bus,get state(){return S},save:()=>save(),render:()=>render(),get fn(){return {dayTasks,today,addDays,loadInfo,pushBlock,monday}}};
+window.journee={bus,get state(){return S},save:()=>save(),render:()=>render(),get fn(){return {dayTasks,today,addDays,loadInfo,pushBlock,monday,hasTree,nodeLabel,findNode,applyTree,pathOf,nodeCal,taskCal}}};
 
 /* ---------- tâches ---------- */
 const norm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -99,10 +99,11 @@ function dateWord(w){
  return null;
 }
 function parseQuick(txt){
- let est=0,channel=null;
+ let est=0,channel=null,pj=null;
  txt=(' '+txt+' ').replace(/\s~?(\d{1,2})\s?h\s?(\d{1,2})?(?=\s)/i,(m,h,mm)=>{est=+h*60+(+mm||0);return ' '})
   .replace(/\s~?(\d{1,3})\s?(?:m|min|mn)(?=\s)/i,(m,n)=>{est=+n;return ' '})
-  .replace(/\s#(\S+)/,(m,n)=>{const c=S.channels.find(c=>c.name.toLowerCase().startsWith(n.toLowerCase()));if(c){channel=c.id;return ' '}return m});
+  .replace(/\s#(\S+)/,(m,n)=>{const c=findNode(n);if(c){channel=c.id;return ' '}return m})
+  .replace(/\s\+(\S+)/,(m,n)=>{const p=findProject(n);if(p){pj=p.id;return ' '}return m});
  let day,due;const t0=today(),WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
  txt=txt.replace(/\s(?:avant|pour|d'ici)\s+(le\s+)?(aujourd['’]hui|demain|après-demain|apres-demain|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|\d{1,2}\/\d{1,2})(?=\s)/i,(m,le,w)=>{const d=dateWord(w);if(d){due=d;return ' '}return m});
  txt=txt.replace(/\s(aujourd['’]hui|auj)(?=\s)/i,()=>{day=t0;return ' '})
@@ -110,11 +111,12 @@ function parseQuick(txt){
   .replace(/\s(demain)(?=\s)/i,()=>{day=addDays(t0,1);return ' '})
   .replace(/\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)(?=\s)/i,(m,w)=>{const k=WD.indexOf(w.toLowerCase()),c=parseYmd(t0).getDay();day=addDays(t0,((k-c+7)%7)||7);return ' '})
   .replace(/\s(\d{1,2})\/(\d{1,2})(?=\s)/,(m,dd,mm)=>{const y=new Date().getFullYear();let d=ymd(new Date(y,+mm-1,+dd));if(d<t0)d=ymd(new Date(y+1,+mm-1,+dd));day=d;return ' '});
- return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due};
+ return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due,proj:pj};
 }
 function addTask(text,day){
  const q=parseQuick(text);if(!q.title)return null;if(q.day!==undefined)day=q.day;
- const t=mk({title:q.title,est:q.est,channel:q.channel,day,order:nextOrder(day),due:q.due||null});
+ if(!q.channel&&hasTree())q.channel=ruleFor(q.title);
+ const t=mk({title:q.title,est:q.est,channel:q.channel,day,order:nextOrder(day),due:q.due||null,proj:q.proj||null});
  S.tasks.push(t);save();render();aiWatch(t);emit('task:add',{task:t});return t;
 }
 async function toggleDone(id){

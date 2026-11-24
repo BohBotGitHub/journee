@@ -5,7 +5,7 @@ const aiOn=()=>!!(S.settings.aiKey||'').trim();
 const AI_TOOL={name:'proposer',description:'Propose des changements concrets au planning de l’utilisateur. Utilise uniquement des ids de tâches existants pour order et updates.',input_schema:{type:'object',properties:{
  message:{type:'string',description:'Réponse courte à l’utilisateur, en français, au tutoiement.'},
  order:{type:'array',items:{type:'string'},description:'Ids des tâches non terminées du jour, dans l’ordre conseillé.'},
- updates:{type:'array',items:{type:'object',properties:{id:{type:'string'},channel:{type:'string',description:'Nom exact d’un canal existant'},est:{type:'integer',description:'Durée estimée en minutes'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},drop:{type:'boolean',description:'true pour proposer d’abandonner une tâche obsolète'},subtasks:{type:'array',items:{type:'string'},description:'Sous-tâches à ajouter'},reason:{type:'string'}},required:['id']}},
+ updates:{type:'array',items:{type:'object',properties:{id:{type:'string'},channel:{type:'string',description:'Catégorie existante, au format « Domaine › Catégorie »'},est:{type:'integer',description:'Durée estimée en minutes'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},drop:{type:'boolean',description:'true pour proposer d’abandonner une tâche obsolète'},subtasks:{type:'array',items:{type:'string'},description:'Sous-tâches à ajouter'},reason:{type:'string'}},required:['id']}},
  pick:{type:'array',items:{type:'string'},description:'Ids de tâches existantes (backlog, autres jours) à ajouter au jour affiché'},
  blocks:{type:'array',items:{type:'object',properties:{id:{type:'string'},start:{type:'string',description:'HH:MM'}},required:['id','start']},description:'Créneaux horaires proposés pour des tâches du jour'},
  intent:{type:'string',description:'Intention courte pour la journée'},
@@ -13,13 +13,13 @@ const AI_TOOL={name:'proposer',description:'Propose des changements concrets au 
  new_tasks:{type:'array',items:{type:'object',properties:{title:{type:'string'},channel:{type:'string'},est:{type:'integer'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['title']}}
 },required:['message']}};
 function aiContext(){
- const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.prio?' | priorité '+t.prio:''}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | canal '+ch(t.channel).name:' | sans canal'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}${t.due?' | échéance '+t.due:''}`;
+ const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.prio?' | priorité '+t.prio:''}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | catégorie '+nodeLabel(t.channel):' | sans catégorie'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}${t.due?' | échéance '+t.due:''}`;
  const hist=S.tasks.filter(t=>t.done&&t.day&&t.day>=addDays(t0,-14)&&t.est&&t.actual).slice(-25).map(t=>`- ${t.title} : estimé ${t.est} min, réel ${Math.round(t.actual/60)} min`);
  const meet=timedEvents(d).map(e=>`- ${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))} ${e.summary||'(sans titre)'} (${evFree(e)?'compatible avec du travail sur les tâches':'occupé'})`);
  const wk=monday(d),days=[...Array(7)].map((_,i)=>addDays(wk,i));
  return `Maintenant : ${cap1(fmtDay(t0))}, ${hm(now)}. Jour affiché : ${fmtDay(d)} (${d}).
 Heures de travail : ${S.settings.workStart}h–${S.settings.workEnd}h.
-Canaux : ${S.channels.map(c=>c.name).join(', ')||'aucun'}.
+${hasTree()?'Catégories (pilier / domaine, puis domaine › catégorie) :\n'+catPaths().join('\n'):'Canaux : '+(S.channels.map(c=>c.name).join(', ')||'aucun')}.${activeProjects().length?'\nProjets en cours : '+activeProjects().map(p=>p.name+(p.end?' (fin '+p.end+')':'')).join(', '):''}
 Objectifs de la semaine : ${weekObjs(wk).map(o=>o.title+(o.done?' (atteint)':'')).join(' ; ')||'aucun'}.
 ${(S.days[d]||{}).intent?'Intention du jour : '+S.days[d].intent+'\n':''}Réunions du jour :\n${meet.join('\n')||'- aucune connue'}
 Tâches du jour :\n${dayTasks(d).map(line).join('\n')||'- aucune'}
@@ -58,6 +58,18 @@ async function callClaude(messages,force){
  if(prop&&prop.message){text=(text?text+'\n':'')+prop.message}
  return{text:text.trim(),prop};
 }
+// réponse JSON libre (sans outil), pour les traitements en lot
+async function claudeJSON(prompt){
+ {const b=+S.settings.aiBudget||0;if(b&&usageNow().usd>=b)throw new Error(`plafond mensuel atteint (${usd(b)})`)}
+ const model=S.settings.aiModel||'claude-haiku-5-5';
+ const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':S.settings.aiKey.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+  body:JSON.stringify({model,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(r.status===401?'clé API refusée':(j.error&&j.error.message)||('erreur '+r.status));
+ trackUsage(j.usage,model);
+ const txt=(j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+ const m=txt.match(/\{[\s\S]*\}/);try{return m?JSON.parse(m[0]):{}}catch(e){return {}}
+}
 function propItems(p){
  if(!p)return[];const out=[];
  const tt=id=>{const t=T(id);return t?t.title:null};
@@ -70,7 +82,7 @@ function propItems(p){
  (p.new_tasks||[]).forEach((n,i)=>{if(n.title)out.push({k:'n'+i,label:'Nouvelle tâche : '+n.title+(n.est?' ('+fmtMin(n.est)+')':''),reason:n.reason})});
  return out;
 }
-const chByName=n=>n?S.channels.find(c=>c.name.toLowerCase()===String(n).toLowerCase().trim()):null;
+const chByName=n=>n?nodeByName(n):null;
 function applyItem(m,k){
  const p=m.prop;if(!p)return;m.applied=m.applied||{};if(m.applied[k])return;
  if(k==='order'){const ids=p.order.filter(id=>T(id));ids.forEach((id,i)=>{T(id).order=i+1});const rest=dayTasks(cur).filter(t=>!ids.includes(t.id));rest.forEach((t,i)=>t.order=ids.length+i+1);reflow(cur)}
@@ -101,8 +113,8 @@ function renderBadge(){const b=$('#aibadge');if(b)b.innerHTML=aiUnread?`<span cl
 function aiWatch(t){if(!aiOn()||!S.settings.aiAuto||!t||(t.est&&t.channel))return;aiQueue.add(t.id);clearTimeout(aiT);aiT=setTimeout(aiClassify,2500)}
 async function aiClassify(){
  const ids=[...aiQueue].filter(id=>T(id));aiQueue.clear();if(!ids.length||!aiOn())return;
- try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nPour ces tâches uniquement, propose un canal et une durée (updates, sans order ni new_tasks, message très court) : ${ids.map(id=>'['+id+'] '+T(id).title).join(' ; ')}`}],true);
-  (r.prop&&r.prop.updates||[]).forEach(u=>{const t=T(u.id);if(!t||t.done)return;const c=chByName(u.channel);const sug={};if(c&&c.id!==t.channel)sug.channel=c.id;if(u.est&&!t.est)sug.est=u.est;if(sug.channel||sug.est)t.aiSug=sug});
+ try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nPour ces tâches uniquement, propose une catégorie (format « Domaine › Catégorie ») et une durée (updates, sans order ni new_tasks, message très court) : ${ids.map(id=>'['+id+'] '+T(id).title).join(' ; ')}`}],true);
+  (r.prop&&r.prop.updates||[]).forEach(u=>{const t=T(u.id);if(!t||t.done)return;const c=chByName(u.channel);const sug={};if(c&&!t.channel){t.channel=c.id;t.aiCat=true;if(t.block)pushBlock(t)}else if(c&&c.id!==t.channel&&!t.aiCat)sug.channel=c.id;if(u.est&&!t.est)sug.est=u.est;if(sug.channel||sug.est)t.aiSug=sug});
   save();render();
  }catch(e){}
 }
