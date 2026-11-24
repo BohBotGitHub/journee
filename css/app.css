@@ -647,4 +647,4 @@ code{white-space:nowrap}
 .tvsvg{max-height:calc(100vh - 250px)}
 /* une seule colonne : icônes alignées, textes alignés, la version sous « Actualiser » */
 #nav button.navrefresh{padding-left:12px;padding-right:12px}
-#nav .navver{padding-left:40px}
+#nav .navver{padding-left:12px}

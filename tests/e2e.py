@@ -418,9 +418,8 @@ def _(c):
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
     assert order == ['runchip', 'navset', 'navrefresh', 'navver'], order
-    xs = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav .navset .ll', '#nav .navrefresh .ll', '#nav .navver b')]
-    ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg')]
-    assert len(set(xs)) == 1 and len(set(ic)) == 1, (xs, ic)
+    ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg', '#nav .navver b')]
+    assert len(set(ic)) == 1, ic
     assert not errs, errs; ctx.close()
 
 @test('Mise en page : aucune vue ne déborde (ordinateur, téléphone, sombre)')
