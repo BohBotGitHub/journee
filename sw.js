@@ -1,5 +1,5 @@
 // Service worker : l'appli s'ouvre même hors ligne. Les appels aux API Google/Microsoft ne passent jamais par le cache.
-const CACHE = 'journee-v11';
+const CACHE = 'journee-v12';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

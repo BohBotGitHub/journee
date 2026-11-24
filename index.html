@@ -49,6 +49,7 @@ small,.mute{color:var(--mute)}
 .brand{display:flex;align-items:center;gap:9px;font-family:Figtree,Inter,sans-serif;font-weight:800;font-size:19px;padding:0 8px 16px}
 .brand svg{width:28px;height:28px;flex:none}
 #nav button[data-view]{border:0;background:transparent;text-align:left;font-weight:500;display:flex;align-items:center;gap:10px}
+.navsearch{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);color:var(--mute);margin-bottom:10px;font-size:13.5px}.navsearch svg{width:16px;height:16px}.navsearch span{flex:1;text-align:left}.navsearch kbd{font-size:10.5px}
 #nav button[data-view] svg{width:18px;height:18px;flex:none;opacity:.7}
 #nav button[data-view].on{background:var(--panel);box-shadow:var(--sh);font-weight:700}
 #runchip{margin-top:auto}
@@ -91,6 +92,7 @@ form.add input{background:var(--panel);border-style:dashed}
 .chk:hover{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent)}
 .card.done .chk{background:var(--ok);border-color:var(--ok)}
 .cbody{flex:1;cursor:pointer}
+.due{font-weight:500}.due.soon{color:var(--acc)}.due.late{color:var(--warn);font-weight:600}
 .prio{color:var(--acc);font-weight:800;margin-right:5px}.prio.u{color:var(--warn)}
 .ctitle{font-weight:500;font-size:15px;line-height:1.35;overflow-wrap:anywhere}
 .cmeta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-size:12.5px;color:var(--mute);align-items:center;line-height:1.3}
@@ -273,6 +275,33 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 .evrow .evt{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
 .evrow .evn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dump{min-height:240px;font-size:17px;line-height:1.7;background:var(--panel);border-radius:14px;padding:14px 16px}
+.calmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:8px 0 12px}
+.tpls{margin:0 0 22px}.tplgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.tpl{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.tplitems{font-size:13px;color:var(--mute);line-height:1.4}.tplsug{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:22px}
+.kpis div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpis b{display:block;font-family:Figtree,Inter,sans-serif;font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.kpis small{color:var(--mute);font-size:12.5px}
+.stsec{margin-bottom:26px}.stsec h2{font-size:17px;margin-bottom:10px}
+.wkbars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;height:180px;align-items:end;margin-top:24px}
+.wkb{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;position:relative}
+.wkb i{display:block;width:100%;background:var(--acc);border-radius:5px 5px 2px 2px;opacity:.85}
+.wkb small{font-size:10.5px;color:var(--mute);white-space:nowrap}.wkb b{position:absolute;top:-18px;font-size:10.5px;font-weight:600;color:var(--mute)}
+.brow span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stsec .brow{grid-template-columns:150px minmax(0,1fr) 120px}
+@media (max-width:720px){.stsec .brow{grid-template-columns:90px minmax(0,1fr) 92px}}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.wkb small{display:none}}
+#pal{position:fixed;inset:0;background:rgba(15,17,20,.35);z-index:90;display:flex;justify-content:center;align-items:flex-start;padding:12vh 14px 14px}
+.palbox{width:min(620px,100%);background:var(--panel);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.3);overflow:hidden;display:flex;flex-direction:column;max-height:70vh}
+#palq{border:0;border-bottom:1px solid var(--line);border-radius:0;font-size:17px;padding:16px 18px;min-height:56px}
+#palq:focus-visible{outline:none}
+#pallist{overflow:auto;padding:6px}
+.palgrp{font-size:11.5px;color:var(--mute);font-weight:600;padding:8px 12px 4px;text-transform:none}
+.palit{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:14.5px}
+.palit span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.palit small{color:var(--mute);font-size:12px;white-space:nowrap}
+.palit.on{background:var(--acc2)}
+.palfoot{display:flex;gap:14px;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--mute)}
 .evrow.mini{font-size:12.5px;padding:3px 8px;gap:6px}
 .evrow.free{background:transparent;border:1px dashed var(--evi)}
 .ev{cursor:pointer}.ev.free{background:repeating-linear-gradient(135deg,var(--ev) 0 6px,transparent 6px 12px);border-left-style:dashed;opacity:.85}
@@ -287,7 +316,7 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 }
 .stabs .closeside{display:none;margin-left:auto}
 @media (max-width:720px){
- kbd.k,.tip{display:none!important}
+ kbd.k,.tip,.navsearch{display:none!important}
  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
  #nav{grid-row:2;flex-direction:row;border-right:0;border-top:1px solid var(--line);padding:6px;gap:2px;overflow-x:auto}
  .brand,#runchip .runbox span{display:none}
@@ -308,11 +337,13 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 <div id="app">
  <nav id="nav">
   <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#e8590c"/><path d="M7 21a9 9 0 0 1 18 0" fill="#fff"/><rect x="5" y="22.5" width="22" height="2.4" rx="1.2" fill="#fff"/></svg>Journée</div>
+  <button class="navsearch" data-act="palopen" title="Rechercher ou lancer une commande (⌘K)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Rechercher</span><kbd>⌘K</kbd></button>
   <button data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="ll">Aujourd'hui</span><span class="sl">Jour</span></button>
   <button data-view="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span class="ll">Semaine</span><span class="sl">Semaine</span></button>
   <button data-view="dump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6c0 2.2 1.2 3.4 2 4.5.6.8 1 1.6 1 2.5h6c0-.9.4-1.7 1-2.5.8-1.1 2-2.3 2-4.5a6 6 0 0 0-6-6z"/><path d="M9 20h6"/></svg><span class="ll">Vide-tête</span><span class="sl">Idées</span></button>
   <button data-view="backlog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="ll">Backlog</span><span class="sl">Backlog</span></button>
   <button data-view="objectives"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><span class="ll">Objectifs</span><span class="sl">Buts</span></button>
+  <button data-view="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg><span class="ll">Statistiques</span><span class="sl">Stats</span></button>
   <button data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="ll">Réglages</span><span class="sl">Réglages</span></button>
   <button data-view="side" id="sidebtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg><span class="ll">Agenda</span><span class="sl">Agenda</span></button>
   <div id="runchip"></div>
@@ -356,7 +387,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 const KEY='journee.v1';
 const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
  channels:[{id:'c1',name:'Travail',color:'#3b6fd8'},{id:'c2',name:'Perso',color:'#2f9e6a'},{id:'c3',name:'Admin',color:'#c99a06'}],
- settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true,aiBudget:3,notif:false},chat:[],archive:[]});
+ settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true,aiBudget:3,notif:false},chat:[],archive:[],templates:[]});
 let S;
 try{S=Object.assign(defaults(),JSON.parse(lsGet(KEY)||'{}'))}catch(e){S=defaults()}
 S.settings=Object.assign(defaults().settings,S.settings||{});
@@ -364,7 +395,7 @@ if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null;
 const save=()=>{S.updatedAt=Date.now();lsSet(KEY,JSON.stringify(S));clearTimeout(pushT);pushT=setTimeout(()=>driveSync(),4000);if(typeof queueFlow==='function')queueFlow()};
-const mk=o=>Object.assign({id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null,prio:''},o);
+const mk=o=>Object.assign({id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null,prio:'',due:null},o);
 const T=id=>S.tasks.find(t=>t.id===id);
 const ch=id=>S.channels.find(c=>c.id===id);
 const nextOrder=day=>Math.max(0,...S.tasks.filter(t=>t.day===day).map(t=>t.order||0))+1;
@@ -381,7 +412,7 @@ if(!S.seeded){
 }
 
 /* ---------- état d'interface ---------- */
-const VIEWS=['today','week','dump','backlog','objectives','settings'];
+const VIEWS=['today','week','dump','backlog','objectives','stats','settings'];
 let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,focusSub=null,drag=null,scrolledCal='',lastDay=today();
 let gEvents={},gLoading={};
 const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,tLoading:false};
@@ -389,25 +420,37 @@ const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,t
 /* ---------- bus d'événements (point d'accroche des futurs modules : gamification, import…) ---------- */
 const bus=new EventTarget();
 const emit=(type,detail)=>{try{bus.dispatchEvent(new CustomEvent(type,{detail}))}catch(e){}};
-window.journee={bus,get state(){return S},save:()=>save(),render:()=>render()};
+window.journee={bus,get state(){return S},save:()=>save(),render:()=>render(),get fn(){return {dayTasks,today,addDays,loadInfo,pushBlock,monday}}};
 
 /* ---------- tâches ---------- */
+const norm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function dateWord(w){
+ const t0=today(),WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];w=norm(w).trim();let m;
+ if(/^(aujourd'?hui|aujourd’hui|auj)$/.test(w))return t0;
+ if(/^apres-?demain$/.test(w))return addDays(t0,2);
+ if(w==='demain')return addDays(t0,1);
+ const k=WD.indexOf(w);if(k>=0){const c=parseYmd(t0).getDay();return addDays(t0,((k-c+7)%7)||7)}
+ if((m=w.match(/^(\d{1,2})\/(\d{1,2})$/))){const y=new Date().getFullYear();let d=ymd(new Date(y,+m[2]-1,+m[1]));if(d<t0)d=ymd(new Date(y+1,+m[2]-1,+m[1]));return d}
+ if(/^\d{4}-\d\d-\d\d$/.test(w))return w;
+ return null;
+}
 function parseQuick(txt){
  let est=0,channel=null;
  txt=(' '+txt+' ').replace(/\s~?(\d{1,2})\s?h\s?(\d{1,2})?(?=\s)/i,(m,h,mm)=>{est=+h*60+(+mm||0);return ' '})
   .replace(/\s~?(\d{1,3})\s?(?:m|min|mn)(?=\s)/i,(m,n)=>{est=+n;return ' '})
   .replace(/\s#(\S+)/,(m,n)=>{const c=S.channels.find(c=>c.name.toLowerCase().startsWith(n.toLowerCase()));if(c){channel=c.id;return ' '}return m});
- let day;const t0=today(),WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+ let day,due;const t0=today(),WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+ txt=txt.replace(/\s(?:avant|pour|d'ici)\s+(le\s+)?(aujourd['’]hui|demain|après-demain|apres-demain|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|\d{1,2}\/\d{1,2})(?=\s)/i,(m,le,w)=>{const d=dateWord(w);if(d){due=d;return ' '}return m});
  txt=txt.replace(/\s(aujourd['’]hui|auj)(?=\s)/i,()=>{day=t0;return ' '})
   .replace(/\s(après-demain|apres-demain)(?=\s)/i,()=>{day=addDays(t0,2);return ' '})
   .replace(/\s(demain)(?=\s)/i,()=>{day=addDays(t0,1);return ' '})
   .replace(/\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)(?=\s)/i,(m,w)=>{const k=WD.indexOf(w.toLowerCase()),c=parseYmd(t0).getDay();day=addDays(t0,((k-c+7)%7)||7);return ' '})
   .replace(/\s(\d{1,2})\/(\d{1,2})(?=\s)/,(m,dd,mm)=>{const y=new Date().getFullYear();let d=ymd(new Date(y,+mm-1,+dd));if(d<t0)d=ymd(new Date(y+1,+mm-1,+dd));day=d;return ' '});
- return {title:txt.trim().replace(/\s+/g,' '),est,channel,day};
+ return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due};
 }
 function addTask(text,day){
  const q=parseQuick(text);if(!q.title)return null;if(q.day!==undefined)day=q.day;
- const t=mk({title:q.title,est:q.est,channel:q.channel,day,order:nextOrder(day)});
+ const t=mk({title:q.title,est:q.est,channel:q.channel,day,order:nextOrder(day),due:q.due||null});
  S.tasks.push(t);save();render();aiWatch(t);emit('task:add',{task:t});return t;
 }
 async function toggleDone(id){
@@ -416,7 +459,7 @@ async function toggleDone(id){
  t.done=!t.done;t.doneAt=t.done?Date.now():null;if(t.done&&!t.day)t.day=today();
  if(t.done)finishBlock(t);
  save();render();if(t.done)chime(660);emit(t.done?'task:done':'task:undone',{task:t});
- if(t.block&&t.block.gcalId&&gTok())gFetch(`/calendars/${calId()}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{});
+ if(t.block&&t.block.gcalId&&gTok())gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{});
  if(t.src&&msOn()){
   try{await graph(`/me/todo/lists/${encodeURIComponent(t.src.listId)}/tasks/${encodeURIComponent(t.src.taskId)}`,{method:'PATCH',body:JSON.stringify({status:t.done?'completed':'notStarted'})});delete todo.tasks[t.src.listId];renderSide()}
   catch(e){toast('To Do : '+e.message)}
@@ -476,6 +519,9 @@ function chime(f){try{actx=actx||new (window.AudioContext||window.webkitAudioCon
 /* ---------- Google Agenda (OAuth implicite, côté navigateur) ---------- */
 const REDIRECT=location.origin+location.pathname;
 const calId=()=>encodeURIComponent(S.settings.calendarId||'primary');
+// agenda cible d'une tâche : celui de son canal, sinon celui de son contexte, sinon l'agenda par défaut
+function taskCal(t){const c=ch(t.channel);return (c&&c.cal)||(c&&c.ctx&&(S.settings.ctxCal||{})[c.ctx])||S.settings.calendarId||'primary'}
+const blkCal=t=>encodeURIComponent((t.block&&t.block.cal)||S.settings.calendarId||'primary');
 function gTok(){try{const o=JSON.parse(lsGet('journee.g')||'null');return o&&o.exp>Date.now()+30000?o.t:null}catch(e){return null}}
 const gWas=()=>!!lsGet('journee.g.on');
 function gLogin(silent){
@@ -507,7 +553,7 @@ let gErr='',gCals=null;
 const gScope=()=>{try{return (JSON.parse(lsGet('journee.g')||'{}').scope)||''}catch(e){return ''}};
 async function loadCals(){
  if(gCals)return gCals;
- try{const j=await gFetch('/users/me/calendarList?minAccessRole=reader&maxResults=100');gCals=(j.items||[]).map(c=>({id:c.id,name:c.summaryOverride||c.summary,color:c.backgroundColor,primary:!!c.primary,selected:c.selected!==false}))}
+ try{const j=await gFetch('/users/me/calendarList?minAccessRole=reader&maxResults=100');gCals=(j.items||[]).map(c=>({id:c.id,name:c.summaryOverride||c.summary,color:c.backgroundColor,primary:!!c.primary,selected:c.selected!==false,write:c.accessRole==='owner'||c.accessRole==='writer'}))}
  catch(e){gCals=[{id:S.settings.calendarId||'primary',name:'Agenda principal',primary:true,selected:true}]}
  return gCals;
 }
@@ -546,14 +592,19 @@ async function pushBlock(t){
  if(gPend[t.id]){gDirty[t.id]=true;return}
  gPend[t.id]=true;
  try{
-  if(t.block.gcalId)await gFetch(`/calendars/${calId()}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify(evBody(t))});
-  else{const ev=await gFetch(`/calendars/${calId()}/events`,{method:'POST',body:JSON.stringify(evBody(t))});if(t.block)t.block.gcalId=ev.id;else gFetch(`/calendars/${calId()}/events/${encodeURIComponent(ev.id)}`,{method:'DELETE'}).catch(()=>{})}
+  const want=taskCal(t);
+  if(t.block.gcalId&&t.block.cal&&t.block.cal!==want){
+   try{await gFetch(`/calendars/${encodeURIComponent(t.block.cal)}/events/${encodeURIComponent(t.block.gcalId)}/move?destination=${encodeURIComponent(want)}`,{method:'POST'});t.block.cal=want}
+   catch(e){await gFetch(`/calendars/${encodeURIComponent(t.block.cal)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'DELETE'}).catch(()=>{});t.block.gcalId=null}
+  }
+  if(t.block.gcalId)await gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify(evBody(t))});
+  else{const ev=await gFetch(`/calendars/${encodeURIComponent(want)}/events`,{method:'POST',body:JSON.stringify(evBody(t))});if(t.block){t.block.gcalId=ev.id;t.block.cal=want}else gFetch(`/calendars/${encodeURIComponent(want)}/events/${encodeURIComponent(ev.id)}`,{method:'DELETE'}).catch(()=>{})}
   save();
  }catch(e){toast('Google Agenda : '+e.message)}
  finally{delete gPend[t.id];if(gDirty[t.id]){delete gDirty[t.id];pushBlock(t)}}
 }
 function setRange(t,start,end,noRender){
- t.block={start:start.toISOString(),end:end.toISOString(),gcalId:t.block&&t.block.gcalId||null,title:t.title};
+ t.block={start:start.toISOString(),end:end.toISOString(),gcalId:t.block&&t.block.gcalId||null,cal:t.block&&t.block.cal||null,title:t.title};
  t.day=ymd(start);save();if(!noRender)render();
  return pushBlock(t);
 }
@@ -614,7 +665,7 @@ function planFlow(d){
 function queueFlow(){if(inFlow||!flowOn())return;clearTimeout(flowQ);flowQ=setTimeout(runFlow,60)}
 function runFlow(){
  if(!flowOn())return;inFlow=true;let n=0;
- try{const t0=today(),days=new Set([t0]);if(cur>t0)days.add(cur);if(view==='week'){const w=monday(cur);for(let i=0;i<7;i++){const x=addDays(w,i);if(x>=t0)days.add(x)}}if(layout==='cal')bigDays().forEach(x=>{if(x>=t0)days.add(x)});for(const d of days)n+=planFlow(d)}
+ try{n+=scheduleDue();const t0=today(),days=new Set([t0]);if(cur>t0)days.add(cur);if(view==='week'){const w=monday(cur);for(let i=0;i<7;i++){const x=addDays(w,i);if(x>=t0)days.add(x)}}if(layout==='cal')bigDays().forEach(x=>{if(x>=t0)days.add(x)});for(const d of days)n+=planFlow(d)}
  finally{inFlow=false}
  if(n){lsSet(KEY,JSON.stringify(S));if(!rz&&!drag)render()}
 }
@@ -653,10 +704,33 @@ function finishBlock(t){
   if(Math.abs(xs-from)<=60000){setRange(x,new Date(to),new Date(to+(xe-xs)),true);from=xe;to=to+(xe-xs)}
  }
 }
+function relocateBlocks(){
+ // déplace les créneaux à venir vers le bon agenda après un changement de correspondance
+ const now=Date.now();S.tasks.filter(t=>t.block&&t.block.gcalId&&!t.done&&+new Date(t.block.end)>now&&(t.block.cal||S.settings.calendarId||'primary')!==taskCal(t)).forEach(t=>pushBlock(t));
+}
 function clearBlock(t,noRender){
- const id=t.block&&t.block.gcalId;t.block=null;save();
- if(id&&gTok())gFetch(`/calendars/${calId()}/events/${encodeURIComponent(id)}`,{method:'DELETE'}).catch(()=>{});
+ const id=t.block&&t.block.gcalId,cl=blkCal(t);t.block=null;save();
+ if(id&&gTok())gFetch(`/calendars/${cl}/events/${encodeURIComponent(id)}`,{method:'DELETE'}).catch(()=>{});
  if(!noRender)render();
+}
+function dueLabel(t){
+ if(!t.due)return '';const n=Math.round((parseYmd(t.due)-parseYmd(today()))/864e5);
+ const cls=t.done?'':n<0?' late':n<=1?' soon':'';const txt=n<0?`en retard de ${-n} j`:n===0?'aujourd’hui':n===1?'demain':n<7?`dans ${n} j`:fmtDay(t.due,{day:'numeric',month:'short'});
+ return `<span class="due${cls}" title="Échéance : ${fmtDay(t.due)}">⏰ ${txt}</span>`;
+}
+function scheduleDue(){
+ // place chaque tâche à échéance sur le jour le moins chargé avant sa date limite
+ const t0=today();let n=0,msgs=[];
+ for(const t of S.tasks){
+  if(t.done||!t.due)continue;
+  if(t.day&&t.day<=t.due&&t.day>=t0)continue;
+  if(t.day&&t.day<t0)continue; // en retard : géré par le report
+  const last=t.due<t0?t0:t.due;let best=null,bl=1e9;
+  for(let d=t0;d<=last;d=addDays(d,1)){const L=loadInfo(d),over=L.task+L.meet+(t.est||30)-L.cap,score=(over>0?1e5+over:0)+L.task;if(score<bl){bl=score;best=d}}
+  if(best&&best!==t.day){if(t.block&&ymd(new Date(t.block.start))!==best)clearBlock(t,true);t.day=best;t.inbox=false;t.order=nextOrder(best);n++;msgs.push(t.title+' → '+fmtDay(best,{weekday:'short',day:'numeric'}))}
+ }
+ if(n)toast((n>1?n+' tâches planifiées':'Planifiée')+' avant l’échéance : '+msgs.slice(0,2).join(', '));
+ return n;
 }
 function syncOrder(d){
  // la liste suit l'agenda : les tâches planifiées reprennent l'ordre horaire, les autres gardent leur place
@@ -825,6 +899,7 @@ async function syncTodo(){
   history.replaceState(null,'',REDIRECT+'#'+view);
  }
  const q=new URLSearchParams(location.search);
+ if(q.has('share')||q.has('text')||q.has('url')){const txt=[q.get('title'),q.get('text'),q.get('url')].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' — ');if(txt){S.dump=(S.dump?S.dump.replace(/\s*$/,'')+'\n':'')+txt;lsSet(KEY,JSON.stringify(S));setTimeout(()=>toast('Ajouté au vide-tête'),400)}view='dump';history.replaceState(null,'',REDIRECT+'#dump')}
  if(q.get('state')==='m'){
   history.replaceState(null,'',REDIRECT);
   if(q.get('code'))msToken({grant_type:'authorization_code',code:q.get('code'),redirect_uri:REDIRECT,code_verifier:lsGet('journee.m.v')||''})
@@ -849,7 +924,7 @@ const AI_TOOL={name:'proposer',description:'Propose des changements concrets au 
  new_tasks:{type:'array',items:{type:'object',properties:{title:{type:'string'},channel:{type:'string'},est:{type:'integer'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['title']}}
 },required:['message']}};
 function aiContext(){
- const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.prio?' | priorité '+t.prio:''}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | canal '+ch(t.channel).name:' | sans canal'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}`;
+ const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.prio?' | priorité '+t.prio:''}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | canal '+ch(t.channel).name:' | sans canal'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}${t.due?' | échéance '+t.due:''}`;
  const hist=S.tasks.filter(t=>t.done&&t.day&&t.day>=addDays(t0,-14)&&t.est&&t.actual).slice(-25).map(t=>`- ${t.title} : estimé ${t.est} min, réel ${Math.round(t.actual/60)} min`);
  const meet=timedEvents(d).map(e=>`- ${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))} ${e.summary||'(sans titre)'} (${evFree(e)?'compatible avec du travail sur les tâches':'occupé'})`);
  const wk=monday(d),days=[...Array(7)].map((_,i)=>addDays(wk,i));
@@ -872,6 +947,7 @@ Règles :
 - Ordre conseillé : tâches importantes et exigeantes tôt, petites tâches entre les réunions, liées aux objectifs de la semaine en priorité.
 - Durées : appuie-toi sur l'historique estimé/réel quand il existe (si l'utilisateur sous-estime, corrige).
 - Canaux : uniquement des noms de la liste fournie.
+- Échéances : une tâche doit être planifiée avant sa date d’échéance ; signale celles qui sont menacées.
 - Nouvelles tâches : maximum 3, seulement si vraiment utiles, avec une raison courte.
 - Dès que tu suggères un changement concret, utilise l'outil « proposer » : l'utilisateur validera chaque élément. Ne prétends jamais avoir modifié quelque chose toi-même.`;
 // coût en dollars par million de jetons (tarifs publics Anthropic ; Haiku : prompts ≤ 100 000 jetons)
@@ -1023,7 +1099,7 @@ function card(t){
  return `<div class="card${t.done?' done':''}${run?' running':''}" draggable="true" data-drag="task|${t.id}" data-id="${t.id}">
  <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
  <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${t.prio==='urgent'?'<span class="prio u" title="Urgent">!!</span>':t.prio==='high'?'<span class="prio" title="Prioritaire">!</span>':''}${esc(t.title)}</div>
- <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}${t.block?`<span title="${t.pinned?'Heure fixée':'Suit l’ordre de la liste'}">${hm(new Date(t.block.start))}${t.pinned?' 📌':''}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?ch(t.aiSug.channel).name:'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
+ <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}${t.block?`<span title="${t.pinned?'Heure fixée':'Suit l’ordre de la liste'}">${hm(new Date(t.block.start))}${t.pinned?' 📌':''}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${dueLabel(t)}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?ch(t.aiSug.channel).name:'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
  <div class="ctime"><span class="est" data-act="estmenu" data-id="${t.id}" data-live="t-${t.id}" title="Temps passé / estimé — clique pour changer la durée">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'—'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
 }
 function loadInfo(d){const ts=dayTasks(d);const task=ts.reduce((a,t)=>a+(t.est||0),0),meet=meetingMin(d),cap=Math.max(60,(S.settings.workEnd-S.settings.workStart)*60);return{task,meet,cap,over:task+meet-cap}}
@@ -1049,6 +1125,7 @@ function viewToday(){
  <div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>
  <div class="acts"><button class="${!info.planned&&d>=today()?'pri':''}" data-act="plan">${(()=>{const r=savedRit();return r&&r.type==='plan'&&r.day===d?'Reprendre la planification ('+(r.step+1)+'/5)':info.planned?'Replanifier':'Planifier ma journée'})()}<kbd class="k">P</kbd></button><button data-act="shutdown">${info.shutdown?'Bilan du jour':'Clôturer la journée'}<kbd class="k">S</kbd></button><button data-act="focusnext">Focus<kbd class="k">F</kbd></button><button data-act="layout" title="Touche C">⇄ Grand agenda<kbd class="k">C</kbd></button></div></div>
  ${past.length?`<div class="banner"><span>${past.length} tâche${past.length>1?'s':''} non terminée${past.length>1?'s':''} des jours précédents</span><span class="sp"></span><button class="sm pri" data-act="rollover">Tout reporter ici</button><button class="sm ghost" data-act="plan">Trier</button></div>`:''}
+ ${(()=>{if(!isT)return '';const soon=S.tasks.filter(t=>!t.done&&t.due&&t.due<=addDays(today(),2)).sort((a,b)=>a.due<b.due?-1:1);return soon.length?`<div class="banner due-b"><span>⏰ Échéances proches :</span>${soon.slice(0,4).map(t=>`<button class="sm ghost" data-act="open" data-id="${t.id}">${esc(t.title)} · ${dueLabel(t).replace(/<[^>]+>/g,'').replace('⏰ ','')}</button>`).join('')}</div>`:''})()}
  ${objChips(monday(d))}
  ${loadBar(d)}
  ${eventsHtml(d)}
@@ -1088,7 +1165,7 @@ function viewDump(){
 }
 function dumpToTasks(){
  const lines=(S.dump||'').split('\n').map(l=>l.replace(/^[-*•\d.)\s]+/,'').trim()).filter(Boolean);if(!lines.length){toast('Ton vide-tête est vide');return}
- let n=0;for(const l of lines){const q=parseQuick(l);if(!q.title)continue;const day=q.day||null;S.tasks.push(mk({title:q.title,est:q.est,channel:q.channel,day,inbox:!day,order:nextOrder(day)}));n++}
+ let n=0;for(const l of lines){const q=parseQuick(l);if(!q.title)continue;const day=q.day||null;S.tasks.push(mk({title:q.title,est:q.est,channel:q.channel,day,due:q.due||null,inbox:!day&&!q.due,order:nextOrder(day)}));n++}
  S.dump='';save();render();toast(n+' tâche'+(n>1?'s':'')+' créée'+(n>1?'s':''));
  S.tasks.filter(t=>t.inbox&&!t.est).slice(-n).forEach(aiWatch);
 }
@@ -1107,11 +1184,35 @@ function dictate(){
  try{rec.start();toast('Parle, chaque phrase devient une ligne');render()}catch(e){rec=null}
 }
 
+/* ---------- routines et modèles ---------- */
+const tplText=tp=>tp.items.map(i=>`${i.title}${i.est?' '+i.est+'m':''}${ch(i.channel)?' #'+ch(i.channel).name.replace(/\s+/g,''):''}${(i.subs||[]).map(x=>'\n- '+x).join('')}`).join('\n');
+function tplFromText(txt){const items=[];for(const raw of txt.split('\n')){const l=raw.trim();if(!l)continue;if(/^[-•]\s*/.test(l)&&items.length){items[items.length-1].subs.push(l.replace(/^[-•]\s*/,''));continue}const q=parseQuick(l);if(q.title)items.push({title:q.title,est:q.est,channel:q.channel,subs:[]})}return items}
+function applyTpl(id,day){const tp=(S.templates||[]).find(x=>x.id===id);if(!tp)return;for(const i of tp.items)S.tasks.push(mk({title:i.title,est:i.est,channel:i.channel,day,order:nextOrder(day),subtasks:(i.subs||[]).map(x=>({id:uid(),t:x,d:false}))}));save();render();toast(`« ${tp.name} » : ${tp.items.length} tâche${tp.items.length>1?'s':''} ajoutée${tp.items.length>1?'s':''} ${day?'au '+fmtDay(day,{weekday:'long',day:'numeric'}):'au backlog'}`);emit('template:apply',{tpl:tp,day})}
+function tplSuggestions(){
+ if(!(S.archive||[]).length)return [];const by={};
+ for(const a of S.archive){if(!a.c)continue;const k=a.c;by[k]=by[k]||{};const t=a.t.trim();by[k][t]=by[k][t]||{n:0,s:0};by[k][t].n++;by[k][t].s+=a.a||0}
+ const have=new Set((S.templates||[]).map(t=>t.name));
+ return Object.entries(by).map(([c,m])=>({c,items:Object.entries(m).filter(([,v])=>v.n>=8).sort((a,b)=>b[1].n-a[1].n).slice(0,7).map(([t,v])=>({title:t,est:Math.max(5,Math.round(v.s/v.n/60/5)*5)||15,channel:c,subs:[]}))})).filter(x=>x.items.length>=3&&ch(x.c)&&!have.has('Routine '+ch(x.c).name)).slice(0,3);
+}
+function editTpl(id){
+ const tp=id?(S.templates||[]).find(x=>x.id===id):{id:'',name:'',items:[]};if(!tp)return;modalTask=null;ritual=null;
+ showModal(`<div class="mhead"><input class="mtitle" data-tplname value="${esc(tp.name)}" placeholder="Nom du modèle (ex. Routine du matin)" aria-label="Nom du modèle"><button class="x" data-act="close" aria-label="Fermer">×</button></div>
+ <label class="full">Une tâche par ligne · « 15m », « #canal » compris · une ligne qui commence par « - » devient une sous-tâche de la précédente<textarea data-tpltext rows="10" placeholder="Vaisselle 15m #ménage&#10;Lessive 10m&#10;Préparer le sac 10m&#10;- Gourde&#10;- Affaires de sport">${esc(tplText(tp))}</textarea></label>
+ <div class="mfoot">${id?`<button class="danger" data-act="tpldel" data-id="${id}">Supprimer</button>`:''}<span class="sp"></span><button class="pri" data-act="tplsave" data-id="${id}">Enregistrer</button></div>`);
+}
+function tplHtml(){
+ const tps=S.templates||[],sug=tplSuggestions();
+ return `<div class="tpls"><div class="row" style="margin-bottom:8px"><h2 style="font-size:18px">Routines et modèles</h2><span class="sp"></span><button class="sm" data-act="tplfromday">Depuis aujourd’hui</button><button class="sm pri" data-act="tplnew">+ Nouveau modèle</button></div>
+ ${tps.length?`<div class="tplgrid">${tps.map(tp=>`<div class="tpl"><div class="row"><b>${esc(tp.name)}</b><span class="sp"></span><button class="sm ghost" data-act="tpledit" data-id="${tp.id}">Modifier</button></div><small class="mute">${tp.items.length} tâche${tp.items.length>1?'s':''} · ${fmtMin(tp.items.reduce((a,i)=>a+(i.est||0),0))}</small><div class="tplitems">${tp.items.slice(0,5).map(i=>esc(i.title)).join(' · ')}${tp.items.length>5?' …':''}</div><div class="row"><button class="sm pri" data-act="tplapply" data-id="${tp.id}" data-day="${today()}">Aujourd’hui</button><button class="sm" data-act="tplapply" data-id="${tp.id}" data-day="${addDays(today(),1)}">Demain</button></div></div>`).join('')}</div>`:'<p class="mute">Crée des listes réutilisables (routine du matin, ménage, préparation de voyage) et ajoute-les à un jour en un clic. Aussi depuis la palette Cmd+K.</p>'}
+ ${sug.length?`<div class="tplsug"><small class="mute">Suggestions d’après ton historique :</small>${sug.map(x=>`<div class="pitem"><div><b>Routine ${esc(ch(x.c).name)}</b><small class="mute">${x.items.map(i=>esc(i.title)+' ('+fmtMin(i.est)+')').join(' · ')}</small></div><button class="sm" data-act="tplsug" data-c="${esc(x.c)}">Créer</button></div>`).join('')}</div>`:''}</div>`;
+}
+
 /* ---------- vue Backlog ---------- */
 function viewBacklog(){
  const ts=S.tasks.filter(t=>!t.day&&!t.done).sort((a,b)=>a.order-b.order);
  const groups=[...S.channels.map(c=>({c,items:ts.filter(t=>t.channel===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length);
  return `<div class="head"><div><h1>Backlog</h1><div class="sub">${ts.length} tâche${ts.length>1?'s':''} en attente d’un jour</div></div></div>
+ ${tplHtml()}
  ${addForm(null,'Ajouter au backlog… (ex. « Réserver le garage 1h #admin »)')}
  <div class="list" data-drop="backlog" style="gap:0">${groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.name)}</span>`:'Sans canal'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
 }
@@ -1140,6 +1241,33 @@ function viewObjectives(){
  ${wk.review?`<div class="note"><b>Revue de la semaine</b>\n${esc(wk.review)}</div>`:''}`;
 }
 
+/* ---------- statistiques ---------- */
+function allDone(){
+ // tâches terminées : actives + historique, au même format {t,c,d,e(min),a(s)}
+ const cap=x=>x>12*3600?0:x;
+ return [...(S.archive||[]).map(a=>({t:a.t,c:a.c,d:a.d,e:a.e||0,a:cap(a.a||0)})),...S.tasks.filter(t=>t.done&&t.day).map(t=>({t:t.title,c:t.channel,d:t.day,e:t.est||0,a:cap(actualSec(t))}))];
+}
+function viewStats(){
+ const all=allDone(),t0=today(),d30=addDays(t0,-29),last30=all.filter(x=>x.d>=d30&&x.d<=t0);
+ const hrs=v=>v/3600,fh=v=>{const h=hrs(v);return h<10?h.toFixed(1).replace('.',',')+' h':Math.round(h)+' h'};
+ const weeks=[...Array(12)].map((_,i)=>addDays(monday(t0),-7*(11-i)));
+ const wk=weeks.map(w=>{const e=addDays(w,6),xs=all.filter(x=>x.d>=w&&x.d<=e);return{w,sec:xs.reduce((a,x)=>a+x.a,0),n:xs.length}});
+ const maxW=Math.max(1,...wk.map(x=>x.sec));
+ const per={};for(const x of last30){const k=x.c||'';per[k]=per[k]||{sec:0,n:0,e:0,ea:0};per[k].sec+=x.a;per[k].n++;if(x.e&&x.a){per[k].e+=x.e*60;per[k].ea+=x.a}}
+ const perL=Object.entries(per).map(([c,v])=>({c:ch(c),...v})).sort((a,b)=>b.sec-a.sec),maxC=Math.max(1,...perL.map(x=>x.sec));
+ const acc=last30.filter(x=>x.e&&x.a),ratio=acc.length?acc.reduce((a,x)=>a+x.a,0)/acc.reduce((a,x)=>a+x.e*60,0):0;
+ let streak=0;const doneDays=new Set(all.map(x=>x.d));for(let d=t0;doneDays.has(d)||(d===t0&&doneDays.has(addDays(d,-1))&&!doneDays.has(d));d=addDays(d,-1)){if(doneDays.has(d))streak++;else if(d!==t0)break}
+ const top={};for(const x of all){const k=norm(x.t).trim();top[k]=top[k]||{t:x.t,sec:0,n:0};top[k].sec+=x.a;top[k].n++}
+ const topL=Object.values(top).sort((a,b)=>b.sec-a.sec).slice(0,8);
+ const first=all.reduce((m,x)=>x.d&&x.d<m?x.d:m,t0),total=all.reduce((a,x)=>a+x.a,0);
+ const pct=r=>Math.round(r*100)+' %';
+ return `<div class="head"><div><h1>Statistiques</h1><div class="sub">30 derniers jours · historique depuis le ${fmtDay(first,{day:'numeric',month:'long',year:'numeric'})}</div></div></div>
+ <div class="kpis"><div><b>${fh(last30.reduce((a,x)=>a+x.a,0))}</b><small>temps suivi (30 j)</small></div><div><b>${last30.length}</b><small>tâches terminées (30 j)</small></div><div><b>${ratio?pct(ratio):'—'}</b><small>réel / estimé ${ratio?(ratio>1.15?'· tu sous-estimes':ratio<0.85?'· tu surestimes':'· estimations justes'):''}</small></div><div><b>${streak} j</b><small>série de jours avec au moins une tâche faite</small></div></div>
+ <section class="stsec"><h2>Temps suivi par semaine</h2><div class="wkbars">${wk.map(x=>`<div class="wkb" title="${fh(x.sec)} · ${x.n} tâches"><i style="height:${Math.max(2,x.sec/maxW*100)}%"></i><small>${fmtDay(x.w,{day:'numeric',month:'short'})}</small><b>${x.sec?fh(x.sec):''}</b></div>`).join('')}</div></section>
+ <section class="stsec"><h2>Par canal (30 jours)</h2>${perL.length?`<div class="bars">${perL.map(x=>`<div class="brow"><span>${esc(x.c?x.c.name:'Sans canal')}</span><div class="bt" style="--c:${esc(x.c?x.c.color:'#8a8f98')}"><i style="width:${x.sec/maxC*100}%"></i></div><span>${fh(x.sec)}${x.e?' · '+pct(x.ea/x.e):''}</span></div>`).join('')}</div><p class="mute" style="font-size:13px">Le pourcentage compare le temps réel au temps estimé.</p>`:'<p class="mute">Pas encore de temps suivi ce mois-ci.</p>'}</section>
+ <section class="stsec"><h2>Là où passe ton temps (depuis le début)</h2><p class="mute" style="margin:0 0 8px">${fh(total)} suivies au total sur ${all.length} tâches (les chronos oubliés de plus de 12 h sont ignorés).</p><div class="bars">${topL.map(x=>`<div class="brow"><span title="${esc(x.t)}">${esc(x.t)}</span><div class="bt" style="--c:var(--acc)"><i style="width:${x.sec/Math.max(1,topL[0].sec)*100}%"></i></div><span>${fh(x.sec)} · ${x.n}×</span></div>`).join('')}</div></section>`;
+}
+
 /* ---------- vue Réglages ---------- */
 function viewSettings(){
  const s=S.settings,num=(k,l,min,max)=>`<label>${l}<input type="number" min="${min}" max="${max}" data-set="${k}" value="${esc(s[k])}"></label>`;
@@ -1147,7 +1275,7 @@ function viewSettings(){
  <div class="set">
  <section><h2>Google Agenda</h2><p>Affiche tes rendez-vous et crée un événement pour chaque tâche que tu places dans l’agenda. Voir le README pour obtenir l’identifiant.</p>
   <label>Identifiant client OAuth (…apps.googleusercontent.com)<input data-set="googleClientId" value="${esc(s.googleClientId)}" placeholder="1234-abcd.apps.googleusercontent.com" autocomplete="off"></label>
-  <div class="grid2"><label>Agenda où créer les créneaux<input data-set="calendarId" value="${esc(s.calendarId)}" placeholder="primary"></label></div>
+  <div class="grid2"><label>Agenda par défaut des créneaux${gCals?`<select data-set="calendarId">${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${(s.calendarId||'primary')===c.id||(s.calendarId==='primary'&&c.primary)?'selected':''}>${esc(c.name)}</option>`).join('')}</select>`:`<input data-set="calendarId" value="${esc(s.calendarId)}" placeholder="primary">`}</label></div>
   ${gCals?`<p style="margin:12px 0 4px">Agendas affichés :</p>${gCals.map(c=>`<label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" data-cal="${esc(c.id)}" ${calOn(c)?'checked':''} style="width:auto;min-height:0"><span class="chip" style="--c:${esc(c.color||'#888')}">${esc(c.name)}</span></label>`).join('')}`:''}
   <p style="margin:10px 0 0">Quand la session expire (toutes les heures), Journée la renouvelle toute seule par un aller-retour éclair, sans clic. Google sert aussi à <b>synchroniser tes tâches entre ton téléphone et ton Mac</b> (fichier caché dans ton Drive). <span data-live="sync">${esc(syncState)}</span></p>
   <div class="row" style="margin-top:12px"><span class="status${gTok()?' on':''}">${gTok()?'Connecté':gWas()?'Session expirée':'Non connecté'}</span><span class="sp"></span>${gWas()?'<button class="ghost" data-act="gout">Déconnecter</button>':''}<button class="pri" data-act="gin">${gWas()?'Reconnecter':'Connecter Google'}</button></div></section>
@@ -1167,7 +1295,13 @@ function viewSettings(){
  <section><h2>Journée type</h2><div class="grid2">${num('workStart','Début du travail (h)',0,23)}${num('workEnd','Fin du travail (h)',1,24)}${num('dayStart','Agenda : première heure',0,23)}${num('dayEnd','Agenda : dernière heure',1,24)}<label>Agenda vivant<select data-set="liveShift"><option value="1" ${s.liveShift!==false?'selected':''}>Vivant : toutes les tâches du jour ont un créneau, dans l’ordre de la liste, et suivent le temps</option><option value="" ${s.liveShift===false?'selected':''}>Manuel : je place moi-même mes créneaux</option></select></label></div></section>
  <section><h2>Canaux</h2><p>Des catégories pour classer tes tâches et voir où passe ton temps. Tape <code>#nom</code> en créant une tâche pour l’y ranger.</p>
   ${S.channels.map(c=>`<div class="chrow"><input type="color" data-chc="${esc(c.id)}" value="${esc(c.color)}" aria-label="Couleur"><input data-chn="${esc(c.id)}" value="${esc(c.name)}" aria-label="Nom du canal"><button class="danger sm" data-act="chdel" data-id="${esc(c.id)}">Supprimer</button></div>`).join('')}
-  <button class="sm" data-act="chadd">+ Ajouter un canal</button></section>
+  <button class="sm" data-act="chadd">+ Ajouter un canal</button>
+  <h3 style="font-size:15px;margin:22px 0 4px">Agenda Google de chaque catégorie</h3>
+  <p>Les créneaux d’une tâche sont créés dans l’agenda de son canal, sinon de son contexte, sinon dans l’agenda par défaut. Changer le canal d’une tâche déplace son créneau.</p>
+  ${!gTok()?'<p class="mute">Connecte Google pour choisir les agendas.</p>':!gCals?(loadCals().then(()=>{if(view==='settings')render()}),'<p class="mute">Chargement des agendas…</p>'):(()=>{const opts=sel=>`<option value="">Agenda par défaut</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${sel===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}`;const ctxs=[...new Set(S.channels.map(c=>c.ctx).filter(Boolean))];
+   return `${ctxs.length?`<div class="calmap">${ctxs.map(x=>`<label>Contexte ${esc(x)}<select data-ctxcal="${esc(x)}"><option value="">Agenda par défaut</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${(S.settings.ctxCal||{})[x]===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>`).join('')}</div>`:''}
+   <div class="calmap">${S.channels.map(c=>`<label><span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span><select data-chcal="${esc(c.id)}">${opts(c.cal||'')}</select></label>`).join('')}</div>`})()}
+  </section>
  <section><h2>Importer depuis Sunsama</h2><p>Dans Sunsama : Settings → Account Management → export. Les tâches terminées de plus de 30 jours vont dans l’historique (utilisé par Claude pour estimer tes durées) ; les rituels Sunsama ne sont pas importés. Tu peux réimporter sans créer de doublons.</p><input type="file" accept=".csv,text/csv" data-sunsama aria-label="Fichier d’export Sunsama">${S.archive&&S.archive.length?`<p style="margin-top:8px">Historique : ${S.archive.length} tâches archivées.</p>`:''}</section>
  <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
  <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus sur la prochaine tâche</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Vide-tête</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
@@ -1249,7 +1383,7 @@ function render(){
  document.querySelectorAll('#nav [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
  {const nb=document.querySelector('#nav [data-view="dump"]'),n=S.tasks.filter(t=>t.inbox&&!t.done).length;if(nb){const o=nb.querySelector('.badge');if(o)o.remove();if(n)nb.insertAdjacentHTML('beforeend',`<span class="badge">${n}</span>`)}}
  const m=$('#main'),st=m.scrollTop,bc0=document.querySelector('.bigcal'),bst=bc0?bc0.scrollTop:null;
- m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='objectives'?viewObjectives():view==='settings'?viewSettings():viewToday();
+ m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'?viewStats():view==='objectives'?viewObjectives():view==='settings'?viewSettings():viewToday();
  m.scrollTop=st;
  renderSide();renderRun();
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
@@ -1277,7 +1411,7 @@ function go(v){
 /* ---------- modale ---------- */
 function showModal(html){$('#sheet').innerHTML=html;$('#modal').classList.remove('hidden')}
 function closeModal(){
- if(modalTask){const t=T(modalTask);if(t&&t.block&&t.block.gcalId&&t.block.title!==t.title&&gTok()){t.block.title=t.title;save();gFetch(`/calendars/${calId()}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{})}}
+ if(modalTask){const t=T(modalTask);if(t&&t.block&&t.block.gcalId&&t.block.title!==t.title&&gTok()){t.block.title=t.title;save();gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{})}}
  $('#modal').classList.add('hidden');modalTask=null;ritual=null;render();
 }
 function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':''}${focusOn===t.id&&focusSub===s.id?' cur':''}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${s.id}" aria-label="Cocher">${s.d?'✓':''}</button><span>${esc(s.t)}</span>${s.d?'':`<button class="play" data-act="focussub" data-tid="${t.id}" data-s="${s.id}" aria-label="Focus sur cette sous-tâche">▶</button>`}<button class="x" data-act="subd" data-tid="${t.id}" data-s="${s.id}" aria-label="Supprimer">×</button></div>`).join('')}
@@ -1291,6 +1425,7 @@ function openTask(id){
  <label>Durée estimée<select data-f="est">${ests.map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${v?fmtMin(v):'—'}</option>`).join('')}</select></label>
  <label>Jour (vide = backlog)<input type="date" data-f="day" value="${t.day||''}"></label>
  <label>Créneau dans l’agenda<span class="row"><input type="time" step="900" data-f="time" value="${t.block?hm(new Date(t.block.start)):''}">${t.block&&t.pinned?'<button class="sm ghost" data-act="unpin">Libérer l’heure</button>':''}${t.block&&!flowOn()?'<button class="sm ghost" data-act="unblock">Retirer</button>':''}</span></label>
+ <label>Échéance<span class="row"><input type="date" data-f="due" value="${t.due||''}">${t.due?'<button class="sm ghost" data-act="nodue">Aucune</button>':''}</span></label>
  <label>Objectif de la semaine<select data-f="obj"><option value="">Aucun</option>${objs.map(o=>`<option value="${esc(o.id)}" ${o.id===t.objId?'selected':''}>${esc(o.title)}</option>`).join('')}</select></label>
  <label>Répéter<select data-f="recur"><option value="">Jamais</option>${Object.entries(RULES).map(([k,v])=>`<option value="${k}" ${r&&r.rule===k?'selected':''}>${v}</option>`).join('')}</select></label>
  <label>Priorité<select data-f="prio">${[['','Normale'],['low','Basse'],['high','Haute'],['urgent','Urgente']].map(([v,l])=>`<option value="${v}" ${(t.prio||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>
@@ -1522,6 +1657,16 @@ document.addEventListener('click',async e=>{
   case'span':calSpan=+b.dataset.n;lsSet('journee.span',String(calSpan));render();break;
   case'focussub':{const t=T(b.dataset.tid);if(t){if(focusOn!==t.id)openFocus(t.id,b.dataset.s);else{focusSub=b.dataset.s;renderFocus()}}break}
   case'focussubdone':{const t=T(focusOn),x=t&&t.subtasks.find(z=>z.id===focusSub);if(x){x.d=true;chime(780);const nx=t.subtasks.find(z=>!z.d);focusSub=nx?nx.id:null;save();render();renderFocus();toast(nx?'Suivante : '+nx.t:'Toutes les sous-tâches sont faites')}break}
+  case'nodue':{const t=T(modalTask);if(t){t.due=null;save();openTask(t.id)}break}
+  case'tplnew':editTpl('');break;
+  case'tpledit':editTpl(id);break;
+  case'tplsave':{const name=($('[data-tplname]').value||'').trim()||'Modèle',items=tplFromText($('[data-tpltext]').value||'');if(!items.length){toast('Ajoute au moins une tâche');break}S.templates=S.templates||[];let tp=id&&S.templates.find(x=>x.id===id);if(tp){tp.name=name;tp.items=items}else S.templates.push({id:uid(),name,items});save();closeModal();toast('Modèle enregistré');break}
+  case'tpldel':S.templates=(S.templates||[]).filter(x=>x.id!==id);save();closeModal();break;
+  case'tplapply':applyTpl(id,b.dataset.day||null);break;
+  case'tplfromday':{const ts=dayTasks(cur).filter(t=>!t.recurId);if(!ts.length){toast('Aucune tâche ce jour-là');break}S.templates=S.templates||[];const tp={id:uid(),name:'Journée type du '+fmtDay(cur,{day:'numeric',month:'short'}),items:ts.map(t=>({title:t.title,est:t.est,channel:t.channel,subs:t.subtasks.map(x=>x.t)}))};S.templates.push(tp);save();editTpl(tp.id);break}
+  case'tplsug':{const x=tplSuggestions().find(z=>z.c===b.dataset.c);if(x){S.templates=S.templates||[];S.templates.push({id:uid(),name:'Routine '+ch(x.c).name,items:x.items});save();render();toast('Routine créée')}break}
+  case'archcopy':{const a=(S.archive||[]).find(x=>x.id===id);if(a){S.tasks.push(mk({title:a.t,channel:a.c,est:a.e||Math.round((a.a||0)/60)||0,day:today(),order:nextOrder(today())}));save();closeModal();go('today');toast('Ajoutée à aujourd’hui')}break}
+  case'palopen':openPal();break;
   case'estmenu':{const t=T(id);if(t)estMenu(t,b);break}
   case'setest':{const t=T(id);if(t)setEst(t,+b.dataset.v);closePop();break}
   case'ritai':aiRitual();break;
@@ -1566,22 +1711,25 @@ document.addEventListener('change',async e=>{
  const el=e.target,f=el.dataset.f;
  if(f&&modalTask){const t=T(modalTask);if(!t)return;const r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
   switch(f){
-   case'channel':t.channel=el.value||null;if(r)r.channel=t.channel;break;
+   case'channel':t.channel=el.value||null;if(r)r.channel=t.channel;if(t.block)pushBlock(t);break;
    case'est':setEst(t,+el.value);break;
    case'day':{const nd=el.value||null;if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;if(nd)t.order=nextOrder(nd);break}
    case'time':if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day)}else{t.pinned=false;if(!flowOn())clearBlock(t,true)}break;
    case'obj':t.objId=el.value||null;break;
+   case'due':t.due=el.value||null;break;
    case'prio':t.prio=el.value;break;
    case'recur':setRecur(t,el.value);break;
    case'actual':if(S.running&&S.running.taskId===t.id)S.running.start=Date.now();t.actual=Math.max(0,+el.value||0)*60;break;
    default:return;
   }
-  save();render();if(['day','time','recur','est'].includes(f))openTask(t.id);return;
+  save();render();if(['day','time','recur','est','due'].includes(f))openTask(t.id);return;
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(ritual.day)}else clearBlock(t,true);save();render();renderRitual()}return}
  if(el.dataset.set){const k=el.dataset.set;S.settings[k]=(k==='aiAuto'||k==='liveShift')?!!el.value:el.type==='number'?+el.value:el.value.trim();if(k==='aiBudget'){const c=document.querySelector('[data-live="aicost"]');if(c)c.textContent=costTxt()}save();if(el.type==='number'||k==='aiKey')render();return}
  if(el.hasAttribute('data-tips')){lsSet('journee.tips',el.checked?'on':'off');renderTip();return}
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
+ if(el.dataset.ctxcal!==undefined){S.settings.ctxCal=S.settings.ctxCal||{};S.settings.ctxCal[el.dataset.ctxcal]=el.value;save();relocateBlocks();toast('Agenda du contexte enregistré');return}
+ if(el.dataset.chcal!==undefined){const c=ch(el.dataset.chcal);if(c){c.cal=el.value;save();relocateBlocks();toast('Agenda de « '+c.name+' » enregistré')}return}
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
  if(el.dataset.chn){const c=ch(el.dataset.chn);if(c){c.name=el.value.trim()||c.name;save()}return}
  if(el.hasAttribute('data-todolist')){todo.listId=el.value;S.settings.todoList=el.value;save();renderSide();return}
@@ -1618,7 +1766,7 @@ document.addEventListener('drop',async e=>{
 });
 
 /* ---------- interactions fluides liste ↔ agenda ---------- */
-const KEYS=[['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Objectifs'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Objectifs'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
 let tipI=0;
 function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
@@ -1648,6 +1796,58 @@ setInterval(()=>{if(!document.hidden&&gTok()&&$('#modal').classList.contains('hi
 
 setInterval(liveTick,30000);setTimeout(liveTick,3000);
 setInterval(gSilent,60000);setTimeout(gSilent,2000);
+/* ---------- palette de commandes (Cmd+K) et recherche globale ---------- */
+let pal=null;
+function palItems(q){
+ const out=[],ql=norm(q).trim();
+ const cmds=[['Aujourd’hui','go:today'],['Semaine','go:week'],['Vide-tête','go:dump'],['Backlog et modèles','go:backlog'],['Objectifs','go:objectives'],['Statistiques','go:stats'],['Réglages','go:settings'],['Planifier ma journée','plan'],['Clôturer la journée','shutdown'],['Focus sur la prochaine tâche','focus'],['Inverser liste et grand agenda','layout'],['Planifier la semaine','weekplan'],['Revue de la semaine','weekreview'],['Nouveau modèle','tplnew'],...(S.templates||[]).map(t=>['Appliquer « '+t.name+' » aujourd’hui','tpl:'+t.id])];
+ const cmdHit=ql&&cmds.some(([l])=>norm(l).startsWith(ql));
+ if(cmdHit)cmds.filter(([l])=>norm(l).includes(ql)).slice(0,6).forEach(([l,k])=>out.push({k,label:l,grp:'Commandes'}));
+ if(ql){
+  const d=dateWord(ql.replace(/^(aller a|aller au|au|le)\s+/,''));if(d)out.unshift({k:'day:'+d,label:'Aller au '+fmtDay(d),grp:'Aller'});
+  out.push({k:'new',label:'Créer la tâche « '+q.trim()+' »',grp:'Créer',hint:'Entrée'});
+  out.push({k:'dump',label:'Ajouter au vide-tête',grp:'Créer'});
+  if(aiOn())out.push({k:'ask',label:'Demander à Claude : « '+q.trim()+' »',grp:'Créer'});
+ }
+ if(!cmdHit)cmds.filter(([l])=>!ql||norm(l).includes(ql)).slice(0,ql?6:14).forEach(([l,k])=>out.push({k,label:l,grp:'Commandes'}));
+ if(ql.length>=2){
+  S.tasks.filter(t=>norm(t.title+' '+(t.notes||'')+' '+t.subtasks.map(x=>x.t).join(' ')).includes(ql)).sort((a,b)=>(a.done-b.done)||((b.day||'')>(a.day||'')?1:-1)).slice(0,8)
+   .forEach(t=>out.push({k:'task:'+t.id,label:(t.done?'✓ ':'')+t.title,hint:t.day?fmtDay(t.day,{day:'numeric',month:'short'}):'Backlog',grp:'Tâches'}));
+  const seen=new Set();(S.archive||[]).filter(a=>norm(a.t).includes(ql)).sort((a,b)=>a.d<b.d?1:-1).filter(a=>{const k=norm(a.t).trim();if(seen.has(k))return false;seen.add(k);return true}).slice(0,8)
+   .forEach(a=>out.push({k:'arch:'+a.id,label:a.t,hint:fmtDay(a.d,{day:'numeric',month:'short',year:'2-digit'})+(a.a?' · '+fmtMin(a.a/60):''),grp:'Historique'}));
+ }
+ return out;
+}
+function openPal(){pal={q:'',sel:0};let el=$('#pal');if(!el){el=document.createElement('div');el.id='pal';document.body.appendChild(el)}el.innerHTML=`<div class="palbox" role="dialog" aria-label="Palette de commandes"><input id="palq" placeholder="Rechercher, créer une tâche, aller à un jour…" autocomplete="off" aria-label="Commande ou recherche"><div id="pallist"></div><div class="palfoot"><span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span><span><kbd>Entrée</kbd> valider</span><span><kbd>Échap</kbd> fermer</span></div></div>`;el.classList.remove('hidden');const i=$('#palq');i.focus();renderPal()}
+function closePal(){pal=null;const el=$('#pal');if(el)el.classList.add('hidden')}
+function renderPal(){if(!pal)return;const items=palItems(pal.q);pal.items=items;pal.sel=Math.min(pal.sel,Math.max(0,items.length-1));let g='';
+ $('#pallist').innerHTML=items.map((it,i)=>{const h=it.grp!==g?`<div class="palgrp">${esc(it.grp)}</div>`:'';g=it.grp;return h+`<div class="palit${i===pal.sel?' on':''}" data-pal="${i}"><span>${esc(it.label)}</span>${it.hint?`<small>${esc(it.hint)}</small>`:''}</div>`}).join('')||'<div class="palgrp">Aucun résultat</div>';
+ const on=$('#pallist .on');if(on)on.scrollIntoView({block:'nearest'})}
+function runPal(it){
+ if(!it)return;const q=pal?pal.q.trim():'';closePal();const k=it.k;
+ if(k.startsWith('go:'))return go(k.slice(3));
+ if(k.startsWith('day:')){cur=k.slice(4);return go('today')}
+ if(k.startsWith('task:')){const t=T(k.slice(5));if(t){if(t.day){cur=t.day;if(view!=='today'&&view!=='week')view='today';render()}openTask(t.id)}return}
+ if(k.startsWith('arch:')){const a=(S.archive||[]).find(x=>x.id===k.slice(5));if(a)showModal(`<div class="rit"><h2>${esc(a.t)}</h2><p class="lead">Terminée le ${fmtDay(a.d)}${a.a?' · '+fmtMin(a.a/60)+' passées':''}${a.e?' · '+fmtMin(a.e)+' estimées':''}${ch(a.c)?' · '+esc(ch(a.c).name):''}${a.o?' · objectif « '+esc(a.o)+' »':''}</p><div class="mfoot"><button class="ghost" data-act="close">Fermer</button><span class="sp"></span><button class="pri" data-act="archcopy" data-id="${esc(a.id)}">Refaire aujourd’hui</button></div></div>`);return}
+ if(k.startsWith('tpl:'))return applyTpl(k.slice(4),today());
+ if(k==='new'){const t=addTask(q,view==='backlog'?null:cur);if(t)toast('Tâche créée'+(t.day?' le '+fmtDay(t.day,{weekday:'long',day:'numeric'}):' au backlog'));return}
+ if(k==='dump'){S.dump=(S.dump?S.dump.replace(/\s*$/,'')+'\n':'')+q;save();toast('Ajouté au vide-tête');return}
+ if(k==='ask'){sideTab='ai';document.body.classList.add('side-open');return aiAsk(q,false)}
+ if(k==='plan')return startRitual('plan',cur);if(k==='shutdown')return startRitual('shutdown',cur);if(k==='weekplan')return startRitual('weekplan',cur);if(k==='weekreview')return startRitual('weekreview',cur);
+ if(k==='focus'){const t=dayTasks(cur).find(t=>!t.done);return t?openFocus(t.id):toast('Aucune tâche à faire')}
+ if(k==='layout')return toggleLayout();if(k==='tplnew')return editTpl('');
+}
+document.addEventListener('input',e=>{if(e.target.id==='palq'&&pal){pal.q=e.target.value;pal.sel=0;renderPal()}});
+document.addEventListener('keydown',e=>{
+ if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();pal?closePal():openPal();return}
+ if(!pal)return;
+ if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();closePal();return}
+ if(e.key==='ArrowDown'){e.preventDefault();pal.sel=Math.min(pal.sel+1,(pal.items||[]).length-1);renderPal()}
+ else if(e.key==='ArrowUp'){e.preventDefault();pal.sel=Math.max(0,pal.sel-1);renderPal()}
+ else if(e.key==='Enter'){e.preventDefault();runPal((pal.items||[])[pal.sel])}
+},true);
+document.addEventListener('click',e=>{const it=e.target.closest('[data-pal]');if(it&&pal){runPal(pal.items[+it.dataset.pal]);return}if(pal&&e.target.id==='pal')closePal()});
+
 /* ---------- clavier ---------- */
 document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});
 document.addEventListener('keydown',e=>{
@@ -1658,6 +1858,7 @@ document.addEventListener('keydown',e=>{
  else if(k==='t'){cur=today();go('today')}
  else if(k==='c'){toggleLayout()}
  else if(e.key==='?'){showKeys()}
+ else if(e.key==='/'){e.preventDefault();openPal()}
  else if(k==='d'){go('dump');setTimeout(()=>{const ta=document.querySelector('[data-dump]');if(ta){ta.focus();ta.selectionStart=ta.value.length}},50)}
  else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');
  else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur);

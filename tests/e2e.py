@@ -1,0 +1,416 @@
+"""Batterie de tests de bout en bout pour Journée.
+
+Lance un serveur local, simule Google (Agenda, Drive), Anthropic et l'horloge,
+puis exerce chaque fonction dans un vrai Chrome. Usage :
+    python3 tests/e2e.py [chemin_export_sunsama.csv]
+"""
+import datetime, glob, json, os, re, sys, threading, http.server, functools, traceback, urllib.parse
+from playwright.sync_api import sync_playwright
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PORT = 8791
+BASE = f'http://localhost:{PORT}/'
+CSV = sys.argv[1] if len(sys.argv) > 1 else (glob.glob('/mnt/user-data/uploads/*sunsama*.csv') or [None])[0]
+CHROME = '/usr/bin/google-chrome'
+
+def serve():
+    h = functools.partial(http.server.SimpleHTTPRequestHandler, directory=ROOT)
+    h.log_message = lambda *a: None
+    srv = http.server.ThreadingHTTPServer(('127.0.0.1', PORT), h)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
+
+TODAY = datetime.date.today()
+def d(n=0): return (TODAY + datetime.timedelta(days=n)).isoformat()
+def at(h, m=0, day=0):
+    return datetime.datetime.combine(TODAY + datetime.timedelta(days=day), datetime.time(h, m)).astimezone()
+
+class Google:
+    """Faux Google : agendas, événements, Drive appData."""
+    def __init__(self):
+        self.events = {'primary': [], 'pro@group': []}
+        self.calls = []
+        self.drive = None
+        self.add('primary', 'Réunion équipe', at(14), at(15))
+        self.add('primary', 'Déjeuner', at(12, 30), at(13, 30), transparent=True)
+        self.add('primary', 'Dentiste', at(10, 0, 1), at(11, 0, 1))
+    def add(self, cal, summary, s, e, transparent=False):
+        ev = {'id': f'ev{len(self.calls)}{summary[:3]}{s.hour}', 'summary': summary, 'status': 'confirmed',
+              'start': {'dateTime': s.isoformat()}, 'end': {'dateTime': e.isoformat()}, 'htmlLink': 'https://calendar.google.com/x'}
+        if transparent: ev['transparency'] = 'transparent'
+        self.events[cal].append(ev)
+    def route(self, route):
+        req = route.request; u = urllib.parse.urlparse(req.url); path = u.path; m = req.method
+        self.calls.append((m, path))
+        J = lambda o, st=200: route.fulfill(status=st, content_type='application/json', body=json.dumps(o))
+        if path.endswith('/users/me/calendarList'):
+            return J({'items': [{'id': 'primary', 'summary': 'Perso', 'primary': True, 'accessRole': 'owner', 'backgroundColor': '#2f9e6a'},
+                                {'id': 'pro@group', 'summary': 'Pro', 'accessRole': 'owner', 'backgroundColor': '#3b6fd8'}]})
+        mm = re.search(r'/calendar/v3/calendars/([^/]+)/events(?:/([^/]+))?(/move)?$', path)
+        if mm:
+            cal = urllib.parse.unquote(mm.group(1)); eid = mm.group(2)
+            if m == 'GET' and not eid: return J({'items': self.events.get(cal, [])})
+            if m == 'POST' and not eid:
+                body = json.loads(req.post_data); body['id'] = f'mine{len(self.calls)}'; body['_cal'] = cal
+                return J(body)
+            return J({'id': eid or 'x'}) if m != 'DELETE' else route.fulfill(status=204, body='')
+        if 'oauth2/v3/userinfo' in req.url: return J({'email': 'test@example.com'})
+        if '/drive/v3/files' in path and m == 'GET' and 'alt=media' not in req.url:
+            return J({'files': [{'id': 'f1'}] if self.drive else []})
+        if 'alt=media' in req.url: return J(self.drive or {})
+        if '/upload/drive/v3/files' in path:
+            data = req.post_data or ''
+            ct = req.headers.get('content-type') or ''
+            if 'multipart' in ct:
+                bnd = ct.split('boundary=')[1]
+                parts = [x for x in data.split('--' + bnd) if x.strip() and x.strip() != '--']
+                j = parts[-1].split('\r\n\r\n', 1)[1].rsplit('\r\n', 1)[0]
+            else: j = data
+            try: self.drive = json.loads(j)
+            except Exception: pass
+            return J({'id': 'f1'})
+        return J({})
+
+def claude_route(route):
+    body = json.loads(route.request.post_data); txt = json.dumps(body['messages'])
+    ids = re.findall(r'\[([a-z0-9-]{8,})\]', txt)
+    inp = {'message': 'Proposition de test.'}
+    if ids:
+        inp['updates'] = [{'id': ids[0], 'est': 25, 'channel': 'Perso'}]
+        inp['order'] = ids[:3][::-1]
+    inp['new_tasks'] = [{'title': 'Tâche proposée', 'est': 15, 'day': 'backlog'}]
+    route.fulfill(status=200, content_type='application/json',
+                  body=json.dumps({'content': [{'type': 'tool_use', 'name': 'proposer', 'id': 't', 'input': inp}],
+                                   'usage': {'input_tokens': 4000, 'output_tokens': 300}}))
+
+RESULTS = []
+def test(name):
+    def deco(fn):
+        def run(ctx):
+            try:
+                fn(ctx); RESULTS.append((name, True, ''))
+            except Exception as e:
+                RESULTS.append((name, False, f'{type(e).__name__}: {e}\n' + ''.join(traceback.format_tb(e.__traceback__)[-2:])))
+        run.__name__ = name; TESTS.append(run); return run
+    return deco
+TESTS = []
+
+def new_page(b, w=1440, h=900, clock=None, google=None, claude=False, scheme='light', storage=None):
+    ctx = b.new_context(viewport={'width': w, 'height': h}, color_scheme=scheme)
+    ctx.grant_permissions(['notifications'], origin=BASE.rstrip('/'))
+    pg = ctx.new_page(); errs = []
+    pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.route('https://fonts.googleapis.com/**', lambda r: r.abort())
+    pg.route('https://fonts.gstatic.com/**', lambda r: r.abort())
+    if google: pg.route('https://www.googleapis.com/**', google.route)
+    if claude: pg.route('https://api.anthropic.com/**', claude_route)
+    if clock: pg.clock.install(time=clock)
+    if storage is not None:
+        pg.add_init_script(f"if(!sessionStorage.getItem('init')){{sessionStorage.setItem('init','1');localStorage.clear();{storage}}}")
+    pg.goto(BASE); pg.wait_for_timeout(300)
+    if clock: pg.clock.run_for(1500)
+    else: pg.wait_for_timeout(900)
+    return ctx, pg, errs
+
+def st(pg, expr): return pg.evaluate(f'()=>{{const S=window.journee.state;const {{dayTasks,today,addDays,loadInfo,pushBlock,monday}}=window.journee.fn;return {expr}}}')
+def add(pg, text):
+    sel = f'[data-keep="add-{st(pg, "today()") if False else d()}"]'
+    pg.fill(sel, text); pg.keyboard.press('Enter'); pg.wait_for_timeout(250)
+def tick(pg, ms=400):
+    try: pg.clock.run_for(ms)
+    except Exception: pg.wait_for_timeout(ms)
+
+TOKEN = "localStorage.setItem('journee.g',JSON.stringify({t:'tok',exp:Date.now()+3600e3,scope:'email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata'}));localStorage.setItem('journee.g.on','1');"
+
+# ---------------------------------------------------------------- tests
+@test('Démarrage sans erreur et tâches d’exemple')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    assert not errs, errs
+    assert st(pg, 'S.tasks.length') == 5
+    ctx.close()
+
+@test('Saisie rapide : durée, canal, date')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    add(pg, 'Appeler la banque 30m #perso demain')
+    t = st(pg, 'S.tasks.at(-1)')
+    assert t['title'] == 'Appeler la banque', t['title']
+    assert t['est'] == 30 and t['day'] == d(1), (t['est'], t['day'])
+    assert st(pg, "S.channels.find(c=>c.id===S.tasks.at(-1).channel).name") == 'Perso'
+    add(pg, 'Rapport mensuel 1h30 lundi')
+    t = st(pg, 'S.tasks.at(-1)'); assert t['est'] == 90
+    assert datetime.date.fromisoformat(t['day']).weekday() == 0
+    assert not errs, errs; ctx.close()
+
+@test('Échéances : syntaxe « avant », planification automatique, alerte')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    add(pg, 'Dossier assurance avant vendredi 45m')
+    t = st(pg, 'S.tasks.at(-1)')
+    assert t['due'], 'échéance non comprise'
+    tick(pg, 300); t = st(pg, 'S.tasks.at(-1)')
+    assert t['day'] and d() <= t['day'] <= t['due'], (t['day'], t['due'])
+    assert pg.locator('.due').count() >= 1
+    assert not errs, errs; ctx.close()
+
+@test('Cocher / décocher une tâche')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.click('#main .card .chk >> nth=0'); tick(pg, 300)
+    assert st(pg, 'S.tasks.filter(t=>t.done).length') == 1
+    pg.click('#main .card.done .chk'); tick(pg, 300)
+    assert st(pg, 'S.tasks.filter(t=>t.done).length') == 0
+    assert not errs, errs; ctx.close()
+
+@test('Agenda vivant : créneaux dans l’ordre de la liste, réordonnancement')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    blocks = st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>t.block&&new Date(t.block.start).getTime())")
+    assert all(blocks) and blocks == sorted(blocks), blocks
+    cards = pg.locator('#main .list .card')
+    first_title = cards.nth(0).locator('.ctitle').inner_text()
+    cards.nth(2).drag_to(cards.nth(0), target_position={'x': 40, 'y': 4}); tick(pg)
+    order = st(pg, "dayTasks(today()).map(t=>t.title)")
+    assert order[1] == first_title or order[0] != first_title, order
+    blocks = st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>new Date(t.block.start).getTime())")
+    assert blocks == sorted(blocks), 'les créneaux ne suivent pas la liste'
+    assert not errs, errs; ctx.close()
+
+@test('Épingler en glissant dans l’agenda, libérer en revenant à la liste')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.locator('#main .card').first.drag_to(pg.locator('.tlin'), target_position={'x': 80, 'y': 76 * 9 + 4}); tick(pg)
+    assert st(pg, 'S.tasks.filter(t=>t.pinned).length') == 1
+    h = st(pg, "new Date(S.tasks.find(t=>t.pinned).block.start).getHours()")
+    assert h == 16, h
+    pg.locator('.blk').filter(has_text='📌').drag_to(pg.locator('#main .list'), target_position={'x': 300, 'y': 3}); tick(pg)
+    assert st(pg, 'S.tasks.filter(t=>t.pinned).length') == 0
+    assert not errs, errs; ctx.close()
+
+@test('Durée rapide et étirement d’un créneau')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.click('#main .est >> nth=0'); pg.click('#pop button >> nth=5'); tick(pg)
+    assert st(pg, 'dayTasks(today())[0].est') == 60
+    blk = pg.locator('.blk').first; bb = blk.bounding_box()
+    x, y = bb['x'] + bb['width'] / 2, bb['y'] + bb['height'] - 3
+    pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x, y + 38, steps=4); pg.mouse.up(); tick(pg)
+    assert st(pg, 'dayTasks(today())[0].est') == 90, st(pg, 'dayTasks(today())[0].est')
+    assert not errs, errs; ctx.close()
+
+@test('Focus : tâche active, sous-tâches, le temps décale la suite')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.evaluate("()=>{const S=window.journee.state;const {dayTasks,today}=window.journee.fn;const t=dayTasks(today())[1];t.subtasks=[{id:'s1',t:'Étape A',d:false},{id:'s2',t:'Étape B',d:false}];window.journee.save()}")
+    pg.click('#main .card >> nth=1 >> [data-act="play"]'); tick(pg)
+    assert pg.inner_text('.ftitle') == 'Étape A'
+    pg.click('[data-act="focussubdone"]'); tick(pg)
+    assert pg.inner_text('.ftitle') == 'Étape B'
+    pg.keyboard.press('Escape'); tick(pg)
+    before = st(pg, "dayTasks(today()).filter(t=>!t.done&&!(S.running&&S.running.taskId===t.id)).map(t=>t.block.start)")
+    tick(pg, 70 * 60 * 1000)
+    after = st(pg, "dayTasks(today()).filter(t=>!t.done&&!(S.running&&S.running.taskId===t.id)).map(t=>t.block.start)")
+    assert after != before, 'rien ne s’est décalé'
+    assert pg.locator('.blk.active').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('Rituel du matin : étapes, reprise après rechargement, suggestions Claude')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], claude=True, storage="localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:true}}))")
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.click('[data-act="plan"] >> nth=0'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(300)
+    pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(600)
+    assert pg.locator('.aibox .pitem').count() >= 1, 'pas de suggestion Claude'
+    pg.reload(); pg.wait_for_timeout(1500)
+    assert pg.inner_text('.rsteps .on') == 'Estimer'
+    pg.click('[data-act="ritapplyall"]'); pg.wait_for_timeout(200)
+    for _ in range(2): pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(300)
+    pg.fill('[data-intent]', 'Avancer'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(300)
+    assert st(pg, 'S.days[today()].planned') is True and st(pg, 'S.days[today()].intent') == 'Avancer'
+    assert not errs, errs; ctx.close()
+
+@test('Rituel du soir : report à demain et note')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.click('[data-act="shutdown"] >> nth=0'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
+    pg.click('[data-act="mvday"]'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
+    pg.fill('[data-note]', 'Bonne journée'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
+    assert st(pg, "S.tasks.filter(t=>t.day===addDays(today(),1)).length") == 3
+    assert st(pg, 'S.days[today()].note') == 'Bonne journée'
+    assert not errs, errs; ctx.close()
+
+@test('Vide-tête : lignes → tâches datées et à trier')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.keyboard.press('d'); pg.wait_for_timeout(200)
+    pg.fill('[data-dump]', 'Rappeler garagiste\n- Acheter ampoules demain 15m\nOffrir livre avant 12/12')
+    pg.dispatch_event('[data-dump]', 'input'); pg.click('[data-act="dumptasks"]'); pg.wait_for_timeout(300)
+    ts = st(pg, 'S.tasks.slice(-3).map(t=>[t.title,t.day,t.inbox,t.due])')
+    assert ts[0][2] is True and ts[1][1] == d(1) and ts[2][3], ts
+    pg.click('[data-act="inbox"] >> nth=0'); pg.wait_for_timeout(200)
+    assert st(pg, 'S.tasks.filter(t=>t.inbox).length') == 0
+    assert not errs, errs; ctx.close()
+
+@test('Palette Cmd+K : commandes, création, aller à une date, recherche')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.keyboard.press('Control+k'); pg.wait_for_selector('#palq')
+    pg.keyboard.type('semaine'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
+    assert pg.evaluate('location.hash') == '#week'
+    pg.keyboard.press('Control+k'); pg.keyboard.type('Nouvelle idée 20m'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
+    assert st(pg, 'S.tasks.at(-1).title') == 'Nouvelle idée' and st(pg, 'S.tasks.at(-1).est') == 20
+    pg.keyboard.press('Control+k'); pg.keyboard.type('demain'); pg.wait_for_timeout(100)
+    assert 'Aller au' in pg.inner_text('#pallist .palit.on')
+    pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
+    pg.keyboard.press('Control+k'); pg.keyboard.type('courses'); pg.wait_for_timeout(100)
+    assert pg.locator('.palgrp', has_text='Tâches').count() == 1
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
+    assert pg.locator('#pal.hidden').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('Modèles : créer, appliquer, depuis aujourd’hui')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.click('#nav [data-view="backlog"]'); pg.click('[data-act="tplnew"]')
+    pg.fill('[data-tplname]', 'Routine du matin'); pg.fill('[data-tpltext]', 'Méditer 10m\nPréparer le sac 10m\n- Gourde\n- Clés')
+    pg.click('[data-act="tplsave"]'); pg.wait_for_timeout(200)
+    assert st(pg, 'S.templates.length') == 1 and st(pg, 'S.templates[0].items[1].subs.length') == 2
+    pg.click('[data-act="tplapply"] >> nth=0'); pg.wait_for_timeout(200)
+    assert st(pg, "S.tasks.filter(t=>t.title==='Préparer le sac'&&t.day===today()&&t.subtasks.length===2).length") == 1
+    pg.click('[data-act="tplfromday"]'); pg.wait_for_timeout(200); pg.click('[data-act="tplsave"]'); pg.wait_for_timeout(200)
+    assert st(pg, 'S.templates.length') == 2
+    assert not errs, errs; ctx.close()
+
+@test('Import Sunsama, réimport sans doublon, statistiques, suggestions de routines, recherche historique')
+def _(c):
+    if not CSV: raise RuntimeError('export Sunsama introuvable')
+    ctx, pg, errs = new_page(c['b'])
+    pg.click('#nav [data-view="settings"]'); pg.set_input_files('[data-sunsama]', CSV); pg.wait_for_selector('.rit h2')
+    n1 = st(pg, 'S.tasks.length+S.archive.length'); pg.click('[data-act="close"]')
+    pg.click('#nav [data-view="settings"]'); pg.set_input_files('[data-sunsama]', CSV); pg.wait_for_selector('.rit h2')
+    assert st(pg, 'S.tasks.length+S.archive.length') == n1, 'doublons au réimport'
+    pg.click('[data-act="close"]'); pg.click('#nav [data-view="stats"]'); pg.wait_for_timeout(300)
+    txt = pg.inner_text('#main')
+    assert 'NaN' not in txt and 'undefined' not in txt and 'Infinity' not in txt, 'valeur invalide dans les stats'
+    pg.click('#nav [data-view="backlog"]'); pg.wait_for_timeout(200)
+    assert pg.locator('[data-act="tplsug"]').count() >= 1, 'pas de suggestion de routine'
+    pg.keyboard.press('Control+k'); pg.keyboard.type('lessive'); pg.wait_for_timeout(200)
+    assert pg.locator('.palgrp', has_text='Historique').count() == 1
+    pg.keyboard.press('Escape')
+    assert not errs, errs; ctx.close()
+
+@test('Google Agenda : rendez-vous, occupé/disponible, agenda par catégorie, déplacement')
+def _(c):
+    g = Google()
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2), google=g, storage=TOKEN)
+    tick(pg, 1500)
+    assert pg.locator('.evrow').count() == 2, pg.locator('.evrow').count()
+    load1 = st(pg, 'loadInfo(today()).meet')
+    pg.click('.evrow:has-text("Réunion équipe") [data-act="evtoggle"]'); tick(pg)
+    assert st(pg, 'loadInfo(today()).meet') < load1
+    # correspondance canal Travail -> agenda Pro
+    pg.evaluate("()=>{const S=window.journee.state;S.channels.find(c=>c.name==='Travail').cal='pro@group';window.journee.save()}")
+    add(pg, 'Préparer offre 30m #travail'); tick(pg, 1500)
+    posts = [p for m, p in g.calls if m == 'POST' and p.endswith('/events')]
+    assert any('pro%40group' in p or 'pro@group' in p for p in posts), posts
+    t = st(pg, "S.tasks.find(t=>t.title==='Préparer offre')")
+    assert t['block']['cal'] == 'pro@group', t['block']
+    pg.evaluate("()=>{const S=window.journee.state;const t=S.tasks.find(t=>t.title==='Préparer offre');t.channel=S.channels.find(c=>c.name==='Perso').id;window.journee.save()}")
+    pg.evaluate("()=>window.journee.fn.pushBlock(window.journee.state.tasks.find(t=>t.title==='Préparer offre'))"); tick(pg, 800)
+    assert any(p.endswith('/move') for m, p in g.calls), 'pas de déplacement d’agenda'
+    pg.goto(BASE + '#today'); tick(pg, 1500)
+    pg.click('[data-act="next"]'); tick(pg, 800)
+    assert pg.locator('.evrow', has_text='Dentiste').count() == 1, 'rendez-vous du lendemain absent'
+    assert not errs, errs; ctx.close()
+
+@test('Synchro Drive : envoi puis récupération sur un autre appareil')
+def _(c):
+    g = Google()
+    ctx, pg, errs = new_page(c['b'], google=g, storage=TOKEN)
+    add(pg, 'Tâche synchronisée'); pg.wait_for_timeout(5000)
+    assert g.drive and any(t['title'] == 'Tâche synchronisée' for t in g.drive.get('tasks', [])), 'rien envoyé sur Drive'
+    ctx.close()
+    ctx2, pg2, errs2 = new_page(c['b'], google=g, storage=TOKEN); pg2.wait_for_timeout(1500)
+    assert st(pg2, "S.tasks.some(t=>t.title==='Tâche synchronisée')"), 'données non récupérées'
+    assert not errs and not errs2, (errs, errs2); ctx2.close()
+
+@test('Claude : chat, application des propositions, coût, plafond')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], claude=True, storage="localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:false}}))")
+    pg.click('.stabs [data-side="ai"]'); pg.fill('[data-keep="ai"]', 'Organise'); pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
+    assert pg.locator('[data-act="aiapply"]').count() >= 2
+    pg.click('[data-act="aiapplyall"]'); pg.wait_for_timeout(200)
+    assert st(pg, "S.tasks.some(t=>t.title==='Tâche proposée')")
+    assert 'requête' in pg.inner_text('[data-live="aicost"]')
+    pg.evaluate("()=>{window.journee.state.settings.aiBudget=0.0001}")
+    pg.fill('[data-keep="ai"]', 'Encore'); pg.keyboard.press('Enter'); pg.wait_for_timeout(400)
+    assert 'plafond' in pg.locator('.msg.a').last.inner_text()
+    assert not errs, errs; ctx.close()
+
+@test('Grand agenda (touche C) : 3 jours, semaine, dépôt sur un autre jour')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.keyboard.press('c'); pg.wait_for_timeout(300)
+    assert pg.locator('.bccol').count() == 3
+    pg.locator('#sidebody .card').first.drag_to(pg.locator('.bccol .tlin').nth(2), target_position={'x': 40, 'y': 76 * 5 + 4}); pg.wait_for_timeout(300)
+    assert st(pg, "S.tasks.some(t=>t.pinned&&t.day===addDays(today(),2))")
+    pg.click('[data-act="span"][data-n="7"]'); pg.wait_for_timeout(200)
+    assert pg.locator('.bccol').count() == 7
+    pg.keyboard.press('c')
+    assert not errs, errs; ctx.close()
+
+@test('Partager vers Journée : texte et lien reçus dans le vide-tête')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.goto(BASE + '?title=Article&text=A%20lire&url=https%3A%2F%2Fex.com'); pg.wait_for_timeout(800)
+    assert 'Article' in st(pg, 'S.dump') and 'https://ex.com' in st(pg, 'S.dump')
+    assert pg.evaluate('location.hash') == '#dump'
+    assert not errs, errs; ctx.close()
+
+@test('Notifications : début de créneau')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.evaluate("()=>{window.__n=[];window.Notification=function(t,o){window.__n.push(t)};window.Notification.permission='granted';if(window.ServiceWorkerRegistration)ServiceWorkerRegistration.prototype.showNotification=function(t){window.__n.push(t);return Promise.resolve()};window.journee.state.settings.notif=true}")
+    first = st(pg, "new Date(dayTasks(today())[0].block.start).getTime()-Date.now()")
+    tick(pg, int(first) + 31000)
+    assert any('C’est l’heure' in n or 'Planifie' in n for n in pg.evaluate('window.__n')), pg.evaluate('window.__n')
+    assert not errs, errs; ctx.close()
+
+@test('Raccourcis : ? affiche la liste, rappel tournant')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.keyboard.press('?'); pg.wait_for_timeout(200)
+    assert 'Raccourcis clavier' in pg.inner_text('#sheet')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(1200)
+    assert pg.locator('#tip kbd').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('Mise en page : aucune vue ne déborde (ordinateur, téléphone, sombre)')
+def _(c):
+    for w, h, scheme in [(1440, 900, 'light'), (1100, 800, 'dark'), (390, 844, 'light'), (360, 740, 'dark')]:
+        ctx, pg, errs = new_page(c['b'], w, h, scheme=scheme)
+        for v in ['today', 'week', 'dump', 'backlog', 'objectives', 'stats', 'settings']:
+            pg.evaluate(f"()=>{{location.hash='{v}'}}"); pg.goto(BASE + '#' + v); pg.wait_for_timeout(350)
+            ow = pg.evaluate("()=>{const m=document.querySelector('#main');return [document.documentElement.scrollWidth-innerWidth,[...m.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>innerWidth+2&&!e.closest('.week,.bigcal,.scroll,.wkbars')}).slice(0,3).map(e=>e.className||e.tagName)]}")
+            assert ow[0] <= 0 and not ow[1], f'{v} {w}px déborde : {ow}'
+        assert not errs, errs; ctx.close()
+
+def main():
+    srv = serve()
+    only = os.environ.get('ONLY')
+    with sync_playwright() as p:
+        b = p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
+        for t in TESTS:
+            if only and only.lower() not in t.__name__.lower(): continue
+            t({'b': b})
+        b.close()
+    srv.shutdown()
+    ok = sum(1 for r in RESULTS if r[1])
+    for name, passed, msg in RESULTS:
+        print(('✅ ' if passed else '❌ ') + name + ('' if passed else '\n   ' + msg.replace('\n', '\n   ')))
+    print(f'\n{ok}/{len(RESULTS)} tests réussis')
+    sys.exit(0 if ok == len(RESULTS) else 1)
+
+if __name__ == '__main__':
+    main()

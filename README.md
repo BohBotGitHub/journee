@@ -77,3 +77,7 @@ La session Microsoft se renouvelle seule pendant 24 h, puis demande un clic pour
 - **Sur mobile**, le glisser-déposer n'existe pas : ouvre une tâche et choisis son jour et son heure dans le détail.
 - **Confidentialité** : l'appli parle directement à Google et à Microsoft depuis ton navigateur. Aucun serveur intermédiaire.
 - **Mise à jour** : remplace les fichiers sur GitHub. Si l'ancienne version reste affichée, recharge l'appli deux fois.
+
+## Tests
+
+`python3 tests/e2e.py [export_sunsama.csv]` lance 22 scénarios de bout en bout dans Chrome (Playwright), avec Google, Claude et l'horloge simulés. `ONLY=palette python3 tests/e2e.py` pour n'en lancer qu'un.
