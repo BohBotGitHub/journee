@@ -1,4 +1,4 @@
-// MyDayBot — synchro entre appareils par fusion (Google Drive)
+// Diem — synchro entre appareils par fusion (Google Drive)
 /* ---------- synchro entre appareils (dossier caché de l'appli dans Google Drive) ---------- */
 let syncBusy=false,syncState='',remoteMod=null,syncAgain=false;
 async function dfetch(url,opts={}){

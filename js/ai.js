@@ -1,4 +1,4 @@
-// MyDayBot — assistant Claude
+// Diem — assistant Claude
 /* ---------- assistant Claude (API Anthropic, clé de l'utilisateur) ---------- */
 let modalAI=null,aiBusy=false,aiUnread=0,aiQueue=new Set(),aiT=null;
 const aiOn=()=>!!(S.settings.aiKey||'').trim();
@@ -29,7 +29,7 @@ Backlog :\n${S.tasks.filter(t=>!t.day&&!t.done).slice(0,40).map(line).join('\n')
 Historique estimé/réel :\n${hist.join('\n')||'- pas encore de données'}
 Habitudes passées (archive, durée réelle moyenne) :\n${archivePatterns()||'- aucune'}`;
 }
-const AI_SYS=`Tu es Claude, l'assistant de planification intégré à l'appli « MyDayBot » (équivalent de Sunsama). Tu aides l'utilisateur à organiser son temps : ordre des tâches, catégorie, durée réaliste, répartition dans la semaine, et nouvelles tâches utiles (préparer une rendez-vous, un suivi, une étape vers un objectif de la semaine).
+const AI_SYS=`Tu es Claude, l'assistant de planification intégré à l'appli « Diem » (équivalent de Sunsama). Tu aides l'utilisateur à organiser son temps : ordre des tâches, catégorie, durée réaliste, répartition dans la semaine, et nouvelles tâches utiles (préparer une rendez-vous, un suivi, une étape vers un objectif de la semaine).
 Règles :
 - Français, tutoiement, ton chaleureux et direct, réponses courtes (3-6 phrases max).
 - Sois réaliste : tâches + rendez-vous ne doivent pas dépasser les heures de travail ; s'il y a trop, propose de reporter (updates avec day) plutôt que d'entasser.

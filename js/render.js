@@ -1,6 +1,6 @@
-// MyDayBot — rendu, modale, rituels, mode focus
+// Diem — rendu, modale, rituels, mode focus
 /* ---------- rendu principal ---------- */
-function render(){
+function render(){applyLook();
  const a=document.activeElement,keep=a&&a.dataset&&a.dataset.keep,val=keep?a.value:null;
  document.querySelectorAll('#nav [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===view||(b.dataset.view==='review'&&(view==='objectives'||view==='stats'))));
  {const nb=document.querySelector('#nav [data-view="dump"]'),n=S.tasks.filter(t=>t.inbox&&!t.done).length;if(nb){const o=nb.querySelector('.badge');if(o)o.remove();if(n)nb.insertAdjacentHTML('beforeend',`<span class="badge">${n}</span>`)}}
@@ -9,7 +9,7 @@ function render(){
  m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='settings'?viewSettings():view==='tree'?viewTree():viewToday();
  m.scrollTop=st;
  {const sv=m.querySelector('.tvsvg');if(sv){try{const bb=sv.getBBox(),p=14;sv.setAttribute('viewBox',`${bb.x-p} ${bb.y-p} ${bb.width+2*p} ${bb.height+2*p}`)}catch(e){}}}
- renderSide();renderRun();renderSyncBar();
+ renderSide();renderRun();renderSyncBar();iconize($('#main'));
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
  if(layout==='cal'&&(view==='today'||view==='week')){const bd=bigDays();ensureRange(bd[0],bd[bd.length-1])}else if(view==='week'){const w=monday(cur);ensureRange(w,addDays(w,6))}else{ensureRange(cur,addDays(cur,6))}
  {const bc=document.querySelector('.bigcal');if(bc){if(!scrolledBig||bst===null){scrolledBig=true;const n=new Date();bc.scrollTop=Math.max(0,(Math.max(S.settings.dayStart,n.getHours()-1)-S.settings.dayStart)*PX)}else bc.scrollTop=bst}}
@@ -33,7 +33,7 @@ function go(v){
 }
 
 /* ---------- modale ---------- */
-function showModal(html){$('#sheet').innerHTML=html;$('#modal').classList.remove('hidden')}
+function showModal(html){$('#sheet').innerHTML=html;$('#modal').classList.remove('hidden');iconize($('#sheet'))}
 function closeModal(){
  if(modalTask){const t=T(modalTask);if(t&&t.block&&t.block.gcalId&&t.block.title!==t.title&&gTok()){t.block.title=t.title;save();gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{})}}
  $('#modal').classList.add('hidden');modalTask=null;ritual=null;render();
@@ -108,7 +108,7 @@ function aiBox(){
 }
 const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Semaine passée','Objectifs','Aperçu'],weekreview:['Chiffres','Réflexion']};
 function startRitual(type,day){modalTask=null;const sv=savedRit();ritual=sv&&sv.type===type&&sv.day===(day||cur)?sv:{type,step:0,day:day||cur,picked:{},ai:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}
-function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<span class="${k===i?'on':k<i?'past':''}">${esc(s)}</span>`).join('')}<span class="sp" style="background:none"></span></div>${body}${aiBox()}<div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':''}<button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
+function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<span class="${k===i?'on':k<i?'past':''}">${esc(s)}</span>`).join('')}<span class="sp" style="background:none"></span></div><div class="ritbody">${body}${aiBox()}</div><div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':''}<button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
 const durBtns=t=>`<div class="durs">${[15,30,45,60,90,120].map(v=>`<button class="sm${t.est===v?' on':''}" data-act="dur" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('')}</div>`;
 // zones où glisser une tâche pour la repousser (rituel du matin)
 function pushZones(d){
@@ -164,7 +164,7 @@ function renderRitual(){
    <div class="rlist">${done.map(t=>`<div class="rrow sel"><div><b>${esc(t.title)}</b><small>${fmtMin(actualSec(t)/60)} passées${t.est?' / '+fmtMin(t.est)+' prévues':''}</small></div></div>`).join('')||'<p class="mute">Aucune tâche cochée. Ça arrive. Demain est un autre jour.</p>'}</div>`);}
   else if(i===1){const srt=[...left].sort((a,b)=>(b.roll||0)-(a.roll||0)),hot=srt.filter(t=>(t.roll||0)>=4).length;
    h=shell(`<h2>Ce qui reste</h2><p class="lead">${left.length?`Par défaut, tout passe à demain. ${hot?`${hot} tâche${hot>1?'s':''} reviennent souvent : décide maintenant ce qu’elles deviennent.`:'Change ce que tu veux.'}`:'Tout est fait. Belle journée.'}</p>
-   ${left.length?`<div class="rlist">${srt.map(t=>`<div class="rrow${(t.roll||0)>=4?' hot':''}"><div><b>${esc(t.title)}</b>${(t.roll||0)>=1?`<small><span class="rollm">↻ ${t.roll}</span>${(t.roll||0)>=4?' reportée '+t.roll+' fois':''}</small>`:''}</div><div class="btns"><button class="sm" data-act="mv" data-id="${t.id}" data-to="${addDays(d,1)}">Demain</button><button class="sm ghost" data-act="mv" data-id="${t.id}" data-to="backlog">Backlog</button><button class="sm ghost" data-act="rm" data-id="${t.id}">Supprimer</button></div></div>`).join('')}</div><button class="sm" data-act="mvday" data-to="${addDays(d,1)}">Tout passer à demain</button>`:''}`);}
+   ${left.length?`<div class="rlist">${srt.map(t=>`<div class="rrow${(t.roll||0)>=4?' hot':''}"><div><b>${esc(t.title)}</b>${(t.roll||0)>=1?`<small><span class="rollm">↻ ${t.roll}</span>${(t.roll||0)>=4?' reportée '+t.roll+' fois':''}</small>`:''}</div><div class="btns"><button class="sm ok" data-act="ritdone" data-id="${t.id}" title="Marquer comme faite">✓ Faite</button><button class="sm" data-act="mv" data-id="${t.id}" data-to="${addDays(d,1)}">Demain</button><button class="sm ghost" data-act="mv" data-id="${t.id}" data-to="backlog">Backlog</button><button class="sm ghost" data-act="rm" data-id="${t.id}">Supprimer</button></div></div>`).join('')}</div><button class="sm" data-act="mvday" data-to="${addDays(d,1)}">Tout passer à demain</button>`:''}`);}
   else if(i===2)h=shell(`<h2>Quelques mots</h2><p class="lead">Ce qui s’est bien passé, ce que tu changerais. Ils nourrissent la revue de la semaine.</p>
    <textarea data-note rows="6" placeholder="Ce qui s’est bien passé…&#10;Ce que je ferais autrement…">${esc((S.days[d]||{}).note||'')}</textarea>`);
   else h=shell(`${quoteHtml(pickQuote('soir',d))}<p class="lead" style="text-align:center">La journée est close. Ce qui reste t’attend demain, rangé.</p>`,'Journée terminée');

@@ -1,4 +1,4 @@
-// MyDayBot — Microsoft To Do
+// Diem — Microsoft To Do
 /* ---------- Microsoft To Do (OAuth PKCE + Microsoft Graph) ---------- */
 const MS='https://login.microsoftonline.com/common/oauth2/v2.0';
 const MS_SCOPE='openid offline_access User.Read Tasks.ReadWrite';

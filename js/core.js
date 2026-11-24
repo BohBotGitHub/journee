@@ -1,4 +1,4 @@
-// MyDayBot — utilitaires, données, horodatage, tâches, récurrence, minuteur
+// Diem — utilitaires, données, horodatage, tâches, récurrence, minuteur
 /* ---------- configuration (identifiants par défaut, remplis à l'installation) ---------- */
 const CONFIG={googleClientId:'24499808678-iini1scq6npi7bqrj4n8vnvclnljmgr9.apps.googleusercontent.com',msClientId:''};
 /* ---------- utilitaires ---------- */
@@ -197,3 +197,7 @@ function startTimer(id){stopTimer();S.running={taskId:id,start:Date.now()};save(
 function stopTimer(){if(!S.running)return;const t=T(S.running.taskId);if(t)t.actual=Math.round((t.actual||0)+(Date.now()-S.running.start)/1000);S.running=null;save()}
 let actx=null;
 function chime(f){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=f||880;o.type='sine';g.gain.setValueAtTime(.0001,actx.currentTime);g.gain.exponentialRampToValueAtTime(.18,actx.currentTime+.02);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.5);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.55)}catch(e){}}
+
+// Apparence : fonds neutres, mode clair/sombre, une couleur d'accent
+const ACCENTS=[{k:'peche',n:'Pêche',l:'#C9714A',d:'#E8A283'},{k:'sauge',n:'Sauge',l:'#4F7D57',d:'#8DBA96'},{k:'lavande',n:'Lavande',l:'#625CA8',d:'#A9A3E6'},{k:'or',n:'Or mat',l:'#94731F',d:'#D4B05A'},{k:'ardoise',n:'Bleu ardoise',l:'#41679E',d:'#86A8D8'},{k:'petrole',n:'Pétrole',l:'#26737A',d:'#6DC0C4'}];
+function applyLook(){const s=S.settings||{},r=document.documentElement,a=ACCENTS.find(x=>x.k===s.accent)||ACCENTS[0];r.dataset.accent=a.k;if(s.mode==='light'||s.mode==='dark')r.dataset.theme=s.mode;else delete r.dataset.theme;const dark=s.mode==='dark'||(s.mode!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);const m=document.querySelector('meta[name=theme-color]');if(m)m.content=dark?'#141415':'#f6f6f5'}

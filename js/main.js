@@ -1,4 +1,4 @@
-// MyDayBot — démarrage
+// Diem — démarrage
 /* ---------- démarrage ---------- */
 const treePending=ensureTree();
 genRecurring();

@@ -1,6 +1,6 @@
-// MyDayBot — citations des rituels : textes authentiques, sources vérifiées.
-// Traductions : publiques (XIXe s.) quand elles existent, sinon traduites par MyDayBot depuis l'original (indiqué « trad. MyDayBot »).
-// Camus est encore protégé : ses idées sont reformulées (kind:'idea', sans guillemets).
+// Diem — citations des rituels : textes authentiques, sources vérifiées.
+// Traductions : publiques (XIXe s.) quand elles existent, sinon traduites par Diem depuis l'original (indiqué « trad. Diem »).
+// Camus (protégé par le droit d'auteur) n'est pas cité.
 // tags : matin, soir, charge (journée pleine), calme (énergie basse, trouble), retard (reports), reussi (journée faite), dur (journée difficile)
 const QUOTES=[
  {t:'Il suffit que tu disposes bien du moment où tu es.',a:'Marc Aurèle',w:'Pensées, VI, 2 (trad. Barthélemy-Saint-Hilaire, 1876)',s:'stoïcien',tags:['matin','charge','calme']},
@@ -9,15 +9,13 @@ const QUOTES=[
  {t:'Regarde le dedans des choses.',a:'Marc Aurèle',w:'Pensées, VI, 3 (trad. Barthélemy-Saint-Hilaire, 1876)',s:'stoïcien',tags:['matin']},
  {t:'Nous n’avons point reçu une vie courte, c’est nous qui l’avons rendue telle.',a:'Sénèque',w:'De la brièveté de la vie, I, 4 (trad. Charpentier, 1860)',s:'stoïcien',tags:['matin','charge','retard']},
  {t:'Nous ne vivons que la moindre partie du temps de notre vie.',a:'Sénèque',w:'De la brièveté de la vie, II (trad. Charpentier, 1860)',s:'stoïcien',tags:['matin','retard']},
- {t:'Toi qui n’es pas maître de demain, tu remets la joie à plus tard ; la vie se perd à attendre.',a:'Épicure',w:'Sentences vaticanes, 14 (trad. MyDayBot)',s:'épicurien',tags:['soir','reussi','retard']},
- {t:'Nous sommes nés une fois ; il n’est pas possible de naître deux fois.',a:'Épicure',w:'Sentences vaticanes, 14 (trad. MyDayBot)',s:'épicurien',tags:['matin','reussi']},
- {t:'À partir d’un certain point, il n’y a plus de retour. C’est ce point qu’il faut atteindre.',a:'Franz Kafka',w:'Aphorismes de Zürau, 5 (trad. MyDayBot)',s:'absurde',tags:['matin','charge']},
- {t:'Il y a deux péchés capitaux dont tous les autres dérivent : l’impatience et la nonchalance.',a:'Franz Kafka',w:'Aphorismes de Zürau, 3 (trad. MyDayBot)',s:'absurde',tags:['retard','calme']},
- {t:'Le rocher redescend toujours ; c’est dans la remontée elle-même que se loge le sens, et il faut imaginer celui qui la recommence heureux.',a:'d’après Albert Camus',w:'Le Mythe de Sisyphe (idée reformulée)',s:'absurde',kind:'idea',tags:['soir','dur','retard']},
- {t:'La révolte donne son prix à la vie : vivre lucidement, sans espoir d’en finir, et pourtant y mettre toute sa force.',a:'d’après Albert Camus',w:'Le Mythe de Sisyphe (idée reformulée)',s:'absurde',kind:'idea',tags:['matin','charge']},
- {t:'Je suis pessimiste par l’intelligence, mais optimiste par la volonté.',a:'Antonio Gramsci',w:'Lettre de prison, 19 décembre 1929 (trad. MyDayBot)',s:'révolutionnaire',tags:['matin','dur','charge']},
- {t:'Je hais les indifférents. Je crois que vivre veut dire prendre parti.',a:'Antonio Gramsci',w:'« Indifferenti », La Città futura, 1917 (trad. MyDayBot)',s:'révolutionnaire',tags:['matin']},
- {t:'Fais en sorte de rester un être humain.',a:'Rosa Luxemburg',w:'Lettre à Mathilde Wurm, 28 décembre 1916 (trad. MyDayBot)',s:'révolutionnaire',tags:['soir','dur','calme']}
+ {t:'Toi qui n’es pas maître de demain, tu remets la joie à plus tard ; la vie se perd à attendre.',a:'Épicure',w:'Sentences vaticanes, 14 (trad. Diem)',s:'épicurien',tags:['soir','reussi','retard']},
+ {t:'Nous sommes nés une fois ; il n’est pas possible de naître deux fois.',a:'Épicure',w:'Sentences vaticanes, 14 (trad. Diem)',s:'épicurien',tags:['matin','reussi']},
+ {t:'À partir d’un certain point, il n’y a plus de retour. C’est ce point qu’il faut atteindre.',a:'Franz Kafka',w:'Aphorismes de Zürau, 5 (trad. Diem)',s:'absurde',tags:['matin','charge']},
+ {t:'Il y a deux péchés capitaux dont tous les autres dérivent : l’impatience et la nonchalance.',a:'Franz Kafka',w:'Aphorismes de Zürau, 3 (trad. Diem)',s:'absurde',tags:['retard','calme']},
+ {t:'Je suis pessimiste par l’intelligence, mais optimiste par la volonté.',a:'Antonio Gramsci',w:'Lettre de prison, 19 décembre 1929 (trad. Diem)',s:'révolutionnaire',tags:['matin','dur','charge']},
+ {t:'Je hais les indifférents. Je crois que vivre veut dire prendre parti.',a:'Antonio Gramsci',w:'« Indifferenti », La Città futura, 1917 (trad. Diem)',s:'révolutionnaire',tags:['matin']},
+ {t:'Fais en sorte de rester un être humain.',a:'Rosa Luxemburg',w:'Lettre à Mathilde Wurm, 28 décembre 1916 (trad. Diem)',s:'révolutionnaire',tags:['soir','dur','calme']}
 ];
 // choisit une citation selon la journée ; stable pour un même jour et un même rituel
 function pickQuote(kind,d){

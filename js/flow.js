@@ -1,4 +1,4 @@
-// MyDayBot — agenda vivant, focus, temps qui passe, notifications
+// Diem — agenda vivant, focus, temps qui passe, notifications
 /* ---------- journée vivante : le focus et le temps qui passe décalent l'agenda ---------- */
 const M5=3e5,ceil5=x=>Math.ceil(x/M5)*M5,floor5=x=>Math.floor(x/M5)*M5;
 const runningTask=()=>{const r=S.running&&T(S.running.taskId);return r&&!r.done?r:null};

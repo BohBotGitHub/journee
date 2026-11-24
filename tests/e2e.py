@@ -676,7 +676,7 @@ def _(c):
     pg2.click('[data-act="synchide"]'); assert pg2.locator('#syncbar.hidden').count() == 1
     assert not errs and not errs2, (errs, errs2); ctx2.close()
 
-@test('Le nom MyDayBot ramène à Aujourd’hui')
+@test('Le nom Diem ramène à Aujourd’hui')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
     pg.click('#nav [data-view="backlog"]'); pg.click('[data-act="next"]') if pg.locator('[data-act="next"]').count() else None

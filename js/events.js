@@ -1,4 +1,4 @@
-// MyDayBot — interactions : clics, glisser-déposer, palette, clavier
+// Diem — interactions : clics, glisser-déposer, palette, clavier
 /* ---------- interactions ---------- */
 let toastT;
 let toastFn=null;
@@ -85,7 +85,7 @@ document.addEventListener('click',async e=>{
   case'unpin':{const t=T(modalTask);if(t){t.pinned=false;save();openTask(t.id)}break}
   case'notifon':{if(!('Notification' in window)){toast('Ce navigateur ne gère pas les notifications');break}const pm=await Notification.requestPermission();S.settings.notif=pm==='granted';save();render();toast(pm==='granted'?'Notifications activées':'Notifications refusées par le navigateur');break}
   case'notifoff':S.settings.notif=false;save();render();break;
-  case'notiftest':{let n;try{n=JSON.parse(lsGet('journee.notified')||'{}')}catch(err){n={}}notify('test'+Date.now(),'MyDayBot','Les notifications fonctionnent.');break}
+  case'notiftest':{let n;try{n=JSON.parse(lsGet('journee.notified')||'{}')}catch(err){n={}}notify('test'+Date.now(),'Diem','Les notifications fonctionnent.');break}
   case'dumptasks':dumpToTasks();break;
   case'dumpai':dumpSort();break;
   case'dictate':dictate();break;
@@ -121,6 +121,8 @@ document.addEventListener('click',async e=>{
   case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();moveTask(id,addDays(today(),1));toast('Reportée à demain');break}
   case'rolldrop':deleteTask(id);closeModal();render();toast('Tâche supprimée');break;
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
+  case'accent':{S.settings.accent=b.dataset.v;save();render();break}
+  case'ritdone':{await toggleDone(id);if(ritual)renderRitual();break}
   case'keep':{const t=T(id);if(t){t.roll=0;save()}if(ritual)renderRitual();break}
   case'phare':{const dd=ritual?ritual.day:cur,info=S.days[dd]=S.days[dd]||{},t=T(id);if(!t)break;if(info.phare===id){info.phare=null}else{info.phare=id;t.prio='high';t.order=0;renorm(dd)}save();render();if(ritual)renderRitual();break}
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
@@ -193,7 +195,7 @@ document.addEventListener('change',async e=>{
   save();render();if(['day','time','recur','est','due'].includes(f))openTask(t.id);return;
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(ritual.day)}else clearBlock(t,true);save();render();renderRitual()}return}
- if(el.dataset.set){const k=el.dataset.set;S.settings[k]=(k==='aiAuto'||k==='liveShift')?!!el.value:el.type==='number'?+el.value:el.value.trim();if(k==='aiBudget'){const c=document.querySelector('[data-live="aicost"]');if(c)c.textContent=costTxt()}save();if(el.type==='number'||k==='aiKey')render();return}
+ if(el.dataset.set){const k=el.dataset.set;S.settings[k]=(k==='aiAuto'||k==='liveShift')?!!el.value:el.type==='number'?+el.value:el.value.trim();if(k==='aiBudget'){const c=document.querySelector('[data-live="aicost"]');if(c)c.textContent=costTxt()}save();if(el.type==='number'||k==='aiKey'||k==='mode')render();return}
  if(el.hasAttribute('data-tips')){lsSet('journee.tips',el.checked?'on':'off');renderTip();return}
  if(el.dataset.sheettime){const t=T(el.dataset.sheettime);if(t&&el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day);save();closeModal();render();toast('Heure fixée à '+el.value)}return}
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}

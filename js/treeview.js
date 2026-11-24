@@ -1,4 +1,4 @@
-// MyDayBot — vue « Arbre » (diagramme radial éditable), sélecteur de catégorie, suppression avec transfert
+// Diem — vue « Arbre » (diagramme radial éditable), sélecteur de catégorie, suppression avec transfert
 let treeFocus=null,treeSel=null,treeMode=null;
 const isNarrow=()=>window.innerWidth<760;
 /* ---------- disposition radiale ---------- */

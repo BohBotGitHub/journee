@@ -1,4 +1,4 @@
-// MyDayBot — arbre des catégories : 4 piliers → domaines → catégories (→ compétences, plus tard)
+// Diem — arbre des catégories : 4 piliers → domaines → catégories (→ compétences, plus tard)
 // Les nœuds vivent dans S.channels (lvl 0 = pilier, 1 = domaine, 2 = catégorie) : t.channel pointe vers un nœud.
 const TREE=[
  ['etre','Être','#1d9e75',[

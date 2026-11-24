@@ -1,6 +1,6 @@
 {
-  "name": "MyDayBot — planificateur quotidien",
-  "short_name": "MyDayBot",
+  "name": "Diem — saisis ta journée",
+  "short_name": "Diem",
   "description": "Planifie ta journée : tâches, agenda Google et Microsoft To Do.",
   "lang": "fr",
   "start_url": "./",

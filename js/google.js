@@ -1,4 +1,4 @@
-// MyDayBot — Google Agenda : connexion, lecture des agendas, créneaux
+// Diem — Google Agenda : connexion, lecture des agendas, créneaux
 /* ---------- Google Agenda (OAuth implicite, côté navigateur) ---------- */
 const REDIRECT=location.origin+location.pathname;
 const calId=()=>encodeURIComponent(S.settings.calendarId||'primary');
@@ -68,7 +68,7 @@ const evFree=e=>{const m=(S.evMode||{})[evKey(e)];return m?m==='free':e.transpar
 const isMine=e=>!!(e.extendedProperties&&e.extendedProperties.private&&e.extendedProperties.private.journeeTask);
 const timedEvents=d=>(gEvents[d]||[]).filter(e=>e.start.dateTime&&!isMine(e));
 function meetingMin(d){return timedEvents(d).filter(e=>!evFree(e)).reduce((a,e)=>a+Math.max(0,(new Date(e.end.dateTime)-new Date(e.start.dateTime))/60000),0)}
-const evBody=t=>({summary:(t.done?'✓ ':'')+t.title,description:(t.notes?t.notes+'\n\n':'')+'Planifié avec MyDayBot',start:{dateTime:t.block.start},end:{dateTime:t.block.end},extendedProperties:{private:{journeeTask:t.id}}});
+const evBody=t=>({summary:(t.done?'✓ ':'')+t.title,description:(t.notes?t.notes+'\n\n':'')+'Planifié avec Diem',start:{dateTime:t.block.start},end:{dateTime:t.block.end},extendedProperties:{private:{journeeTask:t.id}}});
 const gPend={},gDirty={};
 async function pushBlock(t){
  if(!gTok()||!t.block)return;

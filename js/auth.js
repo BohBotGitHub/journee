@@ -1,4 +1,4 @@
-// MyDayBot — retour des connexions OAuth et partage Android
+// Diem — retour des connexions OAuth et partage Android
 /* ---------- retour de connexion OAuth ---------- */
 (function handleAuth(){
  const h=new URLSearchParams(location.hash.slice(1));

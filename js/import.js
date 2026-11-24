@@ -1,4 +1,4 @@
-// MyDayBot — import Sunsama
+// Diem — import Sunsama
 /* ---------- import Sunsama (export CSV : Settings → Account Management) ---------- */
 function archivePatterns(){
  const m={};for(const a of S.archive||[]){if(!a.a)continue;const k=a.t.toLowerCase();(m[k]=m[k]||{t:a.t,n:0,s:0,c:a.c});m[k].n++;m[k].s+=a.a}
