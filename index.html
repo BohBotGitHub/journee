@@ -432,7 +432,7 @@ function gTok(){try{const o=JSON.parse(lsGet('journee.g')||'null');return o&&o.e
 const gWas=()=>!!lsGet('journee.g.on');
 function gLogin(){
  if(!S.settings.googleClientId){toast('Ajoute d’abord ton identifiant client Google dans Réglages');go('settings');return}
- const p=new URLSearchParams({client_id:S.settings.googleClientId.trim(),redirect_uri:REDIRECT,response_type:'token',scope:'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.appdata',include_granted_scopes:'true',state:'g'});
+ const p=new URLSearchParams({client_id:S.settings.googleClientId.trim(),redirect_uri:REDIRECT,response_type:'token',scope:'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata',include_granted_scopes:'true',state:'g',prompt:'consent'});
  location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p;
 }
 function gLogout(){lsDel('journee.g');lsDel('journee.g.on');gEvents={};render()}
@@ -443,6 +443,15 @@ async function gFetch(path,opts={}){
  if(r.status===204)return null;
  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error((j.error&&j.error.message)||('erreur '+r.status));return j;
 }
+let gErr='',gCals=null;
+const gScope=()=>{try{return (JSON.parse(lsGet('journee.g')||'{}').scope)||''}catch(e){return ''}};
+async function loadCals(){
+ if(gCals)return gCals;
+ try{const j=await gFetch('/users/me/calendarList?minAccessRole=reader&maxResults=100');gCals=(j.items||[]).map(c=>({id:c.id,name:c.summaryOverride||c.summary,color:c.backgroundColor,primary:!!c.primary,selected:c.selected!==false}))}
+ catch(e){gCals=[{id:S.settings.calendarId||'primary',name:'Agenda principal',primary:true,selected:true}]}
+ return gCals;
+}
+const calOn=c=>{const m=(S.settings.cals||{})[c.id];return m===undefined?c.selected:m};
 async function ensureRange(from,to,force){
  if(!gTok())return;
  const days=[];for(let d=from;d<=to;d=addDays(d,1))days.push(d);
@@ -450,7 +459,11 @@ async function ensureRange(from,to,force){
  const k=from+to;if(gLoading[k])return;gLoading[k]=1;
  try{
   const tMin=parseYmd(from).toISOString(),tMax=parseYmd(addDays(to,1)).toISOString();let items=[],page='';
-  do{const j=await gFetch(`/calendars/${calId()}/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}${page?'&pageToken='+encodeURIComponent(page):''}`);items=items.concat(j.items||[]);page=j.nextPageToken}while(page);
+  const cals=(await loadCals()).filter(calOn);
+  for(const c of cals){page='';
+   do{const j=await gFetch(`/calendars/${encodeURIComponent(c.id)}/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}${page?'&pageToken='+encodeURIComponent(page):''}`);(j.items||[]).forEach(e=>{e._cal=c.name;e._col=c.color});items=items.concat(j.items||[]);page=j.nextPageToken}while(page);
+  }
+  gErr='';
   days.forEach(d=>gEvents[d]=[]);
   for(const e of items){
    if(e.status==='cancelled'||!e.start)continue;
@@ -458,7 +471,7 @@ async function ensureRange(from,to,force){
    if(e.start.dateTime){const sd=ymd(new Date(e.start.dateTime));if(gEvents[sd])gEvents[sd].push(e)}
    else if(e.start.date){for(let x=e.start.date;x<(e.end&&e.end.date||addDays(e.start.date,1));x=addDays(x,1))if(gEvents[x])gEvents[x].push(e)}
   }
- }catch(e){days.forEach(d=>gEvents[d]=gEvents[d]||[]);toast('Google Agenda : '+e.message)}
+ }catch(e){days.forEach(d=>gEvents[d]=gEvents[d]||[]);gErr=/insufficient|scope|permission|403/i.test(e.message)?'Autorisation Agenda manquante':e.message;toast('Google Agenda : '+gErr)}
  finally{delete gLoading[k];render()}
 }
 const evKey=e=>e.recurringEventId||e.id;
@@ -625,7 +638,7 @@ async function syncTodo(){
 (function handleAuth(){
  const h=new URLSearchParams(location.hash.slice(1));
  if(h.get('state')==='g'){
-  if(h.get('access_token')){lsSet('journee.g',JSON.stringify({t:h.get('access_token'),exp:Date.now()+(+h.get('expires_in')||3600)*1000}));lsSet('journee.g.on','1');setTimeout(()=>toast('Google Agenda connecté'),300)}
+  if(h.get('access_token')){lsSet('journee.g',JSON.stringify({t:h.get('access_token'),exp:Date.now()+(+h.get('expires_in')||3600)*1000,scope:h.get('scope')||''}));lsSet('journee.g.on','1');setTimeout(()=>toast('Google Agenda connecté'),300)}
   else if(h.get('error'))setTimeout(()=>toast('Google : '+h.get('error')),300);
   history.replaceState(null,'',REDIRECT);
  }
@@ -833,7 +846,7 @@ const objChips=w=>{const os=weekObjs(w);return os.length?`<div class="objs">${os
 /* ---------- vue Aujourd'hui ---------- */
 function eventsHtml(d){
  const evs=timedEvents(d);if(!evs.length)return '';
- return `<div class="evlist"><h4>Rendez-vous Google Agenda — indique si tu peux avancer sur tes tâches pendant</h4>${evs.map(e=>{const f=evFree(e);return `<div class="evrow${f?' free':''}"><span class="evt">${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))}</span><span class="evn">${esc(e.summary||'(sans titre)')}${e.recurringEventId?' ↻':''}</span><button class="sm ${f?'':'ghost'}" data-act="evtoggle" data-k="${esc(evKey(e))}">${f?'Je peux travailler':'Occupé'}</button></div>`}).join('')}</div>`;
+ return `<div class="evlist"><h4>Rendez-vous Google Agenda — indique si tu peux avancer sur tes tâches pendant</h4>${evs.map(e=>{const f=evFree(e);return `<div class="evrow${f?' free':''}"><span class="evt">${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))}</span><span class="evn">${esc(e.summary||'(sans titre)')}${e.recurringEventId?' ↻':''}${e._cal&&gCals&&gCals.filter(calOn).length>1?` <small>· ${esc(e._cal)}</small>`:''}</span><button class="sm ${f?'':'ghost'}" data-act="evtoggle" data-k="${esc(evKey(e))}">${f?'Je peux travailler':'Occupé'}</button></div>`}).join('')}</div>`;
 }
 function viewToday(){
  const d=cur,isT=d===today(),ts=dayTasks(d),info=S.days[d]||{};
@@ -907,7 +920,8 @@ function viewSettings(){
  <div class="set">
  <section><h2>Google Agenda</h2><p>Affiche tes rendez-vous et crée un événement pour chaque tâche que tu places dans l’agenda. Voir le README pour obtenir l’identifiant.</p>
   <label>Identifiant client OAuth (…apps.googleusercontent.com)<input data-set="googleClientId" value="${esc(s.googleClientId)}" placeholder="1234-abcd.apps.googleusercontent.com" autocomplete="off"></label>
-  <div class="grid2"><label>Agenda utilisé<input data-set="calendarId" value="${esc(s.calendarId)}" placeholder="primary"></label></div>
+  <div class="grid2"><label>Agenda où créer les créneaux<input data-set="calendarId" value="${esc(s.calendarId)}" placeholder="primary"></label></div>
+  ${gCals?`<p style="margin:12px 0 4px">Agendas affichés :</p>${gCals.map(c=>`<label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" data-cal="${esc(c.id)}" ${calOn(c)?'checked':''} style="width:auto;min-height:0"><span class="chip" style="--c:${esc(c.color||'#888')}">${esc(c.name)}</span></label>`).join('')}`:''}
   <p style="margin:10px 0 0">Google sert aussi à <b>synchroniser tes tâches entre ton téléphone et ton Mac</b> (fichier caché dans ton Drive). <span data-live="sync">${esc(syncState)}</span></p>
   <div class="row" style="margin-top:12px"><span class="status${gTok()?' on':''}">${gTok()?'Connecté':gWas()?'Session expirée':'Non connecté'}</span><span class="sp"></span>${gWas()?'<button class="ghost" data-act="gout">Déconnecter</button>':''}<button class="pri" data-act="gin">${gWas()?'Reconnecter':'Connecter Google'}</button></div></section>
  <section><h2>Microsoft To Do</h2><p>Importe tes tâches dans ta journée ; quand tu les termines ici, elles sont cochées dans To Do (et inversement à la synchro).</p>
@@ -945,11 +959,11 @@ function viewCal(){
  const blocksHtml=out.map(it=>{
   const top=Math.max(0,y(it.s)),h=Math.max(20,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
   const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<36?' short':'';
-  if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
+  if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
   const t=it.t,c=ch(t.channel);return `<div class="blk${t.done?' done':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="task|${t.id}" data-act="open" data-id="${t.id}"><b>${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small></div>`;
  }).join('');
  const n=new Date(),nowTop=d===today()?y(n):-1;
- const gState=gTok()?'':gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`;
+ const gState=gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gEvents[d]&&!(gEvents[d]||[]).length?`<div class="pill">Aucun rendez-vous ce jour-là${gCals?' dans '+gCals.filter(calOn).length+' agenda(s)':''}</div>`:''))):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`;
  return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span>${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
  ${gState}
  ${allday.length?`<div class="allday">${allday.map(e=>`<a href="${esc(e.htmlLink||'#')}" target="_blank" rel="noopener">${esc(e.summary||'(sans titre)')}</a>`).join('')}</div>`:''}
@@ -1232,7 +1246,7 @@ document.addEventListener('click',async e=>{
   case'gout':gLogout();break;
   case'min':msLogin();break;
   case'mout':msLogout();break;
-  case'refresh':{const w=monday(cur);gEvents={};view==='week'?ensureRange(w,addDays(w,6),true):ensureRange(cur,cur,true);break}
+  case'refresh':{const w=monday(cur);gEvents={};gCals=null;view==='week'?ensureRange(w,addDays(w,6),true):ensureRange(cur,cur,true);break}
   case'goset':go('settings');document.body.classList.remove('side-open');break;
   case'todoreload':todo.lists=null;todo.tasks={};renderSide();syncTodo();break;
   case'todoadd':{const l=b.dataset.l,x=(todo.tasks[l]||[]).find(x=>x.id===b.dataset.t);if(x){importTodo(l,x,b.dataset.day||cur);render();if(ritual)renderRitual();toast('Ajoutée au '+fmtDay(b.dataset.day||cur,{weekday:'long',day:'numeric'}))}break}
@@ -1294,6 +1308,7 @@ document.addEventListener('change',async e=>{
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);await setBlock(t,dt,true)}else clearBlock(t,true);render();renderRitual()}return}
  if(el.dataset.set){const k=el.dataset.set;S.settings[k]=k==='aiAuto'?!!el.value:el.type==='number'?+el.value:el.value.trim();save();if(el.type==='number'||k==='aiKey')render();return}
+ if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
  if(el.dataset.chn){const c=ch(el.dataset.chn);if(c){c.name=el.value.trim()||c.name;save()}return}
  if(el.hasAttribute('data-todolist')){todo.listId=el.value;S.settings.todoList=el.value;save();renderSide();return}
