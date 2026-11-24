@@ -566,3 +566,4 @@ button.danger.hasic .ic,button.pri.hasic .ic{opacity:1}
 .logo .la{fill:var(--acc)}.logo .lt{fill:color-mix(in srgb,var(--acc) 45%,var(--bg))}
 .logo .ls{fill:none;stroke:color-mix(in srgb,var(--acc) 45%,var(--bg));stroke-width:2.5;stroke-linecap:round}
 .logo .lr{fill:none;stroke:var(--acc);stroke-width:2;stroke-linecap:round}
+.rrow>.chk{margin:0}.rrow>.chk+div{flex:1}

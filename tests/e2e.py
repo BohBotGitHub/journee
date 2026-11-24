@@ -685,6 +685,23 @@ def _(c):
     assert st(pg, 'true') and 'Aujourd' in pg.inner_text('#main h1'), pg.inner_text('#main h1')
     assert not errs, errs; ctx.close()
 
+@test('Rituels : cocher une tâche d’hier au matin et une tâche restante le soir')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn;S.days[f.today()]=Object.assign(S.days[f.today()]||{},{he:23});S.tasks.push(Object.assign({},S.tasks[0],{id:'y1',title:'Hier pas faite',day:f.addDays(f.today(),-1),prio:'',roll:0,block:null,done:false}));S.tasks.push(Object.assign({},S.tasks[0],{id:'y2',title:'Reste ce soir',day:f.today(),prio:'',roll:0,block:null,done:false}));window.journee.save()}"); tick(pg, 400)
+    pg.evaluate("()=>startRitual('plan',window.journee.fn.today())"); tick(pg, 200)
+    if 'Hier pas faite' not in pg.inner_text('#sheet'): pg.click('[data-act="ritnext"]'); tick(pg, 200)
+    row = pg.locator('#sheet .rrow', has_text='Hier pas faite')
+    assert row.locator('.chk').count() == 1 and row.locator('.btns [data-act="ritdone"]').count() == 0
+    row.locator('.chk').click(); tick(pg, 300)
+    assert st(pg, "S.tasks.find(t=>t.id==='y1').done") is True
+    assert not pg.locator('#modal').get_attribute('class').count('hidden'), 'le rituel doit rester ouvert'
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    pg.evaluate("()=>startRitual('shutdown',window.journee.fn.today())"); tick(pg, 150); pg.click('[data-act="ritnext"]'); tick(pg, 150)
+    pg.locator('#sheet .rrow', has_text='Reste ce soir').locator('.chk').click(); tick(pg, 300)
+    assert st(pg, "S.tasks.find(t=>t.id==='y2').done") is True
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')
