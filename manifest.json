@@ -1,6 +1,6 @@
 {
-  "name": "Journée — planificateur quotidien",
-  "short_name": "Journée",
+  "name": "MyDayBot — planificateur quotidien",
+  "short_name": "MyDayBot",
   "description": "Planifie ta journée : tâches, agenda Google et Microsoft To Do.",
   "lang": "fr",
   "start_url": "./",

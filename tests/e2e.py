@@ -233,7 +233,7 @@ def _(c):
 @test('Rituel du soir : report à demain et note')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
-    pg.click('[data-act="shutdown"] >> nth=0'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
+    pg.click('[data-act="daymenu"]'); pg.click('.menu [data-act="shutdown"]'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
     pg.click('[data-act="mvday"]'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
     pg.fill('[data-note]', 'Bonne journée'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(200)
     assert st(pg, "S.tasks.filter(t=>t.day===addDays(today(),1)).length") == 3
@@ -290,7 +290,7 @@ def _(c):
     n1 = st(pg, 'S.tasks.length+S.archive.length'); pg.click('[data-act="close"]')
     pg.click('#nav [data-view="settings"]'); pg.set_input_files('[data-sunsama]', CSV); pg.wait_for_selector('.rit h2')
     assert st(pg, 'S.tasks.length+S.archive.length') == n1, 'doublons au réimport'
-    pg.click('[data-act="close"]'); pg.click('#nav [data-view="stats"]'); pg.wait_for_timeout(300)
+    pg.click('[data-act="close"]'); pg.goto(BASE + '#stats'); pg.wait_for_timeout(500)
     txt = pg.inner_text('#main')
     assert 'NaN' not in txt and 'undefined' not in txt and 'Infinity' not in txt, 'valeur invalide dans les stats'
     pg.click('#nav [data-view="backlog"]'); pg.wait_for_timeout(200)
@@ -305,6 +305,8 @@ def _(c):
     g = Google()
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2), google=g, storage=TOKEN)
     tick(pg, 1500)
+    assert '2 rendez-vous' in pg.inner_text('.summary'), pg.inner_text('.summary')
+    pg.click('[data-act="sum"][data-k="ev"]'); tick(pg, 300)
     assert pg.locator('.evrow').count() == 2, pg.locator('.evrow').count()
     load1 = st(pg, 'loadInfo(today()).meet')
     pg.click('.evrow:has-text("Réunion équipe") [data-act="evtoggle"]'); tick(pg)
@@ -390,11 +392,67 @@ def _(c):
 def _(c):
     for w, h, scheme in [(1440, 900, 'light'), (1100, 800, 'dark'), (390, 844, 'light'), (360, 740, 'dark')]:
         ctx, pg, errs = new_page(c['b'], w, h, scheme=scheme)
-        for v in ['today', 'week', 'dump', 'backlog', 'objectives', 'stats', 'settings']:
+        for v in ['today', 'week', 'dump', 'backlog', 'review', 'stats', 'settings']:
             pg.evaluate(f"()=>{{location.hash='{v}'}}"); pg.goto(BASE + '#' + v); pg.wait_for_timeout(350)
             ow = pg.evaluate("()=>{const m=document.querySelector('#main');return [document.documentElement.scrollWidth-innerWidth,[...m.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>innerWidth+2&&!e.closest('.week,.bigcal,.scroll,.wkbars')}).slice(0,3).map(e=>e.className||e.tagName)]}")
             assert ow[0] <= 0 and not ow[1], f'{v} {w}px déborde : {ow}'
         assert not errs, errs; ctx.close()
+
+@test('Synchro par fusion : modifications sur deux appareils, aucune perte, suppressions respectées')
+def _(c):
+    g = Google()
+    a, pa, ea = new_page(c['b'], google=g, storage=TOKEN); pa.wait_for_timeout(1500)
+    add(pa, 'Créée sur le Mac'); pa.wait_for_timeout(4800)
+    b_, pb, eb = new_page(c['b'], google=g, storage=TOKEN); pb.wait_for_timeout(1500)
+    assert st(pb, "S.tasks.some(t=>t.title==='Créée sur le Mac')"), 'pas récupérée sur le téléphone'
+    add(pb, 'Créée sur le téléphone'); pb.wait_for_timeout(300)
+    add(pa, 'Autre tâche Mac'); pa.wait_for_timeout(300)
+    pb.evaluate("()=>{const S=window.journee.state;S.tasks=S.tasks.filter(t=>t.title!=='Créée sur le Mac');window.journee.save()}")
+    pb.wait_for_timeout(4800); pa.wait_for_timeout(4800)
+    pa.evaluate("()=>window.dispatchEvent(new Event('focus'))"); pa.evaluate("()=>{document.dispatchEvent(new Event('visibilitychange'))}"); pa.wait_for_timeout(2500)
+    titles = st(pa, "S.tasks.map(t=>t.title)")
+    assert 'Créée sur le téléphone' in titles and 'Autre tâche Mac' in titles, titles
+    assert 'Créée sur le Mac' not in titles, 'suppression non propagée'
+    assert not ea and not eb, (ea, eb); a.close(); b_.close()
+
+@test('Figer la journée : les créneaux ne glissent plus avec l’heure')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    before = st(pg, "dayTasks(today()).map(t=>t.block.start)")
+    pg.click('[data-act="freeze"]'); tick(pg)
+    assert st(pg, 'S.days[today()].frozen') is True
+    tick(pg, 90 * 60 * 1000)
+    assert st(pg, "dayTasks(today()).map(t=>t.block.start)") == before, 'les créneaux ont bougé'
+    pg.click('[data-act="freeze"]'); tick(pg, 31000)
+    assert st(pg, "dayTasks(today()).map(t=>t.block.start)") != before, 'pas de reprise du glissement'
+    assert not errs, errs; ctx.close()
+
+@test('Téléphone : ligne de temps, appui long, menu Plus')
+def _(c):
+    g = Google()
+    ctx, pg, errs = new_page(c['b'], 390, 844, clock=at(9, 2), google=g, storage=TOKEN); tick(pg, 1500)
+    assert pg.locator('.mtl .mev').count() == 2, pg.locator('.mtl .mev').count()
+    assert pg.locator('.mtl .card').count() == 3
+    pg.evaluate("()=>window.journee.fn&&0")
+    cid = pg.locator('.mtl .card').nth(1).get_attribute('data-id')
+    pg.evaluate(f"()=>{{const el=document.querySelector('.card[data-id=\"{cid}\"] .ctitle');const t=new Touch({{identifier:1,target:el,clientX:100,clientY:300}});el.dispatchEvent(new TouchEvent('touchstart',{{touches:[t],bubbles:true}}))}}")
+    tick(pg, 600)
+    assert pg.locator('.menu [data-act="mvup"]').count() == 1, 'pas de menu à l’appui long'
+    pg.click('.menu [data-act="mvup"]'); tick(pg)
+    assert st(pg, "dayTasks(today())[0].id") == cid
+    pg.click('#sidebtn'); tick(pg, 300)
+    assert pg.locator('.stabs .mset').is_visible()
+    assert not errs, errs; ctx.close()
+
+@test('Revue : objectifs et statistiques dans un seul onglet')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.click('#nav [data-view="review"]'); pg.wait_for_timeout(200)
+    assert pg.locator('.revtabs').count() == 1 and 'Objectifs' in pg.inner_text('#main h1')
+    pg.click('[data-act="go"][data-v="stats"]'); pg.wait_for_timeout(200)
+    assert 'Statistiques' in pg.inner_text('#main h1')
+    assert pg.locator('#nav [data-view="review"].on').count() == 1
+    assert not errs, errs; ctx.close()
 
 def main():
     srv = serve()

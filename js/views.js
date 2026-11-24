@@ -1,0 +1,361 @@
+// MyDayBot — vues (Aujourd’hui, Semaine, Vide-tête, Backlog, Revue, Réglages, agendas)
+/* ---------- rendu : morceaux communs ---------- */
+function card(t){
+ const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
+ const subs=t.subtasks&&t.subtasks.length?`<span>${t.subtasks.filter(s=>s.d).length}/${t.subtasks.length} sous-tâches</span>`:'';
+ const act=actualSec(t);
+ return `<div class="card${t.done?' done':''}${run?' running':''}" draggable="true" data-drag="task|${t.id}" data-id="${t.id}">
+ <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
+ <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${t.prio==='urgent'?'<span class="prio u" title="Urgent">!!</span>':t.prio==='high'?'<span class="prio" title="Prioritaire">!</span>':''}${esc(t.title)}</div>
+ <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}${t.block?`<span title="${t.pinned?'Heure fixée':'Suit l’ordre de la liste'}">${hm(new Date(t.block.start))}${t.pinned?' 📌':''}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${dueLabel(t)}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?ch(t.aiSug.channel).name:'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
+ <div class="ctime"><span class="est" data-act="estmenu" data-id="${t.id}" data-live="t-${t.id}" title="Temps passé / estimé — clique pour changer la durée">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'—'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
+}
+function loadInfo(d){const ts=dayTasks(d);const task=ts.reduce((a,t)=>a+(t.est||0),0),meet=meetingMin(d),cap=Math.max(60,(S.settings.workEnd-S.settings.workStart)*60);return{task,meet,cap,over:task+meet-cap}}
+function loadBar(d){
+ const L=loadInfo(d),p=v=>Math.min(100,v/L.cap*100);
+ return `<div class="load${L.over>0?' over':''}"><div class="lbar"><i class="m" style="width:${p(L.meet)}%"></i><i class="t" style="width:${Math.max(0,Math.min(100-p(L.meet),p(L.task)))}%"></i></div>
+ <div class="ltxt"><span>${fmtMin(L.task)} de tâches${L.meet?' · '+fmtMin(L.meet)+' de réunions':''} sur ${fmtMin(L.cap)} de travail</span><span>${L.over>0?fmtMin(L.over)+' de trop':fmtMin(-L.over)+' de marge'}</span></div></div>`;
+}
+const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day||''}"><input name="t" data-keep="${keep||'add-'+(day||'backlog')}" placeholder="${esc(ph)}${!keep&&ph.length>20?' — touche N':''}" autocomplete="off" aria-label="Nouvelle tâche"></form>`;
+const objChips=w=>{const os=weekObjs(w);return os.length?`<div class="objs">${os.map(o=>`<span class="obj${o.done?' done':''}">${esc(o.title)}</span>`).join('')}</div>`:''};
+
+/* ---------- vue Aujourd'hui ---------- */
+function eventsHtml(d){
+ const evs=timedEvents(d);if(!evs.length)return '';
+ return `<div class="evlist"><h4>Rendez-vous Google Agenda — indique si tu peux avancer sur tes tâches pendant</h4>${evs.map(e=>{const f=evFree(e);return `<div class="evrow${f?' free':''}"><span class="evt">${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))}</span><span class="evn">${esc(e.summary||'(sans titre)')}${e.recurringEventId?' ↻':''}${e._cal&&gCals&&gCals.filter(calOn).length>1?` <small>· ${esc(e._cal)}</small>`:''}</span><button class="sm ${f?'':'ghost'}" data-act="evtoggle" data-k="${esc(evKey(e))}">${f?'Je peux travailler':'Occupé'}</button></div>`}).join('')}</div>`;
+}
+const isMobile=()=>innerWidth<720;
+function mobileTimeline(d){
+ // téléphone : une seule colonne qui mêle rendez-vous et tâches dans l'ordre de la journée
+ const ts=dayTasks(d),evs=timedEvents(d).map(e=>({k:'ev',s:+new Date(e.start.dateTime),e:+new Date(e.end.dateTime),e0:e}));
+ const sch=ts.filter(t=>!t.done&&t.block).map(t=>({k:'t',s:+new Date(t.block.start),e:+new Date(t.block.end),t}));
+ const items=[...evs,...sch].sort((a,b)=>a.s-b.s),now=Date.now();let nowDone=false;
+ const rows=items.map(it=>{let pre='';if(!nowDone&&d===today()&&it.s>now){nowDone=true;pre='<div class="mnow"><span>'+hm(new Date())+'</span></div>'}
+  if(it.k==='ev'){const e=it.e0,f=evFree(e);return pre+`<div class="mrow"><div class="mtime">${hm(new Date(it.s))}</div><div class="mev${f?' free':''}" data-act="evtoggle" data-k="${esc(evKey(e))}"><b>${esc(e.summary||'(sans titre)')}</b><small>${hm(new Date(it.s))}–${hm(new Date(it.e))}${f?' · tu peux travailler':' · occupé'}</small></div></div>`}
+  return pre+`<div class="mrow"><div class="mtime">${hm(new Date(it.s))}</div>${card(it.t)}</div>`}).join('');
+ const rest=ts.filter(t=>!t.done&&!t.block),done=ts.filter(t=>t.done);
+ return `<div class="mtl" data-drop="day:${d}">${rows||'<div class="empty">Rien de prévu. Ajoute une tâche ci-dessus.</div>'}${!nowDone&&d===today()&&items.length?'<div class="mnow"><span>'+hm(new Date())+'</span></div>':''}</div>
+ ${rest.length?`<div class="rsec">Sans créneau</div><div class="list">${rest.map(card).join('')}</div>`:''}
+ ${done.length?`<div class="rsec">Terminées</div><div class="list">${done.map(card).join('')}</div>`:''}
+ <p class="mute" style="font-size:12.5px;margin-top:10px">Astuce : appui long sur une tâche pour la déplacer, la reporter ou fixer son heure.</p>`;
+}
+function taskSheet(id){
+ const t=T(id);if(!t)return;const d=t.day||cur,ts=dayTasks(d).filter(x=>!x.done),i=ts.indexOf(t);
+ showModal(`<div class="rit"><h2>${esc(t.title)}</h2><div class="menu">
+  ${i>0?`<button data-act="mvup" data-id="${t.id}">Monter d’un cran</button>`:''}${i>=0&&i<ts.length-1?`<button data-act="mvdown" data-id="${t.id}">Descendre d’un cran</button>`:''}
+  <button data-act="play" data-id="${t.id}">Démarrer le focus</button>
+  <button data-act="sheetmv" data-id="${t.id}" data-to="${addDays(today(),1)}">Reporter à demain</button>
+  <button data-act="sheetmv" data-id="${t.id}" data-to="backlog">Renvoyer au backlog</button>
+  <label class="full">Fixer l’heure<input type="time" step="900" data-sheettime="${t.id}" value="${t.block?hm(new Date(t.block.start)):''}"></label>
+  <button data-act="open" data-id="${t.id}">Ouvrir le détail</button>
+ </div></div>`);
+}
+function swapTask(id,dir){const t=T(id);if(!t)return;const d=t.day,ts=dayTasks(d).filter(x=>!x.done),i=ts.indexOf(t),j=i+dir;if(j<0||j>=ts.length)return;const o=ts[j].order;ts[j].order=t.order;t.order=o;renorm(d);if(!flowOn())reflow(d);save();render()}
+let lp=null;
+document.addEventListener('touchstart',e=>{const c=e.target.closest('.card[data-id]');if(!c||e.target.closest('button'))return;const x=e.touches[0];lp={id:c.dataset.id,x:x.clientX,y:x.clientY,t:setTimeout(()=>{lp=null;if(navigator.vibrate)navigator.vibrate(15);taskSheet(c.dataset.id)},480)}},{passive:true});
+document.addEventListener('touchmove',e=>{if(!lp)return;const x=e.touches[0];if(Math.abs(x.clientX-lp.x)+Math.abs(x.clientY-lp.y)>10){clearTimeout(lp.t);lp=null}},{passive:true});
+document.addEventListener('touchend',()=>{if(lp){clearTimeout(lp.t);lp=null}});
+document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data-id]');if(c&&isMobile()){e.preventDefault()}});
+let lastW=innerWidth;addEventListener('resize',()=>{if((innerWidth<720)!==(lastW<720)){lastW=innerWidth;render()}else lastW=innerWidth});
+function summaryHtml(d,isT){
+ // une seule ligne de repères, chaque puce ouvre le détail
+ const info=S.days[d]||{},past=isT?pastUndone():[],soon=isT?S.tasks.filter(t=>!t.done&&t.due&&t.due<=addDays(today(),2)):[],L=loadInfo(d),evs=timedEvents(d),objs=weekObjs(monday(d));
+ const open=uiOpen;const chip=(k,txt,cls)=>`<button class="sumchip${cls?' '+cls:''}${open===k?' on':''}" data-act="sum" data-k="${k}">${txt}</button>`;
+ const chips=[
+  chip('load',`<i class="meter"><i style="width:${Math.min(100,(L.task+L.meet)/L.cap*100)}%"></i></i>${fmtMin(L.task+L.meet)} / ${fmtMin(L.cap)}`,L.over>0?'warn':''),
+  evs.length?chip('ev',`${evs.length} rendez-vous`):'',
+  past.length?chip('late',`${past.length} en retard`,'warn'):'',
+  soon.length?chip('due',`⏰ ${soon.length} échéance${soon.length>1?'s':''}`,'acc'):'',
+  objs.length?chip('obj',`${objs.filter(o=>o.done).length}/${objs.length} objectif${objs.length>1?'s':''}`):'',
+  isT&&flowOn()?`<button class="sumchip${info.frozen?' on':''}" data-act="freeze" title="${info.frozen?'Journée figée : les créneaux ne glissent plus avec l’heure':'Les créneaux suivent l’heure ; clique pour figer'}">${info.frozen?'❄ Figée':'Figer'}</button>`:''
+ ].join('');
+ let det='';
+ if(open==='load')det=loadBar(d);
+ else if(open==='ev')det=eventsHtml(d);
+ else if(open==='late'&&past.length)det=`<div class="row" style="flex-wrap:wrap"><span>${past.length} tâche${past.length>1?'s':''} non terminée${past.length>1?'s':''} des jours précédents.</span><span class="sp"></span><button class="sm pri" data-act="rollover">Tout reporter ici</button><button class="sm" data-act="plan">Trier une à une</button></div>`;
+ else if(open==='due')det=`<div class="row" style="flex-wrap:wrap">${soon.map(t=>`<button class="sm ghost" data-act="open" data-id="${t.id}">${esc(t.title)} · ${dueLabel(t).replace(/<[^>]+>/g,'').replace('⏰ ','')}</button>`).join('')}</div>`;
+ else if(open==='obj')det=objChips(monday(d))||'';
+ return `<div class="summary">${chips}</div>${det?`<div class="sumdet">${det}</div>`:''}`;
+}
+let uiOpen='';
+function viewToday(){
+ const d=cur,isT=d===today(),ts=dayTasks(d),info=S.days[d]||{};
+ const title=isT?'Aujourd’hui':d===addDays(today(),1)?'Demain':d===addDays(today(),-1)?'Hier':cap1(fmtDay(d,{weekday:'long'}));
+ const done=ts.filter(t=>t.done),r=savedRit();
+ const planLbl=r&&r.type==='plan'&&r.day===d?'Reprendre ('+(r.step+1)+'/5)':info.planned?'Replanifier':'Planifier ma journée';
+ return `<div class="head tight"><div class="htitle"><h1>${title}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
+ <div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>
+ <div class="acts"><button class="${!info.planned&&d>=today()?'pri':''}" data-act="plan">${planLbl}<kbd class="k">P</kbd></button><button data-act="focusnext">Focus<kbd class="k">F</kbd></button><button class="ghost more" data-act="daymenu" aria-label="Plus d’actions">•••</button></div></div>
+ ${summaryHtml(d,isT)}
+ ${addForm(d,'Ajouter une tâche… (« Appeler la banque 30m #perso demain »)')}
+ ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>`}
+ ${ts.length?`<div class="foot">${done.length}/${ts.length} terminée${done.length>1?'s':''} · ${fmtMin(ts.reduce((a,t)=>a+actualSec(t),0)/60)} suivies</div>`:''}
+ ${info.note?`<div class="note"><b>Fin de journée</b>\n${esc(info.note)}</div>`:''}`;
+}
+function dayMenu(){
+ const d=cur,info=S.days[d]||{};
+ showModal(`<div class="rit"><h2>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}</h2><div class="menu">
+  <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
+  <button data-act="layout">Grand agenda au centre<kbd>C</kbd></button>
+  ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
+  <button data-act="tplfromday">Enregistrer cette journée comme modèle</button>
+  <button data-act="palopen">Rechercher ou lancer une commande<kbd>⌘K</kbd></button>
+ </div></div>`);
+}
+
+/* ---------- vue Semaine ---------- */
+function viewWeek(){
+ const w=monday(cur),days=[...Array(7)].map((_,i)=>addDays(w,i));
+ const tot=days.reduce((a,d)=>a+dayTasks(d).reduce((x,t)=>x+(t.est||0),0),0);
+ return `<div class="head"><div><h1>Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</h1><div class="sub">${fmtMin(tot)} de tâches prévues</div></div>
+ <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
+ <div class="acts"><button data-act="weekplan">Planifier la semaine</button><button data-act="layout" title="Touche C">⇄ Grand agenda<kbd class="k">C</kbd></button></div></div>
+ ${objChips(w)}
+ <div class="week">${days.map(d=>{const ts=dayTasks(d),L=loadInfo(d);return `<div class="wcol${d===today()?' today':''}">
+  <h3 data-act="openday" data-day="${d}">${cap1(fmtDay(d,{weekday:'short',day:'numeric'}))}<small class="${L.over>0?'':'mute'}" style="${L.over>0?'color:var(--warn)':''}">${fmtMin(L.task)}</small></h3>
+  ${addForm(d,'+ Tâche')}
+  ${timedEvents(d).map(e=>`<div class="evrow mini${evFree(e)?' free':''}" title="${esc(e.summary||'')}"><span class="evt">${hm(new Date(e.start.dateTime))}</span><span class="evn">${esc(e.summary||'(sans titre)')}</span></div>`).join('')}
+  <div class="list" data-drop="day:${d}">${ts.map(card).join('')}</div></div>`}).join('')}</div>`;
+}
+
+/* ---------- vide-tête (brain dump) ---------- */
+let dumpAI=null,rec=null;
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function viewDump(){
+ const inbox=S.tasks.filter(t=>t.inbox&&!t.done);
+ return `<div class="head"><div><h1>Vide-tête</h1><div class="sub">Écris tout ce qui t’encombre l’esprit, une idée par ligne. Tu trieras après.</div></div></div>
+ <textarea class="dump" data-dump rows="10" placeholder="Rappeler le garagiste&#10;Idée cadeau pour Raf&#10;Préparer la réunion lundi 45m #pro&#10;Acheter des ampoules demain…">${esc(S.dump||'')}</textarea>
+ <div class="row" style="flex-wrap:wrap;margin:10px 0 4px">${SR?`<button data-act="dictate">${rec?'■ Arrêter la dictée':'🎙 Dicter'}</button>`:''}<span class="sp"></span><button data-act="dumptasks">Transformer en tâches</button>${aiOn()?'<button class="pri" data-act="dumpai">Trier avec Claude</button>':''}</div>
+ <p class="mute" style="font-size:13px;margin:4px 0 0">Astuce : « demain », « lundi », « 12/12 », « 30m », « 1h », « #canal » sont compris. Touche <kbd>D</kbd> pour revenir ici de n’importe où.</p>
+ ${dumpAI?`<div class="aibox">${dumpAI.loading?'<span class="mute">Claude trie ton vide-tête…</span>':dumpAI.error?`<span class="mute">Claude : ${esc(dumpAI.error)}</span>`:`<b>Claude</b>${dumpAI.text?`<p>${esc(dumpAI.text)}</p>`:''}${propItems(dumpAI.prop).map(it=>`<div class="pitem${(dumpAI.applied||{})[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${(dumpAI.applied||{})[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="dumpapply" data-k="${it.k}">Ajouter</button>`}</div>`).join('')}<div class="row">${propItems(dumpAI.prop).some(it=>!(dumpAI.applied||{})[it.k])?'<button class="sm pri" data-act="dumpapplyall">Tout ajouter et vider</button>':''}<span class="sp"></span><button class="sm ghost" data-act="dumpaiclose">Fermer</button></div>`}</div>`:''}
+ <h2 style="font-size:18px;margin:26px 0 8px">À trier (${inbox.length})</h2>
+ <div class="list">${inbox.length?inbox.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm" data-act="inbox" data-id="${t.id}" data-to="${today()}">Aujourd’hui</button><button class="sm ghost" data-act="inbox" data-id="${t.id}" data-to="${addDays(today(),1)}">Demain</button><button class="sm ghost" data-act="inbox" data-id="${t.id}" data-to="backlog">Backlog</button>`)).join(''):'<div class="empty">Rien à trier. Les idées sans date atterrissent ici.</div>'}</div>`;
+}
+function dumpToTasks(){
+ const lines=(S.dump||'').split('\n').map(l=>l.replace(/^[-*•\d.)\s]+/,'').trim()).filter(Boolean);if(!lines.length){toast('Ton vide-tête est vide');return}
+ let n=0;for(const l of lines){const q=parseQuick(l);if(!q.title)continue;const day=q.day||null;S.tasks.push(mk({title:q.title,est:q.est,channel:q.channel,day,due:q.due||null,inbox:!day&&!q.due,order:nextOrder(day)}));n++}
+ S.dump='';save();render();toast(n+' tâche'+(n>1?'s':'')+' créée'+(n>1?'s':''));
+ S.tasks.filter(t=>t.inbox&&!t.est).slice(-n).forEach(aiWatch);
+}
+async function dumpSort(){
+ const txt=(S.dump||'').trim();if(!txt){toast('Ton vide-tête est vide');return}
+ dumpAI={loading:true};render();
+ try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nVoici mon vide-tête (une idée par ligne, en vrac) :\n<vide_tete>\n${txt}\n</vide_tete>\nTransforme-le en tâches claires et actionnables (new_tasks) : reformule brièvement si besoin, fusionne les doublons, découpe ce qui contient plusieurs actions, attribue un canal existant, une durée réaliste et un jour (day = YYYY-MM-DD si c'est daté ou urgent, sinon "backlog"). Ce qui n'est pas une tâche (idée, note, souci) : mentionne-le dans le message, en une phrase. Message court.`}],true);dumpAI={text:r.text,prop:r.prop,applied:{}}}
+ catch(e){dumpAI={error:e.message}}
+ render();
+}
+function dictate(){
+ if(!SR)return;if(rec){rec.stop();rec=null;render();return}
+ rec=new SR();rec.lang='fr-FR';rec.continuous=true;rec.interimResults=false;
+ rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const t=e.results[i][0].transcript.trim();S.dump=((S.dump||'').replace(/\s*$/,'')+(S.dump?'\n':'')+t.charAt(0).toUpperCase()+t.slice(1));save();const ta=document.querySelector('[data-dump]');if(ta)ta.value=S.dump}};
+ rec.onend=()=>{rec=null;render()};rec.onerror=e=>{toast('Dictée : '+(e.error==='not-allowed'?'micro refusé':e.error));rec=null;render()};
+ try{rec.start();toast('Parle, chaque phrase devient une ligne');render()}catch(e){rec=null}
+}
+
+/* ---------- routines et modèles ---------- */
+const tplText=tp=>tp.items.map(i=>`${i.title}${i.est?' '+i.est+'m':''}${ch(i.channel)?' #'+ch(i.channel).name.replace(/\s+/g,''):''}${(i.subs||[]).map(x=>'\n- '+x).join('')}`).join('\n');
+function tplFromText(txt){const items=[];for(const raw of txt.split('\n')){const l=raw.trim();if(!l)continue;if(/^[-•]\s*/.test(l)&&items.length){items[items.length-1].subs.push(l.replace(/^[-•]\s*/,''));continue}const q=parseQuick(l);if(q.title)items.push({title:q.title,est:q.est,channel:q.channel,subs:[]})}return items}
+function applyTpl(id,day){const tp=(S.templates||[]).find(x=>x.id===id);if(!tp)return;for(const i of tp.items)S.tasks.push(mk({title:i.title,est:i.est,channel:i.channel,day,order:nextOrder(day),subtasks:(i.subs||[]).map(x=>({id:uid(),t:x,d:false}))}));save();render();toast(`« ${tp.name} » : ${tp.items.length} tâche${tp.items.length>1?'s':''} ajoutée${tp.items.length>1?'s':''} ${day?'au '+fmtDay(day,{weekday:'long',day:'numeric'}):'au backlog'}`);emit('template:apply',{tpl:tp,day})}
+function tplSuggestions(){
+ if(!(S.archive||[]).length)return [];const by={};
+ for(const a of S.archive){if(!a.c)continue;const k=a.c;by[k]=by[k]||{};const t=a.t.trim();by[k][t]=by[k][t]||{n:0,s:0};by[k][t].n++;by[k][t].s+=a.a||0}
+ const have=new Set((S.templates||[]).map(t=>t.name));
+ return Object.entries(by).map(([c,m])=>({c,items:Object.entries(m).filter(([,v])=>v.n>=8).sort((a,b)=>b[1].n-a[1].n).slice(0,7).map(([t,v])=>({title:t,est:Math.max(5,Math.round(v.s/v.n/60/5)*5)||15,channel:c,subs:[]}))})).filter(x=>x.items.length>=3&&ch(x.c)&&!have.has('Routine '+ch(x.c).name)).slice(0,3);
+}
+function editTpl(id){
+ const tp=id?(S.templates||[]).find(x=>x.id===id):{id:'',name:'',items:[]};if(!tp)return;modalTask=null;ritual=null;
+ showModal(`<div class="mhead"><input class="mtitle" data-tplname value="${esc(tp.name)}" placeholder="Nom du modèle (ex. Routine du matin)" aria-label="Nom du modèle"><button class="x" data-act="close" aria-label="Fermer">×</button></div>
+ <label class="full">Une tâche par ligne · « 15m », « #canal » compris · une ligne qui commence par « - » devient une sous-tâche de la précédente<textarea data-tpltext rows="10" placeholder="Vaisselle 15m #ménage&#10;Lessive 10m&#10;Préparer le sac 10m&#10;- Gourde&#10;- Affaires de sport">${esc(tplText(tp))}</textarea></label>
+ <div class="mfoot">${id?`<button class="danger" data-act="tpldel" data-id="${id}">Supprimer</button>`:''}<span class="sp"></span><button class="pri" data-act="tplsave" data-id="${id}">Enregistrer</button></div>`);
+}
+function tplHtml(){
+ const tps=S.templates||[],sug=tplSuggestions();
+ return `<div class="tpls"><div class="row" style="margin-bottom:8px"><h2 style="font-size:18px">Routines et modèles</h2><span class="sp"></span><button class="sm" data-act="tplfromday">Depuis aujourd’hui</button><button class="sm pri" data-act="tplnew">+ Nouveau modèle</button></div>
+ ${tps.length?`<div class="tplgrid">${tps.map(tp=>`<div class="tpl"><div class="row"><b>${esc(tp.name)}</b><span class="sp"></span><button class="sm ghost" data-act="tpledit" data-id="${tp.id}">Modifier</button></div><small class="mute">${tp.items.length} tâche${tp.items.length>1?'s':''} · ${fmtMin(tp.items.reduce((a,i)=>a+(i.est||0),0))}</small><div class="tplitems">${tp.items.slice(0,5).map(i=>esc(i.title)).join(' · ')}${tp.items.length>5?' …':''}</div><div class="row"><button class="sm pri" data-act="tplapply" data-id="${tp.id}" data-day="${today()}">Aujourd’hui</button><button class="sm" data-act="tplapply" data-id="${tp.id}" data-day="${addDays(today(),1)}">Demain</button></div></div>`).join('')}</div>`:'<p class="mute">Crée des listes réutilisables (routine du matin, ménage, préparation de voyage) et ajoute-les à un jour en un clic. Aussi depuis la palette Cmd+K.</p>'}
+ ${sug.length?`<div class="tplsug"><small class="mute">Suggestions d’après ton historique :</small>${sug.map(x=>`<div class="pitem"><div><b>Routine ${esc(ch(x.c).name)}</b><small class="mute">${x.items.map(i=>esc(i.title)+' ('+fmtMin(i.est)+')').join(' · ')}</small></div><button class="sm" data-act="tplsug" data-c="${esc(x.c)}">Créer</button></div>`).join('')}</div>`:''}</div>`;
+}
+
+/* ---------- vue Backlog ---------- */
+function viewBacklog(){
+ const ts=S.tasks.filter(t=>!t.day&&!t.done).sort((a,b)=>a.order-b.order);
+ const groups=[...S.channels.map(c=>({c,items:ts.filter(t=>t.channel===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length);
+ return `<div class="head"><div><h1>Backlog</h1><div class="sub">${ts.length} tâche${ts.length>1?'s':''} en attente d’un jour</div></div></div>
+ ${tplHtml()}
+ ${addForm(null,'Ajouter au backlog… (ex. « Réserver le garage 1h #admin »)')}
+ <div class="list" data-drop="backlog" style="gap:0">${groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.name)}</span>`:'Sans canal'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
+}
+
+/* ---------- vue Objectifs ---------- */
+function weekStats(w){
+ const days=[...Array(7)].map((_,i)=>addDays(w,i)),ts=S.tasks.filter(t=>t.day&&days.includes(t.day));
+ const done=ts.filter(t=>t.done),sec=ts.reduce((a,t)=>a+actualSec(t),0);
+ const per=[...S.channels,{id:null,name:'Sans canal',color:'#8a8f98'}].map(c=>({c,sec:ts.filter(t=>(c.id?t.channel===c.id:!ch(t.channel))).reduce((a,t)=>a+actualSec(t),0)})).filter(x=>x.sec>0);
+ const estDone=done.reduce((a,t)=>a+(t.est||0),0),actDone=done.reduce((a,t)=>a+actualSec(t),0)/60;
+ return{ts,done,sec,per,estDone,actDone};
+}
+function statsHtml(w){
+ const s=weekStats(w),max=Math.max(1,...s.per.map(p=>p.sec));
+ return `<div class="stat"><div><b>${s.done.length}/${s.ts.length}</b><small>tâches terminées</small></div><div><b>${fmtMin(s.sec/60)}</b><small>temps suivi</small></div><div><b>${s.estDone&&s.actDone?Math.round(s.actDone/s.estDone*100)+' %':'—'}</b><small>réel / estimé (tâches finies)</small></div></div>
+ ${s.per.length?`<div class="bars">${s.per.map(p=>`<div class="brow"><span>${esc(p.c.name)}</span><div class="bt" style="--c:${esc(p.c.color)}"><i style="width:${p.sec/max*100}%"></i></div><span>${fmtMin(p.sec/60)}</span></div>`).join('')}</div>`:'<p class="mute">Lance le minuteur sur tes tâches pour voir où passe ton temps.</p>'}`;
+}
+function viewObjectives(){
+ const w=monday(cur),os=weekObjs(w),wk=S.weeks[w]||{};
+ return `<div class="head"><div><h1>Objectifs de la semaine</h1><div class="sub">Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</div></div>
+ <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
+ <div class="acts"><button class="${wk.planned?'':'pri'}" data-act="weekplan">Planifier la semaine</button><button data-act="weekreview">Revue de la semaine</button></div></div>
+ <form class="add" data-form="obj"><input name="t" data-keep="obj" placeholder="Ajouter un objectif pour cette semaine…" autocomplete="off" aria-label="Nouvel objectif"></form>
+ <div class="list">${os.length?os.map(o=>{const lt=S.tasks.filter(t=>t.objId===o.id),dn=lt.filter(t=>t.done).length;return `<div class="card" style="cursor:default"><button class="chk" data-act="objtoggle" data-id="${o.id}" style="${o.done?'background:var(--ok);border-color:var(--ok)':''}" aria-label="Objectif atteint">${o.done?'✓':''}</button><div class="cbody" style="cursor:default"><div class="ctitle" style="${o.done?'text-decoration:line-through':''}">${esc(o.title)}</div><div class="cmeta">${lt.length?`${dn}/${lt.length} tâches liées`:'Aucune tâche liée — relie-en depuis le détail d’une tâche'}</div></div><button class="x" data-act="objdel" data-id="${o.id}" aria-label="Supprimer l’objectif">×</button></div>`}).join(''):'<div class="empty">Fixe 1 à 3 objectifs : ce que tu veux avoir accompli d’ici dimanche.</div>'}</div>
+ <h2 style="font-size:18px;margin:28px 0 6px">Cette semaine en chiffres</h2>${statsHtml(w)}
+ ${wk.review?`<div class="note"><b>Revue de la semaine</b>\n${esc(wk.review)}</div>`:''}`;
+}
+
+/* ---------- statistiques ---------- */
+function allDone(){
+ // tâches terminées : actives + historique, au même format {t,c,d,e(min),a(s)}
+ const cap=x=>x>12*3600?0:x;
+ return [...(S.archive||[]).map(a=>({t:a.t,c:a.c,d:a.d,e:a.e||0,a:cap(a.a||0)})),...S.tasks.filter(t=>t.done&&t.day).map(t=>({t:t.title,c:t.channel,d:t.day,e:t.est||0,a:cap(actualSec(t))}))];
+}
+function viewStats(){
+ const all=allDone(),t0=today(),d30=addDays(t0,-29),last30=all.filter(x=>x.d>=d30&&x.d<=t0);
+ const hrs=v=>v/3600,fh=v=>{const h=hrs(v);return h<10?h.toFixed(1).replace('.',',')+' h':Math.round(h)+' h'};
+ const weeks=[...Array(12)].map((_,i)=>addDays(monday(t0),-7*(11-i)));
+ const wk=weeks.map(w=>{const e=addDays(w,6),xs=all.filter(x=>x.d>=w&&x.d<=e);return{w,sec:xs.reduce((a,x)=>a+x.a,0),n:xs.length}});
+ const maxW=Math.max(1,...wk.map(x=>x.sec));
+ const per={};for(const x of last30){const k=x.c||'';per[k]=per[k]||{sec:0,n:0,e:0,ea:0};per[k].sec+=x.a;per[k].n++;if(x.e&&x.a){per[k].e+=x.e*60;per[k].ea+=x.a}}
+ const perL=Object.entries(per).map(([c,v])=>({c:ch(c),...v})).sort((a,b)=>b.sec-a.sec),maxC=Math.max(1,...perL.map(x=>x.sec));
+ const acc=last30.filter(x=>x.e&&x.a),ratio=acc.length?acc.reduce((a,x)=>a+x.a,0)/acc.reduce((a,x)=>a+x.e*60,0):0;
+ let streak=0;const doneDays=new Set(all.map(x=>x.d));for(let d=t0;doneDays.has(d)||(d===t0&&doneDays.has(addDays(d,-1))&&!doneDays.has(d));d=addDays(d,-1)){if(doneDays.has(d))streak++;else if(d!==t0)break}
+ const top={};for(const x of all){const k=norm(x.t).trim();top[k]=top[k]||{t:x.t,sec:0,n:0};top[k].sec+=x.a;top[k].n++}
+ const topL=Object.values(top).sort((a,b)=>b.sec-a.sec).slice(0,8);
+ const first=all.reduce((m,x)=>x.d&&x.d<m?x.d:m,t0),total=all.reduce((a,x)=>a+x.a,0);
+ const pct=r=>Math.round(r*100)+' %';
+ return `<div class="head"><div><h1>Statistiques</h1><div class="sub">30 derniers jours · historique depuis le ${fmtDay(first,{day:'numeric',month:'long',year:'numeric'})}</div></div></div>
+ <div class="kpis"><div><b>${fh(last30.reduce((a,x)=>a+x.a,0))}</b><small>temps suivi (30 j)</small></div><div><b>${last30.length}</b><small>tâches terminées (30 j)</small></div><div><b>${ratio?pct(ratio):'—'}</b><small>réel / estimé ${ratio?(ratio>1.15?'· tu sous-estimes':ratio<0.85?'· tu surestimes':'· estimations justes'):''}</small></div><div><b>${streak} j</b><small>série de jours avec au moins une tâche faite</small></div></div>
+ <section class="stsec"><h2>Temps suivi par semaine</h2><div class="wkbars">${wk.map(x=>`<div class="wkb" title="${fh(x.sec)} · ${x.n} tâches"><i style="height:${Math.max(2,x.sec/maxW*100)}%"></i><small>${fmtDay(x.w,{day:'numeric',month:'short'})}</small><b>${x.sec?fh(x.sec):''}</b></div>`).join('')}</div></section>
+ <section class="stsec"><h2>Par canal (30 jours)</h2>${perL.length?`<div class="bars">${perL.map(x=>`<div class="brow"><span>${esc(x.c?x.c.name:'Sans canal')}</span><div class="bt" style="--c:${esc(x.c?x.c.color:'#8a8f98')}"><i style="width:${x.sec/maxC*100}%"></i></div><span>${fh(x.sec)}${x.e?' · '+pct(x.ea/x.e):''}</span></div>`).join('')}</div><p class="mute" style="font-size:13px">Le pourcentage compare le temps réel au temps estimé.</p>`:'<p class="mute">Pas encore de temps suivi ce mois-ci.</p>'}</section>
+ <section class="stsec"><h2>Là où passe ton temps (depuis le début)</h2><p class="mute" style="margin:0 0 8px">${fh(total)} suivies au total sur ${all.length} tâches (les chronos oubliés de plus de 12 h sont ignorés).</p><div class="bars">${topL.map(x=>`<div class="brow"><span title="${esc(x.t)}">${esc(x.t)}</span><div class="bt" style="--c:var(--acc)"><i style="width:${x.sec/Math.max(1,topL[0].sec)*100}%"></i></div><span>${fh(x.sec)} · ${x.n}×</span></div>`).join('')}</div></section>`;
+}
+
+function viewReview(){
+ const tab=view==='stats'?'stats':'objectives';
+ const tabs=`<div class="seg revtabs"><button class="sm${tab==='objectives'?' on':''}" data-act="go" data-v="objectives">Objectifs et semaine</button><button class="sm${tab==='stats'?' on':''}" data-act="go" data-v="stats">Statistiques</button></div>`;
+ return tabs+(tab==='stats'?viewStats():viewObjectives());
+}
+/* ---------- vue Réglages ---------- */
+let advOpen=false;
+function viewSettings(){
+ const s=S.settings,num=(k,l,min,max)=>`<label>${l}<input type="number" min="${min}" max="${max}" data-set="${k}" value="${esc(s[k])}"></label>`;
+ return `<div class="head"><div><h1>Réglages</h1><div class="sub">L’essentiel ici ; le reste dans « Réglages avancés » en bas.</div></div></div>
+ <div class="set">
+ <section><h2>Journée type</h2><div class="grid2">${num('workStart','Début du travail (h)',0,23)}${num('workEnd','Fin du travail (h)',1,24)}${num('dayStart','Agenda : première heure',0,23)}${num('dayEnd','Agenda : dernière heure',1,24)}<label>Agenda vivant<select data-set="liveShift"><option value="1" ${s.liveShift!==false?'selected':''}>Vivant : suit la liste et l’heure</option><option value="" ${s.liveShift===false?'selected':''}>Manuel : je place mes créneaux</option></select></label></div></section>
+ <section><h2>Canaux</h2><p>Des catégories pour classer tes tâches et voir où passe ton temps. Tape <code>#nom</code> en créant une tâche pour l’y ranger.</p>
+  ${S.channels.map(c=>`<div class="chrow"><input type="color" data-chc="${esc(c.id)}" value="${esc(c.color)}" aria-label="Couleur"><input data-chn="${esc(c.id)}" value="${esc(c.name)}" aria-label="Nom du canal"><button class="danger sm" data-act="chdel" data-id="${esc(c.id)}">Supprimer</button></div>`).join('')}
+  <button class="sm" data-act="chadd">+ Ajouter un canal</button>
+  </section>
+ <section><h2>Connexions</h2>
+  <div class="connrow"><b>Google</b><span class="mute">Agenda et synchro téléphone ↔ Mac</span><span class="sp"></span><span class="status${gTok()?' on':''}">${gTok()?'Connecté':gWas()?'Session expirée':'Non connecté'}</span>${gTok()?'':`<button class="sm pri" data-act="gin">${gWas()?'Reconnecter':'Connecter'}</button>`}</div>
+  <p class="mute" style="margin:2px 0 10px;font-size:13px" data-live="sync">${esc(syncState)}</p>
+  <div class="connrow"><b>Microsoft To Do</b><span class="mute">Tâches To Do dans ta journée</span><span class="sp"></span><span class="status${msOn()?' on':''}">${msOn()?'Connecté':'Non connecté'}</span>${msOn()||!S.settings.msClientId?'':'<button class="sm" data-act="min">Connecter</button>'}</div>
+ </section>
+ <section><h2>Notifications</h2><p>Début de chaque créneau, rendez-vous occupé dans 5 minutes, rappel de planifier le matin et de clôturer le soir. Elles s’affichent tant que MyDayBot est ouverte (onglet ou appli installée, même en arrière-plan sur ordinateur). Sur téléphone, le système peut mettre l’appli en pause quand elle n’est pas à l’écran.</p>
+  <div class="row"><span class="status${notifOk()?' on':''}">${notifOk()?'Activées':('Notification' in window&&Notification.permission==='denied')?'Bloquées par le navigateur':'Désactivées'}</span><span class="sp"></span>${notifOk()?'<button class="ghost sm" data-act="notifoff">Désactiver</button><button class="sm" data-act="notiftest">Tester</button>':'<button class="pri" data-act="notifon">Activer les notifications</button>'}</div></section>
+ <section><h2>Claude (assistant)</h2><p>Colle ici ta clé API Anthropic (console.anthropic.com → API Keys). Elle reste uniquement sur cet appareil et n’est jamais synchronisée. Coût : quelques centimes par jour avec Haiku.</p>
+  <label>Clé API<input type="password" data-set="aiKey" value="${esc(s.aiKey)}" placeholder="sk-ant-…" autocomplete="off"></label>
+  <div class="grid2"><label>Modèle<select data-set="aiModel"><option value="claude-haiku-5-5" ${s.aiModel==='claude-haiku-5-5'?'selected':''}>Haiku — rapide et économique</option><option value="claude-sonnet-5-5" ${s.aiModel==='claude-sonnet-5-5'?'selected':''}>Sonnet — plus fin</option></select></label>
+  <label>En arrière-plan<select data-set="aiAuto"><option value="1" ${s.aiAuto?'selected':''}>Suggestions automatiques</option><option value="" ${s.aiAuto?'':'selected'}>Seulement quand je demande</option></select></label></div>
+  <div class="grid2"><label>Plafond mensuel ($, 0 = aucun)<input type="number" min="0" step="0.5" data-set="aiBudget" value="${esc(s.aiBudget)}"></label></div>
+  <p style="margin:10px 0 0"><b data-live="aicost">${costTxt()}</b> — estimation d’après les jetons consommés ; le montant exact est sur console.anthropic.com.</p>
+  <div class="row" style="margin-top:12px"><span class="status${aiOn()?' on':''}">${aiOn()?'Clé enregistrée':'Pas de clé'}</span><span class="sp"></span><button class="ghost sm" data-act="aiclear">Effacer la conversation</button></div></section>
+ <details class="adv"${advOpen?' open':''} data-adv><summary>Réglages avancés</summary><div class="set">
+ <section><h2>Google : identifiants et agendas affichés</h2><p>Affiche tes rendez-vous et crée un événement pour chaque tâche que tu places dans l’agenda. Voir le README pour obtenir l’identifiant.</p>
+  <label>Identifiant client OAuth (…apps.googleusercontent.com)<input data-set="googleClientId" value="${esc(s.googleClientId)}" placeholder="1234-abcd.apps.googleusercontent.com" autocomplete="off"></label>
+  <div class="grid2"><label>Agenda par défaut des créneaux${gCals?`<select data-set="calendarId">${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${(s.calendarId||'primary')===c.id||(s.calendarId==='primary'&&c.primary)?'selected':''}>${esc(c.name)}</option>`).join('')}</select>`:`<input data-set="calendarId" value="${esc(s.calendarId)}" placeholder="primary">`}</label></div>
+  ${gCals?`<p style="margin:12px 0 4px">Agendas affichés :</p>${gCals.map(c=>`<label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" data-cal="${esc(c.id)}" ${calOn(c)?'checked':''} style="width:auto;min-height:0"><span class="chip" style="--c:${esc(c.color||'#888')}">${esc(c.name)}</span></label>`).join('')}`:''}
+  <p style="margin:10px 0 0">Quand la session expire (toutes les heures), MyDayBot la renouvelle toute seule par un aller-retour éclair, sans clic. Google sert aussi à <b>synchroniser tes tâches entre ton téléphone et ton Mac</b> (fichier caché dans ton Drive). <span data-live="sync">${esc(syncState)}</span></p>
+  <div class="row" style="margin-top:12px"><span class="status${gTok()?' on':''}">${gTok()?'Connecté':gWas()?'Session expirée':'Non connecté'}</span><span class="sp"></span>${gWas()?'<button class="ghost" data-act="gout">Déconnecter</button>':''}<button class="pri" data-act="gin">${gWas()?'Reconnecter':'Connecter Google'}</button></div></section>
+ <section><h2>Agenda Google de chaque catégorie</h2>
+  
+  <p>Les créneaux d’une tâche sont créés dans l’agenda de son canal, sinon de son contexte, sinon dans l’agenda par défaut. Changer le canal d’une tâche déplace son créneau.</p>
+  ${!gTok()?'<p class="mute">Connecte Google pour choisir les agendas.</p>':!gCals?(loadCals().then(()=>{if(view==='settings')render()}),'<p class="mute">Chargement des agendas…</p>'):(()=>{const opts=sel=>`<option value="">Agenda par défaut</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${sel===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}`;const ctxs=[...new Set(S.channels.map(c=>c.ctx).filter(Boolean))];
+   return `${ctxs.length?`<div class="calmap">${ctxs.map(x=>`<label>Contexte ${esc(x)}<select data-ctxcal="${esc(x)}"><option value="">Agenda par défaut</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${(S.settings.ctxCal||{})[x]===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>`).join('')}</div>`:''}
+   <div class="calmap">${S.channels.map(c=>`<label><span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span><select data-chcal="${esc(c.id)}">${opts(c.cal||'')}</select></label>`).join('')}</div>`})()}
+  </section>
+ <section><h2>Microsoft To Do : identifiant</h2><p>Importe tes tâches dans ta journée ; quand tu les termines ici, elles sont cochées dans To Do (et inversement à la synchro).</p>
+  <label>ID d’application (client) Azure<input data-set="msClientId" value="${esc(s.msClientId)}" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off"></label>
+  <div class="row" style="margin-top:12px"><span class="status${msOn()?' on':''}">${msOn()?'Connecté':'Non connecté'}</span><span class="sp"></span>${msOn()?'<button class="ghost" data-act="mout">Déconnecter</button>':''}<button class="pri" data-act="min">${msOn()?'Reconnecter':'Connecter Microsoft'}</button></div></section>
+ <section><h2>Adresse de redirection</h2><p>À coller à l’identique dans la console Google et dans Azure.</p><div class="row"><code>${esc(REDIRECT)}</code><button class="sm" data-act="copyuri">Copier</button></div></section>
+ <section><h2>Importer depuis Sunsama</h2><p>Dans Sunsama : Settings → Account Management → export. Les tâches terminées de plus de 30 jours vont dans l’historique (utilisé par Claude pour estimer tes durées) ; les rituels Sunsama ne sont pas importés. Tu peux réimporter sans créer de doublons.</p><input type="file" accept=".csv,text/csv" data-sunsama aria-label="Fichier d’export Sunsama">${S.archive&&S.archive.length?`<p style="margin-top:8px">Historique : ${S.archive.length} tâches archivées.</p>`:''}</section>
+ <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
+ <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus sur la prochaine tâche</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Vide-tête</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
+ </div></details>
+ </div>`;
+}
+
+/* ---------- panneau latéral : agenda ---------- */
+const PX=76;
+function calGeom(){const st=S.settings.dayStart,en=Math.max(S.settings.dayEnd,st+1);return{st,en,H:(en-st)*PX}}
+function calCol(d){
+ const s=S.settings,{st,en,H}=calGeom();
+ const timed=timedEvents(d),blocks=S.tasks.filter(t=>t.block&&ymd(new Date(t.block.start))===d);
+ const items=[...timed.map(e=>({k:'ev',s:new Date(e.start.dateTime),e:new Date(e.end.dateTime),e0:e})),...blocks.map(t=>({k:'b',s:new Date(t.block.start),e:new Date(t.block.end),t}))].sort((a,b)=>a.s-b.s||b.e-a.e);
+ let cl=[],cend=0;const out=[];
+ const flush=()=>{const cols=[];cl.forEach(it=>{let c=cols.findIndex(e=>e<=it.s);if(c<0){c=cols.length;cols.push(0)}cols[c]=it.e;it.col=c});cl.forEach(it=>it.n=cols.length);out.push(...cl);cl=[]};
+ items.forEach(it=>{if(cl.length&&it.s>=cend)flush();cl.push(it);cend=Math.max(cend,+it.e)});flush();
+ const y=dt=>((dt.getHours()-st)*60+dt.getMinutes()+(ymd(dt)!==d?(dt>parseYmd(d)?1440:-1440):0))/60*PX;
+ const hrs=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
+ const blocksHtml=out.map(it=>{
+  const top=Math.max(0,y(it.s)),h=Math.max(22,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
+  const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<40?' short':'';
+  if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
+  const t=it.t,c=ch(t.channel),act=S.running&&S.running.taskId===t.id;return `<div class="blk${t.done?' done':''}${act?' active':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${t.pinned?'📌 ':''}${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
+ }).join('');
+ const nowTop=d===today()?y(new Date()):-1;
+ return `<div class="tlin" data-drop="cal" data-day="${d}" style="height:${H}px">${hrs}
+ <div class="work" style="top:${(s.workStart-st)*PX}px;height:${Math.max(0,(s.workEnd-s.workStart)*PX)}px"></div>
+ ${blocksHtml}${nowTop>=0&&nowTop<=H?`<div class="now" data-live="now" style="top:${nowTop}px"></div>`:''}<div class="ghostblk hidden"></div></div>`;
+}
+const alldayHtml=d=>{const a=(gEvents[d]||[]).filter(e=>e.start.date);return a.length?`<div class="allday">${a.map(e=>`<a href="${/^https:/.test(e.htmlLink||'')?esc(e.htmlLink):'#'}" target="_blank" rel="noopener">${esc(e.summary||'(sans titre)')}</a>`).join('')}</div>`:''};
+function gStateHtml(d){return gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:'')):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`}
+function viewCal(){
+ const d=cur;
+ return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span><button class="sm ghost" data-act="layout" title="Inverser : grand agenda au centre (touche C)">⇄ Grand agenda</button>${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
+ ${gStateHtml(d)}${alldayHtml(d)}
+ <div class="tl">${calCol(d)}</div>
+ <div class="sinfo" style="padding-top:0"><span>${flowOn()?'Agenda vivant : les tâches suivent l’ordre de la liste. Glisse une tâche ici pour fixer son heure.':'Glisse une tâche sur l’agenda pour lui réserver un créneau.'}</span>${flowOn()?'':'<button class="sm" data-act="autobox">Placer automatiquement les tâches du jour</button>'}</div>`;
+}
+/* ---------- grand agenda (vue inversée) ---------- */
+let scrolledBig=false,layout=lsGet('journee.layout')||'tasks',calSpan=+(lsGet('journee.span')||3);
+const bigDays=()=>{const n=innerWidth<720?1:calSpan;const s0=n===7?monday(cur):cur;return [...Array(n)].map((_,i)=>addDays(s0,i))};
+function viewBigCal(){
+ const days=bigDays(),{st,en,H}=calGeom();
+ const axis=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
+ return `<div class="head"><div><h1>${days.length===1?cap1(fmtDay(days[0],{weekday:'long',day:'numeric',month:'long'})):cap1(fmtDay(days[0],{day:'numeric',month:'short'}))+' – '+fmtDay(days[days.length-1],{day:'numeric',month:'short'})}</h1><div class="sub">Grand agenda · tes tâches sont à droite</div></div>
+ <div class="dnav"><button data-act="${days.length===7?'prevw':'prev'}" aria-label="Précédent">‹</button><button data-act="gotoday">Aujourd’hui</button><button data-act="${days.length===7?'nextw':'next'}" aria-label="Suivant">›</button></div>
+ <div class="acts"><div class="seg">${[1,3,7].map(n=>`<button class="sm${calSpan===n?' on':''}" data-act="span" data-n="${n}">${n===1?'Jour':n===3?'3 jours':'Semaine'}</button>`).join('')}</div><button data-act="layout" title="Touche C">⇄ Liste au centre<kbd class="k">C</kbd></button></div></div>
+ ${gStateHtml(cur)}
+ <div class="bigcal" style="--n:${days.length}">
+  <div class="bchead"><div></div>${days.map(d=>`<div class="bcday${d===today()?' today':''}" data-act="openday" data-day="${d}"><b>${cap1(fmtDay(d,{weekday:'short',day:'numeric'}))}</b><small>${fmtMin(loadInfo(d).task)} de tâches</small>${alldayHtml(d)}</div>`).join('')}</div>
+  <div class="bcbody"><div class="axis" style="height:${H}px">${axis}</div>${days.map(d=>`<div class="bccol">${calCol(d)}</div>`).join('')}</div>
+ </div>`;
+}
+function viewSideTasks(){
+ const d=cur,ts=dayTasks(d);
+ return `<div class="calhead"><span>Tâches · ${cap1(fmtDay(d,{weekday:'long',day:'numeric'}))}</span><span class="sp"></span><button class="sm ghost" data-act="plan">Planifier</button></div>
+ <div style="padding:10px 12px">${loadBar(d)}${addForm(d,'Ajouter une tâche…','add-side')}
+ <div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu ce jour-là.</div>'}</div>
+ <div class="rsec">Backlog</div><div class="list" data-drop="backlog">${S.tasks.filter(t=>!t.day&&!t.done).slice(0,30).map(card).join('')||'<p class="mute">Vide</p>'}</div></div>`;
+}
+
+/* ---------- panneau latéral : To Do ---------- */
+function viewTodo(){
+ if(!S.settings.msClientId)return `<div class="sinfo"><b>Microsoft To Do n’est pas encore configuré.</b><span>Crée une application dans Azure (5 minutes, voir le README), puis colle son identifiant dans Réglages.</span><button data-act="goset">Ouvrir les réglages</button></div>`;
+ if(!msOn())return `<div class="sinfo"><b>Connecte ton compte Microsoft</b><span>Tes listes To Do apparaîtront ici. Glisse une tâche vers ta journée ou ton agenda.</span><button class="pri" data-act="min">Connecter Microsoft</button></div>`;
+ if(!todo.lists){loadTodoLists();return '<div class="sinfo">Chargement des listes…</div>'}
+ if(!todo.lists.length)return '<div class="sinfo">Aucune liste trouvée.<button class="sm" data-act="todoreload">Réessayer</button></div>';
+ const l=todo.listId,items=todo.tasks[l];
+ if(!items)loadTodoTasks(l);
+ return `<div class="todo-top"><select data-todolist aria-label="Liste To Do">${todo.lists.map(x=>`<option value="${esc(x.id)}" ${x.id===l?'selected':''}>${esc(x.displayName)}</option>`).join('')}</select><button class="sm ghost" data-act="todoreload">Actualiser</button></div>
+ ${!items?'<div class="sinfo">Chargement…</div>':!items.length?'<div class="sinfo">Cette liste est vide.</div>':items.map(x=>{const imp=S.tasks.find(t=>t.src&&t.src.taskId===x.id);const due=x.dueDateTime&&x.dueDateTime.dateTime?`<small>${fmtDay(x.dueDateTime.dateTime.slice(0,10),{day:'numeric',month:'short'})}</small>`:'';
+  return `<div class="todo-item${imp?' imp':''}" draggable="true" data-drag="todo|${esc(l)}|${esc(x.id)}">${x.importance==='high'?'<i class="hi" title="Important">!</i>':''}<span>${esc(x.title)}</span>${due}<button class="sm${imp?' ghost':''}" data-act="todoadd" data-l="${esc(l)}" data-t="${esc(x.id)}">${imp&&imp.day?(imp.day===cur?'Prévue':esc(fmtDay(imp.day,{day:'numeric',month:'short'}))):'+ Jour'}</button></div>`}).join('')}
+ <div class="sinfo"><span>Les tâches ajoutées sont cochées dans To Do quand tu les termines ici.</span></div>`;
+}

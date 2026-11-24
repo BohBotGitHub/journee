@@ -1,10 +1,10 @@
-# Journée : ton Sunsama perso
+# MyDayBot : ton planificateur quotidien
 
-Une appli web installable (PWA) pour planifier ta journée, reliée à **Google Agenda** et **Microsoft To Do**. Elle est gratuite, n'a pas de serveur et tes données restent dans ton navigateur.
+MyDayBot est une appli web installable (PWA) pour planifier ta journée, reliée à **Google Agenda** et **Microsoft To Do**. Elle est gratuite, n'a pas de serveur et tes données restent dans ton navigateur.
 
 ## Ce qu'elle fait
 
-| Fonction Sunsama | Dans Journée |
+| Fonction Sunsama | Dans MyDayBot |
 |---|---|
 | Rituel de planification du matin | 5 étapes : revue d'hier, choix des tâches (backlog et To Do), estimation, créneaux dans l'agenda, intention du jour |
 | Alerte de surcharge | Barre de charge : tâches + réunions Google comparées à tes heures de travail |
@@ -48,7 +48,7 @@ Ouvre-la, puis va dans **Réglages → Adresse de redirection** et copie l'adres
 4. Dans **Clients → Créer un client**, choisis le type **Application Web**, puis renseigne :
    - Origines JavaScript autorisées : `https://TON-PSEUDO.github.io`
    - URI de redirection autorisés : l'adresse copiée dans Réglages (par ex. `https://TON-PSEUDO.github.io/journee/`)
-5. Copie l'**ID client** (`….apps.googleusercontent.com`) dans Journée → Réglages → Google Agenda, puis clique sur **Connecter Google**.
+5. Copie l'**ID client** (`….apps.googleusercontent.com`) dans MyDayBot → Réglages → Google Agenda, puis clique sur **Connecter Google**.
 
 Google affiche « Cette appli n'a pas été validée ». C'est normal pour une appli perso en mode test : clique sur *Continuer*.
 Par sécurité, la session Google dure **1 heure**. Ensuite, un bouton **Reconnecter** apparaît et un clic suffit, sans ressaisir de mot de passe.
@@ -60,7 +60,7 @@ Par sécurité, la session Google dure **1 heure**. Ensuite, un bouton **Reconne
    - Types de comptes : **Comptes dans un annuaire d'organisation et comptes Microsoft personnels**
    - URI de redirection : plateforme **Application monopage (SPA)**, avec l'adresse copiée dans Réglages
 2. Dans **API autorisées → Ajouter une autorisation → Microsoft Graph → Autorisations déléguées**, coche `Tasks.ReadWrite`. `User.Read` est déjà présente.
-3. Dans **Vue d'ensemble**, copie l'**ID d'application (client)** dans Journée → Réglages → Microsoft To Do, puis clique sur **Connecter Microsoft**.
+3. Dans **Vue d'ensemble**, copie l'**ID d'application (client)** dans MyDayBot → Réglages → Microsoft To Do, puis clique sur **Connecter Microsoft**.
 
 La session Microsoft se renouvelle seule pendant 24 h, puis demande un clic pour se reconnecter.
 
