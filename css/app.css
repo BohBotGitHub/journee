@@ -678,3 +678,4 @@ code{white-space:nowrap}
 .sidegrip:hover,.sizing .sidegrip{background:color-mix(in srgb,var(--acc) 35%,transparent)}
 body.sizing{cursor:col-resize;user-select:none}
 @media (max-width:720px){.sumchip .lg{display:none}}
+form.add:has(.qprev:not(:empty)) .addhint{display:none!important}
