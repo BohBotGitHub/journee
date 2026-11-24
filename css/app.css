@@ -625,3 +625,4 @@ code{white-space:nowrap}
 #nav .navver{margin-top:0;padding:0 10px 4px 38px;font-size:11px;line-height:1.3;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
 #nav .navver b{display:inline;font-weight:500;color:var(--mute);font-size:11px}
 #nav .navver span{display:none}
+.ritbody .rlist{max-height:none;overflow:visible}

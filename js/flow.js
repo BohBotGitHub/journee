@@ -86,7 +86,10 @@ function planFlow(d){
    plan=simFlow(d);
   }
  }
+ const nextDay=+parseYmd(addDays(d,1));
  for(const [t,ns,ne] of plan){
+  // ce qui ne tient pas avant minuit (priorité haute, échéance du jour) reste sur sa journée, sans créneau, au lieu de basculer au lendemain
+  if(ns>=nextDay){if(t.block)clearBlock(t,true);continue}
   const same=t.block&&Math.abs(+new Date(t.block.start)-ns)<60000&&Math.abs(+new Date(t.block.end)-ne)<60000;
   if(!same){setRange(t,new Date(ns),new Date(ne),true);n++}
  }
