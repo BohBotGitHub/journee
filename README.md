@@ -12,7 +12,7 @@ Une appli web installable (PWA) pour planifier ta journée, reliée à **Google 
 | Rituel de fin de journée | Bilan (fait / temps suivi / réunions), tri de ce qui reste, note de fin de journée |
 | Objectifs de la semaine | Objectifs liés aux tâches, planification et revue de la semaine avec statistiques par canal |
 | Channels | Canaux colorés. Taper `#perso` dans une tâche la range dans ce canal |
-| Mode focus | Plein écran, chrono, Pomodoro avec pauses, sous-tâches et notes |
+| Mode focus | Plein écran, chrono, sous-tâches et notes ; la tâche devient active dans l’agenda et le reste se décale |
 | Suivi du temps | Temps réel comparé au temps estimé, par tâche, par jour et par semaine |
 | Backlog, récurrence, sous-tâches, report | Oui. Les tâches non terminées sont proposées au report |
 | Microsoft To Do | Panneau latéral : importer (bouton ou glisser). Cocher ici coche dans To Do, et inversement à la synchro |

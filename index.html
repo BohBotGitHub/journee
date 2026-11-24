@@ -128,6 +128,8 @@ form.add input{background:var(--panel);border-style:dashed}
 .ev,.blk{position:absolute;border-radius:7px;padding:3px 7px;font-size:12.5px;overflow:hidden;line-height:1.25;text-decoration:none}
 .ev{background:var(--ev);color:var(--evi);border-left:3px solid var(--evi)}
 .blk{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--acc));box-shadow:var(--sh);cursor:grab;color:var(--ink)}
+.blk.active{box-shadow:0 0 0 2px var(--acc),var(--sh);background:var(--acc2)}
+.blk.active small::after{content:' · en cours';font-weight:700;color:var(--acc)}
 .blk.done{opacity:.55;text-decoration:line-through}
 .ev b,.blk b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev small,.blk small{font-size:11px}
@@ -205,7 +207,6 @@ label.full{margin-top:12px}
 .fclock{font-size:clamp(56px,12vw,96px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1;color:var(--acc)}
 .fsub{color:var(--mute)}
 .fbtns{display:flex;flex-wrap:wrap;gap:10px}
-.pomo{background:var(--acc2);border-radius:12px;padding:12px 16px;font-weight:600}
 .fnotes{min-height:110px}
 /* réglages */
 .set{max-width:720px;display:flex;flex-direction:column;gap:24px}
@@ -325,7 +326,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 const KEY='journee.v1';
 const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
  channels:[{id:'c1',name:'Travail',color:'#3b6fd8'},{id:'c2',name:'Perso',color:'#2f9e6a'},{id:'c3',name:'Admin',color:'#c99a06'}],
- settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,pomo:25,brk:5,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true},chat:[],archive:[]});
+ settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true},chat:[],archive:[]});
 let S;
 try{S=Object.assign(defaults(),JSON.parse(lsGet(KEY)||'{}'))}catch(e){S=defaults()}
 S.settings=Object.assign(defaults().settings,S.settings||{});
@@ -351,7 +352,7 @@ if(!S.seeded){
 
 /* ---------- état d'interface ---------- */
 const VIEWS=['today','week','backlog','objectives','settings'];
-let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,pomo=null,drag=null,scrolledCal='',lastDay=today();
+let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,drag=null,scrolledCal='',lastDay=today();
 let gEvents={},gLoading={};
 const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,tLoading:false};
 
@@ -377,6 +378,7 @@ async function toggleDone(id){
  const t=T(id);if(!t)return;
  if(S.running&&S.running.taskId===id)stopTimer();
  t.done=!t.done;t.doneAt=t.done?Date.now():null;if(t.done&&!t.day)t.day=today();
+ if(t.done)finishBlock(t);
  save();render();if(t.done)chime(660);emit(t.done?'task:done':'task:undone',{task:t});
  if(t.block&&t.block.gcalId&&gTok())gFetch(`/calendars/${calId()}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{});
  if(t.src&&msOn()){
@@ -490,17 +492,72 @@ const isMine=e=>!!(e.extendedProperties&&e.extendedProperties.private&&e.extende
 const timedEvents=d=>(gEvents[d]||[]).filter(e=>e.start.dateTime&&!isMine(e));
 function meetingMin(d){return timedEvents(d).filter(e=>!evFree(e)).reduce((a,e)=>a+Math.max(0,(new Date(e.end.dateTime)-new Date(e.start.dateTime))/60000),0)}
 const evBody=t=>({summary:(t.done?'✓ ':'')+t.title,description:(t.notes?t.notes+'\n\n':'')+'Planifié avec Journée',start:{dateTime:t.block.start},end:{dateTime:t.block.end},extendedProperties:{private:{journeeTask:t.id}}});
-async function setBlock(t,start,noRender){
- if(!t.est)t.est=30;
- const end=new Date(start.getTime()+t.est*60000);
+const gPend={},gDirty={};
+async function pushBlock(t){
+ if(!gTok()||!t.block)return;
+ if(gPend[t.id]){gDirty[t.id]=true;return}
+ gPend[t.id]=true;
+ try{
+  if(t.block.gcalId)await gFetch(`/calendars/${calId()}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify(evBody(t))});
+  else{const ev=await gFetch(`/calendars/${calId()}/events`,{method:'POST',body:JSON.stringify(evBody(t))});if(t.block)t.block.gcalId=ev.id;else gFetch(`/calendars/${calId()}/events/${encodeURIComponent(ev.id)}`,{method:'DELETE'}).catch(()=>{})}
+  save();
+ }catch(e){toast('Google Agenda : '+e.message)}
+ finally{delete gPend[t.id];if(gDirty[t.id]){delete gDirty[t.id];pushBlock(t)}}
+}
+function setRange(t,start,end,noRender){
  t.block={start:start.toISOString(),end:end.toISOString(),gcalId:t.block&&t.block.gcalId||null,title:t.title};
  t.day=ymd(start);save();if(!noRender)render();
- if(gTok()){
-  try{
-   if(t.block.gcalId)await gFetch(`/calendars/${calId()}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify(evBody(t))});
-   else{const ev=await gFetch(`/calendars/${calId()}/events`,{method:'POST',body:JSON.stringify(evBody(t))});if(t.block)t.block.gcalId=ev.id}
-   save();
-  }catch(e){toast('Google Agenda : '+e.message)}
+ return pushBlock(t);
+}
+function setBlock(t,start,noRender){
+ if(!t.est)t.est=30;
+ return setRange(t,start,new Date(start.getTime()+t.est*60000),noRender);
+}
+/* ---------- journée vivante : le focus et le temps qui passe décalent l'agenda ---------- */
+const M5=3e5,ceil5=x=>Math.ceil(x/M5)*M5,floor5=x=>Math.floor(x/M5)*M5;
+const runningTask=()=>{const r=S.running&&T(S.running.taskId);return r&&!r.done?r:null};
+function busyAt(d){return timedEvents(d).filter(e=>!evFree(e)).map(e=>[+new Date(e.start.dateTime),+new Date(e.end.dateTime)])}
+function activate(t){
+ const now=Date.now(),d=today();
+ if(t.day!==d){t.day=d}
+ const b=t.block,inWin=b&&+new Date(b.start)<=now&&+new Date(b.end)>now;
+ const left=Math.max(10,(t.est||30)-Math.floor((t.actual||0)/60))*60000;
+ if(inWin)setRange(t,new Date(b.start),new Date(Math.max(+new Date(b.end),ceil5(now)+M5)),true);
+ else{const st=floor5(now);setRange(t,new Date(st),new Date(Math.max(st+left,ceil5(now)+M5)),true)}
+ cascade(d);syncOrder(d);save();render();
+}
+function cascade(d){
+ if(d!==today()||S.settings.liveShift===false)return 0;
+ const now=Date.now(),r=runningTask(),busy=busyAt(d);
+ let cursor=ceil5(now);if(r&&r.block&&r.day===d)cursor=Math.max(cursor,+new Date(r.block.end));
+ const ts=dayTasks(d).filter(t=>!t.done&&t.block&&t!==r).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start));
+ let n=0;
+ for(const t of ts){
+  const st=+new Date(t.block.start),en=+new Date(t.block.end);
+  if(st>=cursor){cursor=Math.max(cursor,en);continue}
+  let dur=en-st;if(en<=now&&t.actual)dur=Math.max(10*60000,(t.est||30)*60000-t.actual*1000);
+  let ns=cursor;for(let g=0;g<50;g++){const hit=busy.find(([a,b])=>ns<b&&ns+dur>a);if(!hit)break;ns=ceil5(hit[1])}
+  if(Math.abs(ns-st)>=60000){setRange(t,new Date(ns),new Date(ns+dur),true);n++}
+  cursor=ns+dur;
+ }
+ return n;
+}
+function liveTick(){
+ const d=today(),now=Date.now();let ch=false;const r=runningTask();
+ if(r&&r.day===d){if(!r.block){activate(r);return}if(+new Date(r.block.end)<now+60000){setRange(r,new Date(r.block.start),new Date(ceil5(now)+M5),true);ch=true}}
+ if(cascade(d))ch=true;
+ if(ch){syncOrder(d);save();if(!rz&&!drag)render()}
+}
+function finishBlock(t){
+ // tâche terminée en avance : le créneau se raccourcit et les créneaux enchaînés derrière remontent
+ if(!t.block||t.day!==today())return;
+ const now=Date.now(),st=+new Date(t.block.start),oldEnd=+new Date(t.block.end);
+ if(oldEnd<=now||st>now)return;
+ const ne=Math.max(st+M5,ceil5(now));setRange(t,new Date(st),new Date(ne),true);
+ let from=oldEnd,to=ne;
+ for(const x of dayTasks(t.day).filter(x=>!x.done&&x.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start))){
+  const xs=+new Date(x.block.start),xe=+new Date(x.block.end);
+  if(Math.abs(xs-from)<=60000){setRange(x,new Date(to),new Date(to+(xe-xs)),true);from=xe;to=to+(xe-xs)}
  }
 }
 function clearBlock(t,noRender){
@@ -961,7 +1018,7 @@ function viewSettings(){
   <label>En arrière-plan<select data-set="aiAuto"><option value="1" ${s.aiAuto?'selected':''}>Suggestions automatiques</option><option value="" ${s.aiAuto?'':'selected'}>Seulement quand je demande</option></select></label></div>
   <div class="row" style="margin-top:12px"><span class="status${aiOn()?' on':''}">${aiOn()?'Clé enregistrée':'Pas de clé'}</span><span class="sp"></span><button class="ghost sm" data-act="aiclear">Effacer la conversation</button></div></section>
  <section><h2>Adresse de redirection</h2><p>À coller à l’identique dans la console Google et dans Azure.</p><div class="row"><code>${esc(REDIRECT)}</code><button class="sm" data-act="copyuri">Copier</button></div></section>
- <section><h2>Journée type</h2><div class="grid2">${num('workStart','Début du travail (h)',0,23)}${num('workEnd','Fin du travail (h)',1,24)}${num('dayStart','Agenda : première heure',0,23)}${num('dayEnd','Agenda : dernière heure',1,24)}${num('pomo','Pomodoro (min)',5,90)}${num('brk','Pause (min)',1,30)}</div></section>
+ <section><h2>Journée type</h2><div class="grid2">${num('workStart','Début du travail (h)',0,23)}${num('workEnd','Fin du travail (h)',1,24)}${num('dayStart','Agenda : première heure',0,23)}${num('dayEnd','Agenda : dernière heure',1,24)}<label>Agenda vivant<select data-set="liveShift"><option value="1" ${s.liveShift!==false?'selected':''}>Le temps qui passe décale les créneaux</option><option value="" ${s.liveShift===false?'selected':''}>Créneaux fixes</option></select></label></div></section>
  <section><h2>Canaux</h2><p>Des catégories pour classer tes tâches et voir où passe ton temps. Tape <code>#nom</code> en créant une tâche pour l’y ranger.</p>
   ${S.channels.map(c=>`<div class="chrow"><input type="color" data-chc="${esc(c.id)}" value="${esc(c.color)}" aria-label="Couleur"><input data-chn="${esc(c.id)}" value="${esc(c.name)}" aria-label="Nom du canal"><button class="danger sm" data-act="chdel" data-id="${esc(c.id)}">Supprimer</button></div>`).join('')}
   <button class="sm" data-act="chadd">+ Ajouter un canal</button></section>
@@ -988,7 +1045,7 @@ function viewCal(){
   const top=Math.max(0,y(it.s)),h=Math.max(20,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
   const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<36?' short':'';
   if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
-  const t=it.t,c=ch(t.channel);return `<div class="blk${t.done?' done':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
+  const t=it.t,c=ch(t.channel);const act=S.running&&S.running.taskId===t.id;return `<div class="blk${t.done?' done':''}${act?' active':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
  }).join('');
  const n=new Date(),nowTop=d===today()?y(n):-1;
  const gState=gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gEvents[d]&&!(gEvents[d]||[]).length?`<div class="pill">Aucun rendez-vous ce jour-là${gCals?' dans '+gCals.filter(calOn).length+' agenda(s)':''}</div>`:''))):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`;
@@ -1189,7 +1246,7 @@ function ritNext(){
 function openFocus(id){
  const t=T(id);if(!t)return;
  if(!$('#modal').classList.contains('hidden')){$('#modal').classList.add('hidden');modalTask=null;ritual=null}
- focusOn=id;if(!S.running||S.running.taskId!==id)startTimer(id);renderFocus();
+ focusOn=id;if(!S.running||S.running.taskId!==id)startTimer(id);activate(t);renderFocus();
 }
 function renderFocus(){
  const el=$('#focus');
@@ -1199,14 +1256,11 @@ function renderFocus(){
  el.classList.remove('hidden');
  el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<button class="x" data-act="focusclose">Quitter le focus (Échap)</button></div>
  <h1 class="ftitle">${esc(t.title)}</h1>
- <div><div class="fclock" data-live="focus">${clock(actualSec(t))}</div><div class="fsub">${t.est?'Estimé : '+fmtMin(t.est):'Pas d’estimation'}${run?'':' · en pause'}</div></div>
- <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button><button class="ghost big" data-act="pomo">${pomo?'Arrêter le Pomodoro':'Pomodoro '+S.settings.pomo+' min'}</button><button class="ok big" data-act="focusdone" data-id="${t.id}">Terminer la tâche</button></div>
- ${pomo?`<div class="pomo" data-live="pomo">${pomoTxt()}</div>`:''}
+ <div><div class="fclock" data-live="focus">${clock(actualSec(t))}</div><div class="fsub">${t.est?'Estimé : '+fmtMin(t.est):'Pas d’estimation'}${run?'':' · en pause'}${t.block?' · créneau '+hm(new Date(t.block.start))+'–'+hm(new Date(t.block.end)):''}${(()=>{const nx=dayTasks(today()).filter(x=>!x.done&&x!==t&&x.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start))[0];return nx?' · ensuite : '+esc(nx.title)+' à '+hm(new Date(nx.block.start)):''})()}</div></div>
+ <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button><button class="ok big" data-act="focusdone" data-id="${t.id}">Terminer la tâche</button></div>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="fsub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form></div>
  <textarea class="fnotes" data-fnotes="${t.id}" placeholder="Notes…">${esc(t.notes)}</textarea></div>`;
 }
-const pomoLeft=()=>pomo?(pomo.phase==='work'?S.settings.pomo:S.settings.brk)*60-(Date.now()-pomo.start)/1000:0;
-const pomoTxt=()=>pomo?(pomo.phase==='work'?'Concentration — encore ':'Pause — encore ')+clock(pomoLeft()):'';
 
 /* ---------- boucle d'une seconde ---------- */
 setInterval(()=>{
@@ -1214,8 +1268,6 @@ setInterval(()=>{
  if(t){const el=document.querySelector('[data-live="run"]');if(el)el.textContent=clock(actualSec(t));
   const f=document.querySelector('[data-live="focus"]');if(f&&focusOn===t.id)f.textContent=clock(actualSec(t));
   const c=document.querySelector(`[data-live="t-${t.id}"]`);if(c)c.textContent=fmtMin(actualSec(t)/60)+' / '+(t.est?fmtMin(t.est):'—');}
- if(pomo){if(pomoLeft()<=0){chime(pomo.phase==='work'?880:660);if(pomo.phase==='work'){pomo={phase:'break',start:Date.now()};stopTimer();toast('Pause ! Lève-toi quelques minutes.')}else{pomo={phase:'work',start:Date.now()};if(focusOn)startTimer(focusOn);toast('C’est reparti.')}renderFocus()}
-  const p=document.querySelector('[data-live="pomo"]');if(p)p.textContent=pomoTxt()}
  const nl=document.querySelector('[data-live="now"]');if(nl){const n=new Date();nl.style.top=((n.getHours()-S.settings.dayStart)*60+n.getMinutes())/60*PX+'px'}
  if(today()!==lastDay){const was=lastDay;lastDay=today();if(cur===was)cur=lastDay;genRecurring();render()}
 },1000);
@@ -1236,9 +1288,8 @@ document.addEventListener('click',async e=>{
   case'openfocus':openFocus(id);break;
   case'focusnext':{const t=dayTasks(cur).find(t=>!t.done);t?openFocus(t.id):toast('Aucune tâche à faire ce jour-là');break}
   case'focusclose':focusOn=null;renderFocus();render();break;
-  case'focusdone':{await toggleDone(id);pomo=null;const nx=dayTasks(cur).find(t=>!t.done);focusOn=null;renderFocus();toast(nx?'Bravo ! Prochaine : '+nx.title:'Bravo ! Tout est fait.');break}
-  case'timer':S.running&&S.running.taskId===id?(stopTimer(),render()):startTimer(id);renderFocus();break;
-  case'pomo':pomo=pomo?null:{phase:'work',start:Date.now()};if(pomo&&focusOn&&!S.running)startTimer(focusOn);renderFocus();break;
+  case'focusdone':{await toggleDone(id);const nx=dayTasks(cur).find(t=>!t.done);focusOn=null;renderFocus();toast(nx?'Bravo ! Prochaine : '+nx.title:'Bravo ! Tout est fait.');break}
+  case'timer':if(S.running&&S.running.taskId===id){stopTimer();render()}else{startTimer(id);const tt=T(id);if(tt)activate(tt)}renderFocus();break;
   case'prev':cur=addDays(cur,-1);render();break;
   case'next':cur=addDays(cur,1);render();break;
   case'prevw':cur=addDays(cur,-7);render();break;
@@ -1337,7 +1388,7 @@ document.addEventListener('change',async e=>{
   save();render();if(['day','time','recur','est'].includes(f))openTask(t.id);return;
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);setBlock(t,dt,true);syncOrder(ritual.day)}else clearBlock(t,true);save();render();renderRitual()}return}
- if(el.dataset.set){const k=el.dataset.set;S.settings[k]=k==='aiAuto'?!!el.value:el.type==='number'?+el.value:el.value.trim();save();if(el.type==='number'||k==='aiKey')render();return}
+ if(el.dataset.set){const k=el.dataset.set;S.settings[k]=(k==='aiAuto'||k==='liveShift')?!!el.value:el.type==='number'?+el.value:el.value.trim();save();if(el.type==='number'||k==='aiKey')render();return}
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
  if(el.dataset.chn){const c=ch(el.dataset.chn);if(c){c.name=el.value.trim()||c.name;save()}return}
@@ -1397,6 +1448,7 @@ document.addEventListener('pointerup',()=>{if(!rz)return;const {t,m}=rz;rz=null;
 // rafraîchissement régulier de l'agenda Google
 setInterval(()=>{if(!document.hidden&&gTok()&&$('#modal').classList.contains('hidden')){const a=document.activeElement;if(a&&a.matches('input,textarea'))return;const w=monday(cur);view==='week'?ensureRange(w,addDays(w,6),true):ensureRange(cur,cur,true)}},5*60*1000);
 
+setInterval(liveTick,30000);setTimeout(liveTick,3000);
 /* ---------- clavier ---------- */
 document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});
 document.addEventListener('keydown',e=>{
