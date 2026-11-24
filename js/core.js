@@ -201,3 +201,9 @@ function chime(f){try{actx=actx||new (window.AudioContext||window.webkitAudioCon
 // Apparence : fonds neutres, mode clair/sombre, une couleur d'accent
 const ACCENTS=[{k:'peche',n:'Pêche',l:'#C9714A',d:'#E8A283'},{k:'sauge',n:'Sauge',l:'#4F7D57',d:'#8DBA96'},{k:'lavande',n:'Lavande',l:'#625CA8',d:'#A9A3E6'},{k:'or',n:'Or mat',l:'#94731F',d:'#D4B05A'},{k:'ardoise',n:'Bleu ardoise',l:'#41679E',d:'#86A8D8'},{k:'petrole',n:'Pétrole',l:'#26737A',d:'#6DC0C4'}];
 function applyLook(){const s=S.settings||{},r=document.documentElement,a=ACCENTS.find(x=>x.k===s.accent)||ACCENTS[0];r.dataset.accent=a.k;if(s.mode==='light'||s.mode==='dark')r.dataset.theme=s.mode;else delete r.dataset.theme;const dark=s.mode==='dark'||(s.mode!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);const m=document.querySelector('meta[name=theme-color]');if(m)m.content=dark?'#141415':'#f6f6f5'}
+
+// Priorité : la tâche se place en tête (haute), après les hautes (normale) ou en fin (basse), sans bouger les autres
+function placeByPrio(t){if(!t||!t.day||t.done)return;const rk=x=>x.prio==='high'?0:x.prio==='low'?2:1;
+ const L=dayTasks(t.day).filter(x=>!x.done&&x!==t),r=rk(t);let i;
+ if(r===2)i=L.length;else{i=0;L.forEach((x,k)=>{if(rk(x)<r)i=k+1})}
+ L.splice(i,0,t);L.forEach((x,k)=>x.order=k+1);dayTasks(t.day).filter(x=>x.done).forEach((x,k)=>x.order=L.length+k+1)}

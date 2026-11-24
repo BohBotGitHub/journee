@@ -722,6 +722,21 @@ def _(c):
     pg.evaluate("()=>startRitual('plan',window.journee.fn.today())"); pg.wait_for_timeout(200)
     assert not errs, errs; ctx.close()
 
+@test('Priorité : haute monte en tête, basse descend en fin, normale se place après les hautes')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn;S.tasks=S.tasks.filter(t=>t.day!==f.today());['A','B','C','D'].forEach((n,i)=>S.tasks.push({id:'p'+n,title:'Tâche '+n,day:f.today(),order:i+1,est:15,prio:'',done:false,subtasks:[]}));window.journee.save();window.journee.render&&window.journee.render()}"); tick(pg, 300)
+    order = lambda: st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>t.id).join(',')")
+    pg.evaluate("()=>window.journee.fn.openTask?0:0")
+    def setp(i, p):
+        pg.evaluate(f"()=>{{openTask('{i}')}}"); tick(pg, 100)
+        pg.click(f'#modal [data-act="setprio"][data-p="{p}"]'); tick(pg, 100); pg.keyboard.press('Escape'); tick(pg, 100)
+    setp('pC', 'high'); assert order() == 'pC,pA,pB,pD', order()
+    setp('pA', 'low'); assert order() == 'pC,pB,pD,pA', order()
+    setp('pD', 'high'); assert order() == 'pD,pC,pB,pA', order()
+    setp('pD', ''); assert order() == 'pC,pD,pB,pA', order()
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

@@ -111,7 +111,7 @@ document.addEventListener('click',async e=>{
   case'synchide':lsSet('journee.sync.hide',today());renderSyncBar();break;
   case'timerreset':{const t=T(id);if(!t)break;const prev={a:t.actual,s:S.running&&S.running.taskId===id?S.running.start:null};t.actual=0;if(prev.s)S.running.start=Date.now();save();renderFocus();render();timerUndo={id,...prev,at:Date.now()};toast('Minuteur remis à zéro · Ctrl+Z (⌘Z) pour annuler');break}
   case'toastact':{const f=toastFn;toastFn=null;$('#toast').classList.remove('show');if(f){f();save();render();if(modalTask)openTask(modalTask)}break}
-  case'setprio':{const t=T(id);if(t){t.prio=b.dataset.p;save();render();if(modalTask===id)openTask(id);else if(!$('#modal').classList.contains('hidden'))taskSheet(id)}break}
+  case'setprio':{const t=T(id);if(t){const was=t.prio||'';t.prio=b.dataset.p;if(was!==(t.prio||''))placeByPrio(t);save();render();if(modalTask===id)openTask(id);else if(!$('#modal').classList.contains('hidden'))taskSheet(id)}break}
   case'hardrefresh':{b.classList.add('spin');try{save();await Promise.race([driveSync(),new Promise(r=>setTimeout(r,4000))])}catch(err){}
    try{const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg){await reg.update().catch(()=>{});if(reg.waiting)reg.waiting.postMessage('skip')}}catch(err){}
    try{if(window.caches){for(const k of await caches.keys())await caches.delete(k)}}catch(err){}
@@ -187,7 +187,7 @@ document.addEventListener('change',async e=>{
    case'time':if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day)}else{t.pinned=false;if(!flowOn())clearBlock(t,true)}break;
    case'obj':t.objId=el.value||null;break;
    case'due':{t.due=el.value||null;if(t.due&&t.day&&t.day>t.due){const nd=t.due<today()?today():t.due;if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;t.order=nextOrder(nd);toast('Date prévue avancée au '+fmtDay(nd,{weekday:'long',day:'numeric'})+' pour tenir l’échéance')}break}
-   case'prio':t.prio=el.value;break;
+   case'prio':if((t.prio||'')!==(el.value||'')){t.prio=el.value;placeByPrio(t)}break;
    case'recur':setRecur(t,el.value);break;
    case'actual':if(S.running&&S.running.taskId===t.id)S.running.start=Date.now();t.actual=Math.max(0,+el.value||0)*60;break;
    default:return;
