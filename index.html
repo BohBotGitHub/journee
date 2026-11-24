@@ -230,6 +230,16 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 .aisug{display:inline-flex;align-items:center;gap:4px;background:var(--acc2);color:var(--ink);border-radius:6px;padding:0 0 0 6px;font-size:12px}
 .aisug button{min-height:22px;height:22px;padding:0 6px;border:0;background:transparent;font-size:12px}
 .badge{display:inline-block;min-width:18px;height:18px;border-radius:9px;background:var(--acc);color:#fff;font-size:11px;line-height:18px;text-align:center;margin-left:4px;padding:0 4px}
+.aibox{margin-top:14px;border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:10px;padding:10px 12px;background:var(--panel2);font-size:14px;display:flex;flex-direction:column;gap:6px}
+.aibox p{margin:0;white-space:pre-wrap}
+.evlist{display:flex;flex-direction:column;gap:5px;margin:0 0 14px}
+.evlist h4{font-size:13px;color:var(--mute);font-weight:600;margin:0 0 2px}
+.evrow{display:flex;align-items:center;gap:10px;background:var(--ev);color:var(--evi);border-radius:9px;padding:6px 10px;font-size:14px}
+.evrow .evt{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.evrow .evn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evrow.free{background:transparent;border:1px dashed var(--evi)}
+.ev{cursor:pointer}.ev.free{background:repeating-linear-gradient(135deg,var(--ev) 0 6px,transparent 6px 12px);border-left-style:dashed;opacity:.85}
+.ev a{color:inherit;text-decoration:none;float:right;padding-left:4px}
 .thinking{color:var(--mute);font-size:13px;padding:0 14px 10px}
 @media (max-width:1100px){
  #app{grid-template-columns:196px minmax(0,1fr)}
@@ -451,9 +461,11 @@ async function ensureRange(from,to,force){
  }catch(e){days.forEach(d=>gEvents[d]=gEvents[d]||[]);toast('Google Agenda : '+e.message)}
  finally{delete gLoading[k];render()}
 }
+const evKey=e=>e.recurringEventId||e.id;
+const evFree=e=>{const m=(S.evMode||{})[evKey(e)];return m?m==='free':e.transparency==='transparent'};
 const isMine=e=>!!(e.extendedProperties&&e.extendedProperties.private&&e.extendedProperties.private.journeeTask);
 const timedEvents=d=>(gEvents[d]||[]).filter(e=>e.start.dateTime&&!isMine(e));
-function meetingMin(d){return timedEvents(d).filter(e=>e.transparency!=='transparent').reduce((a,e)=>a+Math.max(0,(new Date(e.end.dateTime)-new Date(e.start.dateTime))/60000),0)}
+function meetingMin(d){return timedEvents(d).filter(e=>!evFree(e)).reduce((a,e)=>a+Math.max(0,(new Date(e.end.dateTime)-new Date(e.start.dateTime))/60000),0)}
 const evBody=t=>({summary:(t.done?'✓ ':'')+t.title,description:(t.notes?t.notes+'\n\n':'')+'Planifié avec Journée',start:{dateTime:t.block.start},end:{dateTime:t.block.end},extendedProperties:{private:{journeeTask:t.id}}});
 async function setBlock(t,start,noRender){
  if(!t.est)t.est=30;
@@ -473,12 +485,24 @@ function clearBlock(t,noRender){
  if(id&&gTok())gFetch(`/calendars/${calId()}/events/${encodeURIComponent(id)}`,{method:'DELETE'}).catch(()=>{});
  if(!noRender)render();
 }
+function reflow(d){
+ // suit l'ordre de la liste : les tâches déjà placées dans l'agenda sont réenchaînées dans cet ordre
+ const ts=dayTasks(d).filter(t=>!t.done&&t.block);if(ts.length<2)return 0;
+ const base=parseYmd(d),mins=x=>{const a=new Date(x);return a.getHours()*60+a.getMinutes()};
+ let st=Math.min(...ts.map(t=>mins(t.block.start)));
+ const busy=timedEvents(d).filter(e=>!evFree(e)).map(e=>[mins(e.start.dateTime),mins(e.end.dateTime)]);
+ S.tasks.filter(t=>t.done&&t.block&&ymd(new Date(t.block.start))===d).forEach(t=>busy.push([mins(t.block.start),mins(t.block.end)]));
+ let n=0;
+ for(const t of ts){const dur=t.est||30;for(let g=0;g<200;g++){const hit=busy.find(([a,b])=>st<b&&st+dur>a);if(!hit)break;st=Math.ceil(hit[1]/5)*5}
+  const dt=new Date(base);dt.setMinutes(st);if(dt.toISOString()!==new Date(t.block.start).toISOString()){setBlock(t,dt,true);n++}st+=dur}
+ return n;
+}
 function autoBox(d){
  const s=S.settings,base=parseYmd(d);
  let from=s.workStart*60;
  if(d===today()){const n=new Date();from=Math.max(from,Math.ceil((n.getHours()*60+n.getMinutes())/15)*15)}
  const end=s.workEnd*60;
- const busy=timedEvents(d).filter(e=>e.transparency!=='transparent').map(e=>{const a=new Date(e.start.dateTime),b=new Date(e.end.dateTime);return[a.getHours()*60+a.getMinutes(),b.getHours()*60+b.getMinutes()+(ymd(b)!==d?1440:0)]});
+ const busy=timedEvents(d).filter(e=>!evFree(e)).map(e=>{const a=new Date(e.start.dateTime),b=new Date(e.end.dateTime);return[a.getHours()*60+a.getMinutes(),b.getHours()*60+b.getMinutes()+(ymd(b)!==d?1440:0)]});
  S.tasks.filter(t=>t.block&&ymd(new Date(t.block.start))===d).forEach(t=>{const a=new Date(t.block.start),b=new Date(t.block.end);busy.push([a.getHours()*60+a.getMinutes(),b.getHours()*60+b.getMinutes()])});
  let n=0;
  for(const t of dayTasks(d).filter(t=>!t.done&&!t.block)){
@@ -617,18 +641,22 @@ async function syncTodo(){
 })();
 
 /* ---------- assistant Claude (API Anthropic, clé de l'utilisateur) ---------- */
-let aiBusy=false,aiUnread=0,aiQueue=new Set(),aiT=null;
+let modalAI=null,aiBusy=false,aiUnread=0,aiQueue=new Set(),aiT=null;
 const aiOn=()=>!!(S.settings.aiKey||'').trim();
 const AI_TOOL={name:'proposer',description:'Propose des changements concrets au planning de l’utilisateur. Utilise uniquement des ids de tâches existants pour order et updates.',input_schema:{type:'object',properties:{
  message:{type:'string',description:'Réponse courte à l’utilisateur, en français, au tutoiement.'},
  order:{type:'array',items:{type:'string'},description:'Ids des tâches non terminées du jour, dans l’ordre conseillé.'},
- updates:{type:'array',items:{type:'object',properties:{id:{type:'string'},channel:{type:'string',description:'Nom exact d’un canal existant'},est:{type:'integer',description:'Durée estimée en minutes'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['id']}},
+ updates:{type:'array',items:{type:'object',properties:{id:{type:'string'},channel:{type:'string',description:'Nom exact d’un canal existant'},est:{type:'integer',description:'Durée estimée en minutes'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},drop:{type:'boolean',description:'true pour proposer d’abandonner une tâche obsolète'},subtasks:{type:'array',items:{type:'string'},description:'Sous-tâches à ajouter'},reason:{type:'string'}},required:['id']}},
+ pick:{type:'array',items:{type:'string'},description:'Ids de tâches existantes (backlog, autres jours) à ajouter au jour affiché'},
+ blocks:{type:'array',items:{type:'object',properties:{id:{type:'string'},start:{type:'string',description:'HH:MM'}},required:['id','start']},description:'Créneaux horaires proposés pour des tâches du jour'},
+ intent:{type:'string',description:'Intention courte pour la journée'},
+ objectives:{type:'array',items:{type:'string'},description:'Objectifs proposés pour la semaine'},
  new_tasks:{type:'array',items:{type:'object',properties:{title:{type:'string'},channel:{type:'string'},est:{type:'integer'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['title']}}
 },required:['message']}};
 function aiContext(){
  const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.prio?' | priorité '+t.prio:''}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | canal '+ch(t.channel).name:' | sans canal'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}`;
  const hist=S.tasks.filter(t=>t.done&&t.day&&t.day>=addDays(t0,-14)&&t.est&&t.actual).slice(-25).map(t=>`- ${t.title} : estimé ${t.est} min, réel ${Math.round(t.actual/60)} min`);
- const meet=timedEvents(d).map(e=>`- ${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))} ${e.summary||'(sans titre)'}`);
+ const meet=timedEvents(d).map(e=>`- ${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))} ${e.summary||'(sans titre)'} (${evFree(e)?'compatible avec du travail sur les tâches':'occupé'})`);
  const wk=monday(d),days=[...Array(7)].map((_,i)=>addDays(wk,i));
  return `Maintenant : ${cap1(fmtDay(t0))}, ${hm(now)}. Jour affiché : ${fmtDay(d)} (${d}).
 Heures de travail : ${S.settings.workStart}h–${S.settings.workEnd}h.
@@ -665,15 +693,24 @@ function propItems(p){
  if(!p)return[];const out=[];
  const tt=id=>{const t=T(id);return t?t.title:null};
  if(p.order&&p.order.filter(tt).length>1)out.push({k:'order',label:'Réordonner : '+p.order.filter(tt).map(tt).join(' → ')});
- (p.updates||[]).forEach((u,i)=>{const t=T(u.id);if(!t)return;const parts=[];if(u.channel)parts.push('canal '+u.channel);if(u.est)parts.push(fmtMin(u.est));if(u.day)parts.push(u.day==='backlog'?'au backlog':'le '+fmtDay(u.day,{weekday:'long',day:'numeric'}));if(parts.length)out.push({k:'u'+i,label:t.title+' : '+parts.join(', '),reason:u.reason})});
+ (p.updates||[]).forEach((u,i)=>{const t=T(u.id);if(!t)return;if(u.drop){out.push({k:'u'+i,label:'Abandonner : '+t.title,reason:u.reason});return}const parts=[];if(u.subtasks&&u.subtasks.length)parts.push('sous-tâches : '+u.subtasks.join(', '));if(u.channel)parts.push('canal '+u.channel);if(u.est)parts.push(fmtMin(u.est));if(u.day)parts.push(u.day==='backlog'?'au backlog':'le '+fmtDay(u.day,{weekday:'long',day:'numeric'}));if(parts.length)out.push({k:'u'+i,label:t.title+' : '+parts.join(', '),reason:u.reason})});
+ (p.pick||[]).forEach((id,i)=>{const t=T(id);if(t&&t.day!==cur&&!t.done)out.push({k:'p'+i,label:'Ajouter au jour : '+t.title+(t.est?' ('+fmtMin(t.est)+')':'')})});
+ (p.blocks||[]).forEach((b,i)=>{const t=T(b.id);if(t&&/^\d{1,2}:\d{2}$/.test(b.start||''))out.push({k:'b'+i,label:'Créneau '+b.start+' : '+t.title})});
+ if(p.intent)out.push({k:'i',label:'Intention : '+p.intent});
+ (p.objectives||[]).forEach((o,i)=>{if(o)out.push({k:'o'+i,label:'Objectif : '+o})});
  (p.new_tasks||[]).forEach((n,i)=>{if(n.title)out.push({k:'n'+i,label:'Nouvelle tâche : '+n.title+(n.est?' ('+fmtMin(n.est)+')':''),reason:n.reason})});
  return out;
 }
 const chByName=n=>n?S.channels.find(c=>c.name.toLowerCase()===String(n).toLowerCase().trim()):null;
 function applyItem(m,k){
  const p=m.prop;if(!p)return;m.applied=m.applied||{};if(m.applied[k])return;
- if(k==='order'){const ids=p.order.filter(id=>T(id));ids.forEach((id,i)=>{T(id).order=i+1});const rest=dayTasks(cur).filter(t=>!ids.includes(t.id));rest.forEach((t,i)=>t.order=ids.length+i+1)}
- else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}t.aiSug=null}}
+ if(k==='order'){const ids=p.order.filter(id=>T(id));ids.forEach((id,i)=>{T(id).order=i+1});const rest=dayTasks(cur).filter(t=>!ids.includes(t.id));rest.forEach((t,i)=>t.order=ids.length+i+1);reflow(cur)}
+ else if(k[0]==='p'){const t=T(p.pick[+k.slice(1)]);if(t)moveTask(t.id,cur,true)}
+ else if(k[0]==='b'){const b=p.blocks[+k.slice(1)],t=b&&T(b.id);if(t){const[hh,mm]=b.start.split(':').map(Number),dt=parseYmd(cur);dt.setHours(hh,mm,0,0);if(t.day!==cur)moveTask(t.id,cur,true);setBlock(t,dt,true)}}
+ else if(k==='i'){S.days[cur]=Object.assign(S.days[cur]||{},{intent:p.intent})}
+ else if(k[0]==='o'){const o=p.objectives[+k.slice(1)];if(o)S.objectives.push({id:uid(),week:monday(cur),title:o,done:false})}
+ else if(k[0]==='u'&&p.updates[+k.slice(1)]&&p.updates[+k.slice(1)].drop){const t=T(p.updates[+k.slice(1)].id);if(t)deleteTask(t.id)}
+ else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){if(u.subtasks)u.subtasks.forEach(x=>t.subtasks.push({id:uid(),t:x,d:false}));const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}t.aiSug=null}}
  else if(k[0]==='n'){const n=p.new_tasks[+k.slice(1)];if(n){const day=n.day==='backlog'?null:(n.day||cur);const c=chByName(n.channel);S.tasks.push(mk({title:n.title,est:n.est||0,channel:c?c.id:null,day,order:nextOrder(day)}))}}
  m.applied[k]=true;save();render();
 }
@@ -794,6 +831,10 @@ const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day|
 const objChips=w=>{const os=weekObjs(w);return os.length?`<div class="objs">${os.map(o=>`<span class="obj${o.done?' done':''}">${esc(o.title)}</span>`).join('')}</div>`:''};
 
 /* ---------- vue Aujourd'hui ---------- */
+function eventsHtml(d){
+ const evs=timedEvents(d);if(!evs.length)return '';
+ return `<div class="evlist"><h4>Rendez-vous Google Agenda — indique si tu peux avancer sur tes tâches pendant</h4>${evs.map(e=>{const f=evFree(e);return `<div class="evrow${f?' free':''}"><span class="evt">${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))}</span><span class="evn">${esc(e.summary||'(sans titre)')}${e.recurringEventId?' ↻':''}</span><button class="sm ${f?'':'ghost'}" data-act="evtoggle" data-k="${esc(evKey(e))}">${f?'Je peux travailler':'Occupé'}</button></div>`}).join('')}</div>`;
+}
 function viewToday(){
  const d=cur,isT=d===today(),ts=dayTasks(d),info=S.days[d]||{};
  const past=isT?pastUndone():[];
@@ -801,10 +842,11 @@ function viewToday(){
  const done=ts.filter(t=>t.done);
  return `<div class="head"><div><h1>${title}</h1><div class="sub">${cap1(fmtDay(d))}${info.intent?' · '+esc(info.intent):''}</div></div>
  <div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>
- <div class="acts"><button class="${!info.planned&&d>=today()?'pri':''}" data-act="plan">${info.planned?'Replanifier':'Planifier ma journée'}</button><button data-act="shutdown">${info.shutdown?'Bilan du jour':'Clôturer la journée'}</button><button data-act="focusnext">Focus</button></div></div>
+ <div class="acts"><button class="${!info.planned&&d>=today()?'pri':''}" data-act="plan">${(()=>{const r=savedRit();return r&&r.type==='plan'&&r.day===d?'Reprendre la planification ('+(r.step+1)+'/5)':info.planned?'Replanifier':'Planifier ma journée'})()}</button><button data-act="shutdown">${info.shutdown?'Bilan du jour':'Clôturer la journée'}</button><button data-act="focusnext">Focus</button></div></div>
  ${past.length?`<div class="banner"><span>${past.length} tâche${past.length>1?'s':''} non terminée${past.length>1?'s':''} des jours précédents</span><span class="sp"></span><button class="sm pri" data-act="rollover">Tout reporter ici</button><button class="sm ghost" data-act="plan">Trier</button></div>`:''}
  ${objChips(monday(d))}
  ${loadBar(d)}
+ ${eventsHtml(d)}
  ${addForm(d,'Ajouter une tâche… (ex. « Appeler la banque 30m #perso »)')}
  <div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu. Glisse une tâche ici ou lance la planification.</div>'}</div>
  ${ts.length?`<div class="foot">${done.length}/${ts.length} terminée${done.length>1?'s':''} · ${fmtMin(ts.reduce((a,t)=>a+actualSec(t),0)/60)} suivies</div>`:''}
@@ -903,7 +945,7 @@ function viewCal(){
  const blocksHtml=out.map(it=>{
   const top=Math.max(0,y(it.s)),h=Math.max(20,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
   const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<36?' short':'';
-  if(it.k==='ev'){const e=it.e0;return `<a class="ev${sh}" style="${pos}" href="${esc(e.htmlLink||'#')}" target="_blank" rel="noopener"><b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small></a>`}
+  if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
   const t=it.t,c=ch(t.channel);return `<div class="blk${t.done?' done':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="task|${t.id}" data-act="open" data-id="${t.id}"><b>${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small></div>`;
  }).join('');
  const n=new Date(),nowTop=d===today()?y(n):-1;
@@ -967,7 +1009,7 @@ function closeModal(){
 }
 function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':''}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${s.id}" aria-label="Cocher">${s.d?'✓':''}</button><span>${esc(s.t)}</span><button class="x" data-act="subd" data-tid="${t.id}" data-s="${s.id}" aria-label="Supprimer">×</button></div>`).join('')}
 function openTask(id){
- const t=T(id);if(!t)return;modalTask=id;ritual=null;
+ const t=T(id);if(!t)return;if(modalAI&&modalAI.tid!==id)modalAI=null;modalTask=id;ritual=null;
  const objs=weekObjs(monday(t.day||today())),r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
  const ests=[0,10,15,20,30,45,60,75,90,120,150,180,240];if(!ests.includes(t.est))ests.push(t.est),ests.sort((a,b)=>a-b);
  showModal(`<div class="mhead"><input class="mtitle" data-f="title" value="${esc(t.title)}" aria-label="Titre"><button class="x" data-act="close" aria-label="Fermer">×</button></div>
@@ -981,15 +1023,60 @@ function openTask(id){
  <label>Priorité<select data-f="prio">${[['','Normale'],['low','Basse'],['high','Haute'],['urgent','Urgente']].map(([v,l])=>`<option value="${v}" ${(t.prio||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>
  <label>Temps passé (min)<input type="number" min="0" data-f="actual" value="${Math.round(actualSec(t)/60)}"></label>
  </div>
- <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="sub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form></div>
+ <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="sub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form>${aiOn()?modalAIHtml(t):''}</div>
  <label class="full">Notes<textarea data-f="notes" rows="4">${esc(t.notes)}</textarea></label>
  <div class="mfoot"><button class="danger" data-act="del" data-id="${t.id}">Supprimer</button>${t.src?'<span class="src">Liée à Microsoft To Do</span>':msOn()?`<button class="ghost sm" data-act="pushtodo" data-id="${t.id}">Créer dans To Do</button>`:''}<span class="sp"></span><button class="ghost" data-act="play" data-id="${t.id}">Focus</button><button class="pri" data-act="close">OK</button></div>`);
 }
 
+function modalAIHtml(t){
+ const a=modalAI&&modalAI.tid===t.id?modalAI:null;
+ if(!a)return `<div class="row" style="margin-top:8px"><button class="sm" data-act="aisplit" data-id="${t.id}">Découper et estimer avec Claude</button></div>`;
+ if(a.loading)return '<div class="aibox"><span class="mute">Claude réfléchit…</span></div>';
+ if(a.error)return `<div class="aibox"><span class="mute">Claude : ${esc(a.error)}</span><button class="sm" data-act="aisplit" data-id="${t.id}">Réessayer</button></div>`;
+ const items=propItems(a.prop),ap=a.applied||{};
+ return `<div class="aibox"><b>Claude</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="modalapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="modalapplyall">Tout appliquer</button>':''}</div>`;
+}
+async function aiSplit(t){
+ modalAI={tid:t.id,loading:true};openTask(t.id);
+ try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nTâche [${t.id}] « ${t.title} »${t.notes?' — notes : '+t.notes.slice(0,500):''}. Découpe-la en 3 à 6 sous-tâches concrètes et actionnables (updates subtasks), propose une durée réaliste (est) et un canal si absent. Message très court.`}],true);
+  modalAI={tid:t.id,text:r.text,prop:r.prop,applied:{}}}
+ catch(e){modalAI={tid:t.id,error:e.message}}
+ if(modalTask===t.id)openTask(t.id);
+}
 /* ---------- rituels ---------- */
+const RKEY='journee.rit';
+const saveRit=()=>{if(ritual)lsSet(RKEY,JSON.stringify(Object.assign({},ritual,{at:Date.now()})));else lsDel(RKEY)};
+const savedRit=()=>{try{const r=JSON.parse(lsGet(RKEY)||'null');return r&&Date.now()-r.at<12*3600e3?r:null}catch(e){return null}};
+const RIT_AI={
+ plan0:{when:d=>pastUndone().some(t=>t.day<d),q:d=>`Rituel du matin, étape « hier ». Pour chaque tâche en retard, propose : la reprendre le ${d} (updates day=${d}), la renvoyer au backlog (day=backlog) ou l’abandonner si elle est obsolète (drop=true). Justifie en quelques mots.`},
+ plan1:{when:()=>true,q:d=>`Rituel du matin, étape « choisir ». Dans le backlog et les autres jours, choisis les tâches à ajouter au ${d} (pick) en tenant compte de la charge, des réunions occupées, des priorités et des objectifs de la semaine. Propose au plus 2 nouvelles tâches utiles.`},
+ plan2:{when:d=>dayTasks(d).some(t=>!t.done),q:d=>`Rituel du matin, étape « estimer ». Donne une durée (updates est) aux tâches du ${d} sans durée ou mal estimées d’après l’historique. Si la journée déborde, propose des reports (updates day).`},
+ plan3:{when:d=>dayTasks(d).some(t=>!t.done&&!t.block),q:d=>`Rituel du matin, étape « planifier ». Propose un ordre (order) et des créneaux (blocks, HH:MM) pour les tâches non planifiées du ${d}, dans les heures de travail, sans chevaucher les rendez-vous occupés${d===today()?', à partir de maintenant':''}. Les rendez-vous « compatibles » peuvent accueillir des tâches légères.`},
+ plan4:{when:()=>true,q:d=>`Rituel du matin, dernière étape. Propose une intention courte et motivante pour la journée (intent), en lien avec ce qui compte le plus.`},
+ shutdown0:{when:()=>true,q:d=>`Rituel du soir. Fais un bilan bref et bienveillant de la journée du ${d} (ce qui a avancé, temps réel vs estimé) en 2-3 phrases, sans proposition.`},
+ shutdown1:{when:d=>dayTasks(d).some(t=>!t.done),q:d=>`Rituel du soir. Pour chaque tâche non terminée du ${d} : demain (${addDays(d,1)}), backlog ou abandon (drop). Garde demain réaliste.`},
+ weekplan1:{when:()=>true,q:d=>`Planification de la semaine. Propose 1 à 3 objectifs (objectives) pour la semaine du ${monday(d)}, à partir des tâches prévues, du backlog et des objectifs passés non atteints.`},
+ weekreview0:{when:()=>true,q:d=>`Revue de la semaine du ${monday(d)}. Fais une synthèse courte (ce qui a marché, où est passé le temps) et un conseil concret pour la semaine suivante, sans proposition.`}
+};
+async function aiRitual(){
+ if(!ritual||!aiOn())return;const key=ritual.type+ritual.step,R=RIT_AI[key];if(!R)return;
+ const rt=ritual,step=ritual.step;rt.ai=rt.ai||{};rt.ai[step]={loading:true};renderRitual();
+ try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\n${R.q(rt.day)}`}],true);rt.ai[step]={text:r.text,prop:r.prop,applied:{}}}
+ catch(e){rt.ai[step]={error:e.message}}
+ if(ritual===rt){saveRit();if(rt.step===step)renderRitual()}
+}
+function aiBox(){
+ if(!ritual||!aiOn()||!RIT_AI[ritual.type+ritual.step])return '';
+ const a=ritual.ai&&ritual.ai[ritual.step];
+ if(!a)return `<div class="aibox"><div class="row"><span class="mute">Claude peut t’aider sur cette étape.</span><span class="sp"></span><button class="sm" data-act="ritai">Demander à Claude</button></div></div>`;
+ if(a.loading)return `<div class="aibox"><span class="mute">Claude réfléchit…</span></div>`;
+ if(a.error)return `<div class="aibox"><div class="row"><span class="mute">Claude : ${esc(a.error)}</span><span class="sp"></span><button class="sm" data-act="ritai">Réessayer</button></div></div>`;
+ const items=propItems(a.prop),ap=a.applied||{};
+ return `<div class="aibox"><b>Claude</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="ritapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="ritapplyall">Tout appliquer</button>':''}<div class="row"><span class="sp"></span><button class="sm ghost" data-act="ritai">Nouvelle proposition</button></div></div>`;
+}
 const RIT={plan:['Hier','Choisir','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Clôture'],weekplan:['Semaine passée','Objectifs','Aperçu'],weekreview:['Chiffres','Réflexion']};
-function startRitual(type,day){modalTask=null;ritual={type,step:0,day:day||cur,picked:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}
-function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<span class="${k===i?'on':k<i?'past':''}">${esc(s)}</span>`).join('')}<span class="sp" style="background:none"></span></div>${body}<div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':'<button class="ghost" data-act="close">Plus tard</button>'}<span class="sp"></span>${ritual.type==='plan'&&aiOn()&&ritual.step<4?'<button data-act="askclaude">Demander à Claude</button>':''}<button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
+function startRitual(type,day){modalTask=null;const sv=savedRit();ritual=sv&&sv.type===type&&sv.day===(day||cur)?sv:{type,step:0,day:day||cur,picked:{},ai:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}
+function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<span class="${k===i?'on':k<i?'past':''}">${esc(s)}</span>`).join('')}<span class="sp" style="background:none"></span></div>${body}${aiBox()}<div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':''}<button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
 const durBtns=t=>`<div class="durs">${[15,30,45,60,90,120].map(v=>`<button class="sm${t.est===v?' on':''}" data-act="dur" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('')}</div>`;
 function renderRitual(){
  if(!ritual)return;const d=ritual.day,i=ritual.step,dl=fmtDay(d,{weekday:'long',day:'numeric',month:'long'});let h='';
@@ -1040,7 +1127,9 @@ function renderRitual(){
   else h=shell(`<h2>Ce que tu retiens</h2><p class="lead">Ce qui a marché, ce qui a coincé, ce que tu ajustes la semaine prochaine.</p>
    <textarea data-review rows="7">${esc((S.weeks[w]||{}).review||'')}</textarea>`,'Terminer la revue');
  }
- showModal(h);
+ showModal(h);saveRit();
+ const R=RIT_AI[ritual.type+ritual.step];
+ if(R&&aiOn()&&S.settings.aiAuto&&!(ritual.ai&&ritual.ai[ritual.step])&&R.when(ritual.day))aiRitual();
 }
 function ritNext(){
  const n=RIT[ritual.type].length,d=ritual.day;
@@ -1050,7 +1139,7 @@ function ritNext(){
  if(ritual.type==='weekplan'&&ritual.step===2){const w=monday(d);S.weeks[w]=Object.assign(S.weeks[w]||{},{planned:true})}
  if(ritual.type==='weekreview'&&ritual.step===1){const w=monday(d),v=sh.querySelector('[data-review]');S.weeks[w]=Object.assign(S.weeks[w]||{},{review:v?v.value.trim():''})}
  save();
- if(ritual.step>=n-1){const ty=ritual.type;closeModal();toast(ty==='plan'?'Journée planifiée. Bon travail !':ty==='shutdown'?'Journée clôturée. Repose-toi bien.':ty==='weekplan'?'Semaine planifiée.':'Revue enregistrée.');if(ty==='shutdown')chime(520);return}
+ if(ritual.step>=n-1){const ty=ritual.type;ritual=null;lsDel(RKEY);closeModal();toast(ty==='plan'?'Journée planifiée. Bon travail !':ty==='shutdown'?'Journée clôturée. Repose-toi bien.':ty==='weekplan'?'Semaine planifiée.':'Revue enregistrée.');if(ty==='shutdown')chime(520);return}
  ritual.step++;renderRitual();
 }
 
@@ -1095,7 +1184,7 @@ function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('sh
 document.addEventListener('click',async e=>{
  const nv=e.target.closest('#nav [data-view]');if(nv){go(nv.dataset.view);return}
  const sd=e.target.closest('[data-side]');if(sd){sideTab=sd.dataset.side;renderSide();return}
- if(e.target.id==='modal'){closeModal();return}
+ if(e.target.id==='modal'){if(!ritual)closeModal();return}
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,id=b.dataset.id;
  switch(a){
@@ -1150,6 +1239,13 @@ document.addEventListener('click',async e=>{
   case'copyuri':try{await navigator.clipboard.writeText(REDIRECT);toast('Adresse copiée')}catch(err){toast('Copie impossible : sélectionne l’adresse à la main')}break;
   case'chadd':S.channels.push({id:uid(),name:'Nouveau canal',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;
+  case'ritai':aiRitual();break;
+  case'ritapply':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){applyItem(a,b.dataset.k);saveRit();renderRitual()}break}
+  case'ritapplyall':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){propItems(a.prop).forEach(it=>applyItem(a,it.k));saveRit();renderRitual();toast('Suggestions appliquées')}break}
+  case'evtoggle':{if(e.target.closest('a'))break;const k=b.dataset.k;S.evMode=S.evMode||{};const ev=Object.values(gEvents).flat().find(x=>evKey(x)===k);const cur0=ev?evFree(ev):false;S.evMode[k]=cur0?'busy':'free';save();render();toast(cur0?'Marqué occupé':'Tu peux travailler pendant ce rendez-vous');break}
+  case'aisplit':{const t=T(id);if(t)aiSplit(t);break}
+  case'modalapply':{if(modalAI){applyItem(modalAI,b.dataset.k);openTask(modalTask)}break}
+  case'modalapplyall':{if(modalAI){propItems(modalAI.prop).forEach(it=>applyItem(modalAI,it.k));openTask(modalTask)}break}
   case'aiq':sideTab='ai';document.body.classList.add('side-open');aiAsk(b.dataset.q,true);break;
   case'aiapply':{const m=S.chat[+b.dataset.m];if(m)applyItem(m,b.dataset.k);break}
   case'aiapplyall':{const m=S.chat[+b.dataset.m];if(m)propItems(m.prop).forEach(it=>applyItem(m,it.k));toast('Propositions appliquées');break}
@@ -1175,6 +1271,9 @@ document.addEventListener('input',e=>{
  if(el.dataset.f&&modalTask){const t=T(modalTask);if(!t)return;
   if(el.dataset.f==='title'){t.title=el.value;if(t.recurId){const r=S.recurring.find(x=>x.id===t.recurId);if(r)r.title=t.title}save()}
   if(el.dataset.f==='notes'){t.notes=el.value;save()}}
+ if(ritual&&el.hasAttribute('data-intent')){S.days[ritual.day]=Object.assign(S.days[ritual.day]||{},{intent:el.value});save()}
+ if(ritual&&el.hasAttribute('data-note')){S.days[ritual.day]=Object.assign(S.days[ritual.day]||{},{note:el.value});save()}
+ if(ritual&&el.hasAttribute('data-review')){const w=monday(ritual.day);S.weeks[w]=Object.assign(S.weeks[w]||{},{review:el.value});save()}
  if(el.dataset.fnotes){const t=T(el.dataset.fnotes);if(t){t.notes=el.value;save()}}
 });
 document.addEventListener('change',async e=>{
@@ -1224,6 +1323,7 @@ document.addEventListener('drop',async e=>{
   const day=dz.slice(4),before=e.target.closest('.card');
   if(t.day!==day)moveTask(t.id,day,true);
   if(before&&before.dataset.id!==t.id){const b=T(before.dataset.id);if(b&&b.day===day){t.order=b.order-.5;renorm(day)}}
+  if(reflow(day))toast('Agenda réorganisé selon le nouvel ordre');
   save();render();
  }
 });
@@ -1249,6 +1349,7 @@ if(S.running&&T(S.running.taskId))renderRun();
 if(msOn()&&S.settings.msClientId)setTimeout(syncTodo,1500);
 setTimeout(driveSync,800);
 setTimeout(aiMorning,1500);
+{const r=savedRit();if(r&&Date.now()-r.at<3*3600e3&&r.day>=today()){cur=r.day;setTimeout(()=>{if(!ritual&&$('#modal').classList.contains('hidden')){ritual=r;renderRitual()}},400)}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){driveSync();if(msOn())syncTodo();if(gTok()){gEvents={};render()}}});
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 }
