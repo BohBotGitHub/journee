@@ -51,6 +51,8 @@ small,.mute{color:var(--mute)}
 #nav button[data-view] svg{width:18px;height:18px;flex:none;opacity:.7}
 #nav button[data-view].on{background:var(--panel);box-shadow:var(--sh);font-weight:700}
 #runchip{margin-top:auto}
+.tip{border:0;background:transparent;text-align:left;font-size:12px;color:var(--mute);display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:8px;min-height:0}.tip:empty{display:none}.tip kbd{color:var(--ink)}
+kbd.k{margin-left:6px;opacity:.75;font-size:11px;background:transparent;border-color:currentColor}
 .runbox{background:var(--acc2);border-radius:10px;padding:10px;font-size:13px;cursor:pointer}
 .runbox b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
 .runbox .t{font-variant-numeric:tabular-nums;font-weight:700;color:var(--acc)}
@@ -146,6 +148,15 @@ form.add input{background:var(--panel);border-style:dashed}
 .ctime .est{cursor:pointer;border-radius:6px;padding:1px 4px}.ctime .est:hover{background:var(--panel2)}
 #pop{position:fixed;z-index:70;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:8px;display:flex;flex-wrap:wrap;gap:4px;width:236px}
 #pop button{min-width:52px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}.seg button{border:0;border-radius:0;min-height:36px}.seg button.on{background:var(--ink);color:var(--bg)}
+.bigcal{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:auto;height:calc(100vh - 190px);height:calc(100dvh - 190px);min-height:360px}
+.bchead,.bcbody{display:grid;grid-template-columns:54px repeat(var(--n),minmax(0,1fr))}
+.bchead{border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:5}
+.bcday{padding:8px 8px 6px;border-left:1px solid var(--line);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.bcday.today b{color:var(--acc)}.bcday small{color:var(--mute);font-size:12px}.bcday .allday{padding:4px 0 0;border:0}
+.bcbody{position:relative;padding:8px 0 16px}
+.axis{position:relative}.axis .hr{border-top:0}.axis .hr span{left:auto;right:8px}
+.bccol{border-left:1px solid var(--line);padding:0 3px}.bccol .hr span{display:none}
 .ghostline{position:absolute;left:0;right:0;height:3px;background:var(--acc);border-radius:2px;pointer-events:none;z-index:4}
 .todo-item{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:grab;font-size:14px}
 .todo-item span{flex:1;overflow-wrap:anywhere}
@@ -167,6 +178,8 @@ label.full{margin-top:12px}
 .subs h4{font-size:13px;color:var(--mute);font-weight:500;margin-bottom:6px}
 .sub{display:flex;align-items:center;gap:8px;padding:4px 0}
 .sub .chk{width:18px;height:18px;min-height:18px;font-size:10px}
+.sub.cur{background:var(--acc2);border-radius:8px;padding-left:6px}
+.sub .play{width:26px;height:26px;min-height:26px;font-size:10px}
 .sub.d span{text-decoration:line-through;color:var(--mute)}
 .sub span{flex:1}
 .sub .x{font-size:16px;min-height:28px;min-width:28px}
@@ -248,6 +261,7 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 .evrow{display:flex;align-items:center;gap:10px;background:var(--ev);color:var(--evi);border-radius:9px;padding:6px 10px;font-size:14px}
 .evrow .evt{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
 .evrow .evn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evrow.mini{font-size:12.5px;padding:3px 8px;gap:6px}
 .evrow.free{background:transparent;border:1px dashed var(--evi)}
 .ev{cursor:pointer}.ev.free{background:repeating-linear-gradient(135deg,var(--ev) 0 6px,transparent 6px 12px);border-left-style:dashed;opacity:.85}
 .ev a{color:inherit;text-decoration:none;float:right;padding-left:4px}
@@ -261,6 +275,7 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
 }
 .stabs .closeside{display:none;margin-left:auto}
 @media (max-width:720px){
+ kbd.k,.tip{display:none!important}
  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
  #nav{grid-row:2;flex-direction:row;border-right:0;border-top:1px solid var(--line);padding:6px;gap:2px;overflow-x:auto}
  .brand,#runchip .runbox span{display:none}
@@ -287,6 +302,7 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
   <button data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
   <button data-view="side" id="sidebtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg>Agenda</button>
   <div id="runchip"></div>
+  <button id="tip" class="tip" data-act="keys" title="Voir tous les raccourcis (touche ?)"></button>
  </nav>
  <main id="main"></main>
  <aside id="side">
@@ -352,7 +368,7 @@ if(!S.seeded){
 
 /* ---------- état d'interface ---------- */
 const VIEWS=['today','week','backlog','objectives','settings'];
-let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,drag=null,scrolledCal='',lastDay=today();
+let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,focusSub=null,drag=null,scrolledCal='',lastDay=today();
 let gEvents={},gLoading={};
 const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,tLoading:false};
 
@@ -566,7 +582,7 @@ function planFlow(d){
 function queueFlow(){if(inFlow||!flowOn())return;clearTimeout(flowQ);flowQ=setTimeout(runFlow,60)}
 function runFlow(){
  if(!flowOn())return;inFlow=true;let n=0;
- try{const t0=today(),days=new Set([t0]);if(cur>t0)days.add(cur);if(view==='week'){const w=monday(cur);for(let i=0;i<7;i++){const x=addDays(w,i);if(x>=t0)days.add(x)}}for(const d of days)n+=planFlow(d)}
+ try{const t0=today(),days=new Set([t0]);if(cur>t0)days.add(cur);if(view==='week'){const w=monday(cur);for(let i=0;i<7;i++){const x=addDays(w,i);if(x>=t0)days.add(x)}}if(layout==='cal')bigDays().forEach(x=>{if(x>=t0)days.add(x)});for(const d of days)n+=planFlow(d)}
  finally{inFlow=false}
  if(n){lsSet(KEY,JSON.stringify(S));if(!rz&&!drag)render()}
 }
@@ -954,7 +970,7 @@ function loadBar(d){
  return `<div class="load${L.over>0?' over':''}"><div class="lbar"><i class="m" style="width:${p(L.meet)}%"></i><i class="t" style="width:${Math.max(0,Math.min(100-p(L.meet),p(L.task)))}%"></i></div>
  <div class="ltxt"><span>${fmtMin(L.task)} de tâches${L.meet?' · '+fmtMin(L.meet)+' de réunions':''} sur ${fmtMin(L.cap)} de travail</span><span>${L.over>0?fmtMin(L.over)+' de trop':fmtMin(-L.over)+' de marge'}</span></div></div>`;
 }
-const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day||''}"><input name="t" data-keep="${keep||'add-'+(day||'backlog')}" placeholder="${esc(ph)}" autocomplete="off" aria-label="Nouvelle tâche"></form>`;
+const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day||''}"><input name="t" data-keep="${keep||'add-'+(day||'backlog')}" placeholder="${esc(ph)}${!keep&&ph.length>20?' — touche N':''}" autocomplete="off" aria-label="Nouvelle tâche"></form>`;
 const objChips=w=>{const os=weekObjs(w);return os.length?`<div class="objs">${os.map(o=>`<span class="obj${o.done?' done':''}">${esc(o.title)}</span>`).join('')}</div>`:''};
 
 /* ---------- vue Aujourd'hui ---------- */
@@ -969,7 +985,7 @@ function viewToday(){
  const done=ts.filter(t=>t.done);
  return `<div class="head"><div><h1>${title}</h1><div class="sub">${cap1(fmtDay(d))}${info.intent?' · '+esc(info.intent):''}</div></div>
  <div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>
- <div class="acts"><button class="${!info.planned&&d>=today()?'pri':''}" data-act="plan">${(()=>{const r=savedRit();return r&&r.type==='plan'&&r.day===d?'Reprendre la planification ('+(r.step+1)+'/5)':info.planned?'Replanifier':'Planifier ma journée'})()}</button><button data-act="shutdown">${info.shutdown?'Bilan du jour':'Clôturer la journée'}</button><button data-act="focusnext">Focus</button></div></div>
+ <div class="acts"><button class="${!info.planned&&d>=today()?'pri':''}" data-act="plan">${(()=>{const r=savedRit();return r&&r.type==='plan'&&r.day===d?'Reprendre la planification ('+(r.step+1)+'/5)':info.planned?'Replanifier':'Planifier ma journée'})()}<kbd class="k">P</kbd></button><button data-act="shutdown">${info.shutdown?'Bilan du jour':'Clôturer la journée'}<kbd class="k">S</kbd></button><button data-act="focusnext">Focus<kbd class="k">F</kbd></button><button data-act="layout" title="Touche C">⇄ Grand agenda<kbd class="k">C</kbd></button></div></div>
  ${past.length?`<div class="banner"><span>${past.length} tâche${past.length>1?'s':''} non terminée${past.length>1?'s':''} des jours précédents</span><span class="sp"></span><button class="sm pri" data-act="rollover">Tout reporter ici</button><button class="sm ghost" data-act="plan">Trier</button></div>`:''}
  ${objChips(monday(d))}
  ${loadBar(d)}
@@ -986,11 +1002,12 @@ function viewWeek(){
  const tot=days.reduce((a,d)=>a+dayTasks(d).reduce((x,t)=>x+(t.est||0),0),0);
  return `<div class="head"><div><h1>Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</h1><div class="sub">${fmtMin(tot)} de tâches prévues</div></div>
  <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
- <div class="acts"><button data-act="weekplan">Planifier la semaine</button></div></div>
+ <div class="acts"><button data-act="weekplan">Planifier la semaine</button><button data-act="layout" title="Touche C">⇄ Grand agenda<kbd class="k">C</kbd></button></div></div>
  ${objChips(w)}
  <div class="week">${days.map(d=>{const ts=dayTasks(d),L=loadInfo(d);return `<div class="wcol${d===today()?' today':''}">
   <h3 data-act="openday" data-day="${d}">${cap1(fmtDay(d,{weekday:'short',day:'numeric'}))}<small class="${L.over>0?'':'mute'}" style="${L.over>0?'color:var(--warn)':''}">${fmtMin(L.task)}</small></h3>
   ${addForm(d,'+ Tâche')}
+  ${timedEvents(d).map(e=>`<div class="evrow mini${evFree(e)?' free':''}" title="${esc(e.summary||'')}"><span class="evt">${hm(new Date(e.start.dateTime))}</span><span class="evn">${esc(e.summary||'(sans titre)')}</span></div>`).join('')}
   <div class="list" data-drop="day:${d}">${ts.map(card).join('')}</div></div>`}).join('')}</div>`;
 }
 
@@ -1053,18 +1070,17 @@ function viewSettings(){
   <button class="sm" data-act="chadd">+ Ajouter un canal</button></section>
  <section><h2>Importer depuis Sunsama</h2><p>Dans Sunsama : Settings → Account Management → export. Les tâches terminées de plus de 30 jours vont dans l’historique (utilisé par Claude pour estimer tes durées) ; les rituels Sunsama ne sont pas importés. Tu peux réimporter sans créer de doublons.</p><input type="file" accept=".csv,text/csv" data-sunsama aria-label="Fichier d’export Sunsama">${S.archive&&S.archive.length?`<p style="margin-top:8px">Historique : ${S.archive.length} tâches archivées.</p>`:''}</section>
  <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
- <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus sur la prochaine tâche</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
+ <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus sur la prochaine tâche</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Objectifs</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
  </div>`;
 }
 
 /* ---------- panneau latéral : agenda ---------- */
 const PX=56;
-function viewCal(){
- const d=cur,s=S.settings,st=s.dayStart,en=Math.max(s.dayEnd,st+1),H=(en-st)*PX;
- const ev=gEvents[d]||[],allday=ev.filter(e=>e.start.date),timed=timedEvents(d);
- const blocks=S.tasks.filter(t=>t.block&&ymd(new Date(t.block.start))===d);
+function calGeom(){const st=S.settings.dayStart,en=Math.max(S.settings.dayEnd,st+1);return{st,en,H:(en-st)*PX}}
+function calCol(d){
+ const s=S.settings,{st,en,H}=calGeom();
+ const timed=timedEvents(d),blocks=S.tasks.filter(t=>t.block&&ymd(new Date(t.block.start))===d);
  const items=[...timed.map(e=>({k:'ev',s:new Date(e.start.dateTime),e:new Date(e.end.dateTime),e0:e})),...blocks.map(t=>({k:'b',s:new Date(t.block.start),e:new Date(t.block.end),t}))].sort((a,b)=>a.s-b.s||b.e-a.e);
- // colonnes pour les chevauchements
  let cl=[],cend=0;const out=[];
  const flush=()=>{const cols=[];cl.forEach(it=>{let c=cols.findIndex(e=>e<=it.s);if(c<0){c=cols.length;cols.push(0)}cols[c]=it.e;it.col=c});cl.forEach(it=>it.n=cols.length);out.push(...cl);cl=[]};
  items.forEach(it=>{if(cl.length&&it.s>=cend)flush();cl.push(it);cend=Math.max(cend,+it.e)});flush();
@@ -1074,17 +1090,43 @@ function viewCal(){
   const top=Math.max(0,y(it.s)),h=Math.max(20,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
   const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<36?' short':'';
   if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
-  const t=it.t,c=ch(t.channel);const act=S.running&&S.running.taskId===t.id;return `<div class="blk${t.done?' done':''}${act?' active':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${t.pinned?'📌 ':''}${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
+  const t=it.t,c=ch(t.channel),act=S.running&&S.running.taskId===t.id;return `<div class="blk${t.done?' done':''}${act?' active':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${t.pinned?'📌 ':''}${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
  }).join('');
- const n=new Date(),nowTop=d===today()?y(n):-1;
- const gState=gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gEvents[d]&&!(gEvents[d]||[]).length?`<div class="pill">Aucun rendez-vous ce jour-là${gCals?' dans '+gCals.filter(calOn).length+' agenda(s)':''}</div>`:''))):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`;
- return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span>${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
- ${gState}
- ${allday.length?`<div class="allday">${allday.map(e=>`<a href="${esc(e.htmlLink||'#')}" target="_blank" rel="noopener">${esc(e.summary||'(sans titre)')}</a>`).join('')}</div>`:''}
- <div class="tl"><div class="tlin" data-drop="cal" style="height:${H}px">${hrs}
+ const nowTop=d===today()?y(new Date()):-1;
+ return `<div class="tlin" data-drop="cal" data-day="${d}" style="height:${H}px">${hrs}
  <div class="work" style="top:${(s.workStart-st)*PX}px;height:${Math.max(0,(s.workEnd-s.workStart)*PX)}px"></div>
- ${blocksHtml}${nowTop>=0&&nowTop<=H?`<div class="now" data-live="now" style="top:${nowTop}px"></div>`:''}<div class="ghostblk hidden" id="ghost"></div></div></div>
- <div class="sinfo" style="padding-top:0"><span>Glisse une tâche sur l’agenda pour lui réserver un créneau${gTok()?' (un événement est créé dans Google Agenda)':''}.</span><button class="sm" data-act="autobox">Placer automatiquement les tâches du jour</button></div>`;
+ ${blocksHtml}${nowTop>=0&&nowTop<=H?`<div class="now" data-live="now" style="top:${nowTop}px"></div>`:''}<div class="ghostblk hidden"></div></div>`;
+}
+const alldayHtml=d=>{const a=(gEvents[d]||[]).filter(e=>e.start.date);return a.length?`<div class="allday">${a.map(e=>`<a href="${/^https:/.test(e.htmlLink||'')?esc(e.htmlLink):'#'}" target="_blank" rel="noopener">${esc(e.summary||'(sans titre)')}</a>`).join('')}</div>`:''};
+function gStateHtml(d){return gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:'')):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`}
+function viewCal(){
+ const d=cur;
+ return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span><button class="sm ghost" data-act="layout" title="Inverser : grand agenda au centre (touche C)">⇄ Grand agenda</button>${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
+ ${gStateHtml(d)}${alldayHtml(d)}
+ <div class="tl">${calCol(d)}</div>
+ <div class="sinfo" style="padding-top:0"><span>${flowOn()?'Agenda vivant : les tâches suivent l’ordre de la liste. Glisse une tâche ici pour fixer son heure.':'Glisse une tâche sur l’agenda pour lui réserver un créneau.'}</span>${flowOn()?'':'<button class="sm" data-act="autobox">Placer automatiquement les tâches du jour</button>'}</div>`;
+}
+/* ---------- grand agenda (vue inversée) ---------- */
+let scrolledBig=false,layout=lsGet('journee.layout')||'tasks',calSpan=+(lsGet('journee.span')||3);
+const bigDays=()=>{const n=innerWidth<720?1:calSpan;const s0=n===7?monday(cur):cur;return [...Array(n)].map((_,i)=>addDays(s0,i))};
+function viewBigCal(){
+ const days=bigDays(),{st,en,H}=calGeom();
+ const axis=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
+ return `<div class="head"><div><h1>${days.length===1?cap1(fmtDay(days[0],{weekday:'long',day:'numeric',month:'long'})):cap1(fmtDay(days[0],{day:'numeric',month:'short'}))+' – '+fmtDay(days[days.length-1],{day:'numeric',month:'short'})}</h1><div class="sub">Grand agenda · tes tâches sont à droite</div></div>
+ <div class="dnav"><button data-act="${days.length===7?'prevw':'prev'}" aria-label="Précédent">‹</button><button data-act="gotoday">Aujourd’hui</button><button data-act="${days.length===7?'nextw':'next'}" aria-label="Suivant">›</button></div>
+ <div class="acts"><div class="seg">${[1,3,7].map(n=>`<button class="sm${calSpan===n?' on':''}" data-act="span" data-n="${n}">${n===1?'Jour':n===3?'3 jours':'Semaine'}</button>`).join('')}</div><button data-act="layout" title="Touche C">⇄ Liste au centre<kbd class="k">C</kbd></button></div></div>
+ ${gStateHtml(cur)}
+ <div class="bigcal" style="--n:${days.length}">
+  <div class="bchead"><div></div>${days.map(d=>`<div class="bcday${d===today()?' today':''}" data-act="openday" data-day="${d}"><b>${cap1(fmtDay(d,{weekday:'short',day:'numeric'}))}</b><small>${fmtMin(loadInfo(d).task)} de tâches</small>${alldayHtml(d)}</div>`).join('')}</div>
+  <div class="bcbody"><div class="axis" style="height:${H}px">${axis}</div>${days.map(d=>`<div class="bccol">${calCol(d)}</div>`).join('')}</div>
+ </div>`;
+}
+function viewSideTasks(){
+ const d=cur,ts=dayTasks(d);
+ return `<div class="calhead"><span>Tâches · ${cap1(fmtDay(d,{weekday:'long',day:'numeric'}))}</span><span class="sp"></span><button class="sm ghost" data-act="plan">Planifier</button></div>
+ <div style="padding:10px 12px">${loadBar(d)}${addForm(d,'Ajouter une tâche…','add-side')}
+ <div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu ce jour-là.</div>'}</div>
+ <div class="rsec">Backlog</div><div class="list" data-drop="backlog">${S.tasks.filter(t=>!t.day&&!t.done).slice(0,30).map(card).join('')||'<p class="mute">Vide</p>'}</div></div>`;
 }
 
 /* ---------- panneau latéral : To Do ---------- */
@@ -1105,19 +1147,21 @@ function viewTodo(){
 function render(){
  const a=document.activeElement,keep=a&&a.dataset&&a.dataset.keep,val=keep?a.value:null;
  document.querySelectorAll('#nav [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
- const m=$('#main'),st=m.scrollTop;
- m.innerHTML=view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='objectives'?viewObjectives():view==='settings'?viewSettings():viewToday();
+ const m=$('#main'),st=m.scrollTop,bc0=document.querySelector('.bigcal'),bst=bc0?bc0.scrollTop:null;
+ m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='objectives'?viewObjectives():view==='settings'?viewSettings():viewToday();
  m.scrollTop=st;
  renderSide();renderRun();
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
- if(view==='week'){const w=monday(cur);ensureRange(w,addDays(w,6))}else ensureRange(cur,cur);
+ if(layout==='cal'&&(view==='today'||view==='week')){const bd=bigDays();ensureRange(bd[0],bd[bd.length-1])}else if(view==='week'){const w=monday(cur);ensureRange(w,addDays(w,6))}else{ensureRange(cur,addDays(cur,6))}
+ {const bc=document.querySelector('.bigcal');if(bc){if(!scrolledBig||bst===null){scrolledBig=true;const n=new Date();bc.scrollTop=Math.max(0,(Math.max(S.settings.dayStart,n.getHours()-1)-S.settings.dayStart)*PX)}else bc.scrollTop=bst}}
 }
 function renderSide(){
  document.querySelectorAll('.stabs [data-side]').forEach(b=>b.classList.toggle('on',b.dataset.side===sideTab));
  const sb=$('#sidebody'),st=sb.scrollTop;
- sb.innerHTML=sideTab==='todo'?viewTodo():sideTab==='ai'?viewAI():viewCal();
+ const bigOn=layout==='cal'&&(view==='today'||view==='week');sb.innerHTML=sideTab==='todo'?viewTodo():sideTab==='ai'?viewAI():bigOn?viewSideTasks():viewCal();
+ const tb=document.querySelector('.stabs [data-side="cal"]');if(tb)tb.textContent=bigOn?'Tâches':'Agenda';
  if(sideTab==='ai'){aiUnread=0;renderBadge();}
- if(sideTab==='ai'){sb.scrollTop=sb.scrollHeight}else if(sideTab==='cal'&&scrolledCal!==cur){scrolledCal=cur;const n=new Date(),h=cur===today()?Math.max(S.settings.dayStart,n.getHours()-1):S.settings.workStart;sb.scrollTop=(h-S.settings.dayStart)*PX}else sb.scrollTop=st;
+ if(sideTab==='ai'){sb.scrollTop=sb.scrollHeight}else if(sideTab==='cal'&&!bigOn&&scrolledCal!==cur){scrolledCal=cur;const n=new Date(),h=cur===today()?Math.max(S.settings.dayStart,n.getHours()-1):S.settings.workStart;sb.scrollTop=(h-S.settings.dayStart)*PX}else sb.scrollTop=st;
 }
 function renderRun(){
  const r=S.running,t=r&&T(r.taskId);
@@ -1135,7 +1179,7 @@ function closeModal(){
  if(modalTask){const t=T(modalTask);if(t&&t.block&&t.block.gcalId&&t.block.title!==t.title&&gTok()){t.block.title=t.title;save();gFetch(`/calendars/${calId()}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{})}}
  $('#modal').classList.add('hidden');modalTask=null;ritual=null;render();
 }
-function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':''}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${s.id}" aria-label="Cocher">${s.d?'✓':''}</button><span>${esc(s.t)}</span><button class="x" data-act="subd" data-tid="${t.id}" data-s="${s.id}" aria-label="Supprimer">×</button></div>`).join('')}
+function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':''}${focusOn===t.id&&focusSub===s.id?' cur':''}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${s.id}" aria-label="Cocher">${s.d?'✓':''}</button><span>${esc(s.t)}</span>${s.d?'':`<button class="play" data-act="focussub" data-tid="${t.id}" data-s="${s.id}" aria-label="Focus sur cette sous-tâche">▶</button>`}<button class="x" data-act="subd" data-tid="${t.id}" data-s="${s.id}" aria-label="Supprimer">×</button></div>`).join('')}
 function openTask(id){
  const t=T(id);if(!t)return;if(modalAI&&modalAI.tid!==id)modalAI=null;modalTask=id;ritual=null;
  const objs=weekObjs(monday(t.day||today())),r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
@@ -1272,10 +1316,10 @@ function ritNext(){
 }
 
 /* ---------- mode focus ---------- */
-function openFocus(id){
+function openFocus(id,sub){
  const t=T(id);if(!t)return;
  if(!$('#modal').classList.contains('hidden')){$('#modal').classList.add('hidden');modalTask=null;ritual=null}
- focusOn=id;if(!S.running||S.running.taskId!==id)startTimer(id);activate(t);renderFocus();
+ focusOn=id;const fs=sub&&t.subtasks.find(x=>x.id===sub)||t.subtasks.find(x=>!x.d);focusSub=fs?fs.id:null;if(!S.running||S.running.taskId!==id)startTimer(id);activate(t);renderFocus();
 }
 function renderFocus(){
  const el=$('#focus');
@@ -1284,9 +1328,9 @@ function renderFocus(){
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
  el.classList.remove('hidden');
  el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<button class="x" data-act="focusclose">Quitter le focus (Échap)</button></div>
- <h1 class="ftitle">${esc(t.title)}</h1>
+ ${(()=>{const sb=focusSub&&t.subtasks.find(x=>x.id===focusSub);return sb?`<div class="fsub">${esc(t.title)} · sous-tâche ${t.subtasks.indexOf(sb)+1}/${t.subtasks.length}</div><h1 class="ftitle">${esc(sb.t)}</h1>`:`<h1 class="ftitle">${esc(t.title)}</h1>`})()}
  <div><div class="fclock" data-live="focus">${clock(actualSec(t))}</div><div class="fsub">${t.est?'Estimé : '+fmtMin(t.est):'Pas d’estimation'}${run?'':' · en pause'}${t.block?' · créneau '+hm(new Date(t.block.start))+'–'+hm(new Date(t.block.end)):''}${(()=>{const nx=dayTasks(today()).filter(x=>!x.done&&x!==t&&x.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start))[0];return nx?' · ensuite : '+esc(nx.title)+' à '+hm(new Date(nx.block.start)):''})()}</div></div>
- <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button><button class="ok big" data-act="focusdone" data-id="${t.id}">Terminer la tâche</button></div>
+ <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button>${focusSub?`<button class="ok big" data-act="focussubdone">Sous-tâche terminée</button><button class="ghost big" data-act="focusdone" data-id="${t.id}">Terminer toute la tâche</button>`:`<button class="ok big" data-act="focusdone" data-id="${t.id}">Terminer la tâche</button>`}</div>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="fsub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form></div>
  <textarea class="fnotes" data-fnotes="${t.id}" placeholder="Notes…">${esc(t.notes)}</textarea></div>`;
 }
@@ -1297,7 +1341,7 @@ setInterval(()=>{
  if(t){const el=document.querySelector('[data-live="run"]');if(el)el.textContent=clock(actualSec(t));
   const f=document.querySelector('[data-live="focus"]');if(f&&focusOn===t.id)f.textContent=clock(actualSec(t));
   const c=document.querySelector(`[data-live="t-${t.id}"]`);if(c)c.textContent=fmtMin(actualSec(t)/60)+' / '+(t.est?fmtMin(t.est):'—');}
- const nl=document.querySelector('[data-live="now"]');if(nl){const n=new Date();nl.style.top=((n.getHours()-S.settings.dayStart)*60+n.getMinutes())/60*PX+'px'}
+ document.querySelectorAll('[data-live="now"]').forEach(nl=>{const n=new Date();nl.style.top=((n.getHours()-S.settings.dayStart)*60+n.getMinutes())/60*PX+'px'});
  if(today()!==lastDay){const was=lastDay;lastDay=today();if(cur===was)cur=lastDay;genRecurring();render()}
 },1000);
 
@@ -1316,7 +1360,7 @@ document.addEventListener('click',async e=>{
   case'play':openFocus(id);break;
   case'openfocus':openFocus(id);break;
   case'focusnext':{const t=dayTasks(cur).find(t=>!t.done);t?openFocus(t.id):toast('Aucune tâche à faire ce jour-là');break}
-  case'focusclose':focusOn=null;renderFocus();render();break;
+  case'focusclose':focusOn=null;focusSub=null;renderFocus();render();break;
   case'focusdone':{await toggleDone(id);const nx=dayTasks(cur).find(t=>!t.done);focusOn=null;renderFocus();toast(nx?'Bravo ! Prochaine : '+nx.title:'Bravo ! Tout est fait.');break}
   case'timer':if(S.running&&S.running.taskId===id){stopTimer();render()}else{startTimer(id);const tt=T(id);if(tt)activate(tt)}renderFocus();break;
   case'prev':cur=addDays(cur,-1);render();break;
@@ -1362,6 +1406,11 @@ document.addEventListener('click',async e=>{
   case'chadd':S.channels.push({id:uid(),name:'Nouveau canal',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;
   case'unpin':{const t=T(modalTask);if(t){t.pinned=false;save();openTask(t.id)}break}
+  case'keys':showKeys();break;
+  case'layout':toggleLayout();break;
+  case'span':calSpan=+b.dataset.n;lsSet('journee.span',String(calSpan));render();break;
+  case'focussub':{const t=T(b.dataset.tid);if(t){if(focusOn!==t.id)openFocus(t.id,b.dataset.s);else{focusSub=b.dataset.s;renderFocus()}}break}
+  case'focussubdone':{const t=T(focusOn),x=t&&t.subtasks.find(z=>z.id===focusSub);if(x){x.d=true;chime(780);const nx=t.subtasks.find(z=>!z.d);focusSub=nx?nx.id:null;save();render();renderFocus();toast(nx?'Suivante : '+nx.t:'Toutes les sous-tâches sont faites')}break}
   case'estmenu':{const t=T(id);if(t)estMenu(t,b);break}
   case'setest':{const t=T(id);if(t)setEst(t,+b.dataset.v);closePop();break}
   case'ritai':aiRitual();break;
@@ -1419,6 +1468,7 @@ document.addEventListener('change',async e=>{
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(ritual.day)}else clearBlock(t,true);save();render();renderRitual()}return}
  if(el.dataset.set){const k=el.dataset.set;S.settings[k]=(k==='aiAuto'||k==='liveShift')?!!el.value:el.type==='number'?+el.value:el.value.trim();save();if(el.type==='number'||k==='aiKey')render();return}
+ if(el.hasAttribute('data-tips')){lsSet('journee.tips',el.checked?'on':'off');renderTip();return}
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
  if(el.dataset.chn){const c=ch(el.dataset.chn);if(c){c.name=el.value.trim()||c.name;save()}return}
@@ -1430,20 +1480,20 @@ document.addEventListener('change',async e=>{
 /* ---------- glisser-déposer ---------- */
 function calMinute(z,y){const r=z.getBoundingClientRect();let m=S.settings.dayStart*60+(y-r.top)/PX*60;m=Math.round(m/15)*15;return Math.max(S.settings.dayStart*60,Math.min(S.settings.dayEnd*60-15,m))}
 document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]');if(!c)return;drag=c.dataset.drag;try{e.dataTransfer.setData('text/plain',drag);e.dataTransfer.effectAllowed='move'}catch(err){}c.classList.add('dragging')});
-document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over').forEach(x=>x.classList.remove('dragging','over'));const g=$('#ghost');if(g)g.classList.add('hidden');drag=null});
+document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over').forEach(x=>x.classList.remove('dragging','over'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
 document.addEventListener('dragover',e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
  document.querySelectorAll('.over').forEach(x=>{if(x!==z)x.classList.remove('over')});z.classList.add('over');
- const g=$('#ghost');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
+ document.querySelectorAll('.ghostblk').forEach(x=>{if(!z.contains(x))x.classList.add('hidden')});const g=z.querySelector('.ghostblk');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
 });
 document.addEventListener('drop',async e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
  const dz=z.dataset.drop,src=drag.split('|');drag=null;z.classList.remove('over');
  let t;
- if(src[0]==='todo'){const x=(todo.tasks[src[1]]||[]).find(x=>x.id===src[2]);if(!x)return;t=importTodo(src[1],x,dz==='backlog'?null:dz.startsWith('day:')?dz.slice(4):cur)}
+ if(src[0]==='todo'){const x=(todo.tasks[src[1]]||[]).find(x=>x.id===src[2]);if(!x)return;t=importTodo(src[1],x,dz==='backlog'?null:dz.startsWith('day:')?dz.slice(4):(z.dataset.day||cur))}
  else t=T(src[1]);
  if(!t)return;
- if(dz==='cal'){const dt=parseYmd(cur);dt.setMinutes(calMinute(z,e.clientY));t.pinned=true;const p=setBlock(t,dt,true);syncOrder(cur);save();render();await p;return}
+ if(dz==='cal'){const dd=z.dataset.day||cur,dt=parseYmd(dd);dt.setMinutes(calMinute(z,e.clientY));t.pinned=true;if(t.day!==dd)t.order=nextOrder(dd);const p=setBlock(t,dt,true);syncOrder(dd);save();render();await p;return}
  if(dz==='backlog'){if(t.day!==null)moveTask(t.id,'backlog');else render();return}
  if(dz.startsWith('day:')){
   const day=dz.slice(4),before=e.target.closest('.card');
@@ -1456,6 +1506,12 @@ document.addEventListener('drop',async e=>{
 });
 
 /* ---------- interactions fluides liste ↔ agenda ---------- */
+const KEYS=[['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Objectifs'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
+let tipI=0;
+function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
+setInterval(renderTip,20000);setTimeout(renderTip,1500);
+function toggleLayout(){layout=layout==='cal'?'tasks':'cal';lsSet('journee.layout',layout);scrolledBig=false;if(view!=='today'&&view!=='week')view='today';if(layout==='cal')sideTab='cal';render();toast(layout==='cal'?'Grand agenda au centre, tâches à droite':'Liste au centre, agenda à droite')}
 function closePop(){const p=$('#pop');if(p)p.remove()}
 function estMenu(t,el){
  closePop();const r=el.getBoundingClientRect(),p=document.createElement('div');p.id='pop';
@@ -1487,6 +1543,8 @@ document.addEventListener('keydown',e=>{
  const k=e.key.toLowerCase();
  if(k==='n'){e.preventDefault();const i=document.querySelector('[data-keep^="add-"]');if(i)i.focus()}
  else if(k==='t'){cur=today();go('today')}
+ else if(k==='c'){toggleLayout()}
+ else if(e.key==='?'){showKeys()}
  else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');
  else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur);
  else if(k==='f'){const t=dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
