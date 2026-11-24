@@ -76,7 +76,7 @@ const weekObjs=w=>S.objectives.filter(o=>o.week===w);
 stamp();
 if(!S.seeded){
  S.seeded=true;const d=today();
- [['Exemple : préparer la réunion de lundi',d,'c-organisation',45],['Exemple : répondre aux mails importants',d,'c-admin',30],['Exemple : courses pour le week-end',d,'c-courses',30],['Exemple : renouveler l’assurance auto',null,'c-admin',20],['Exemple : trier les photos de vacances',null,'c-deco',60]]
+ [['Exemple : préparer le rendez-vous de lundi',d,'c-organisation',45],['Exemple : répondre aux mails importants',d,'c-admin',30],['Exemple : courses pour le week-end',d,'c-courses',30],['Exemple : renouveler l’assurance auto',null,'c-admin',20],['Exemple : trier les photos de vacances',null,'c-deco',60]]
   .forEach(([title,day,channel,est],i)=>S.tasks.push(mk({title,day,channel,est,order:i+1})));
  save();
 }

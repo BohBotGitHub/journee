@@ -527,3 +527,5 @@ form.add:focus-within .addhint{display:block}
 #nav button.navrefresh svg{width:18px;height:18px;flex:none;opacity:.7}
 #nav button.navrefresh:hover{color:var(--ink);background:var(--panel)}
 #nav button.navrefresh .sl{display:none}
+.overalert{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:#fff4e6;color:#8a3b00;font-size:14px}
+@media (prefers-color-scheme:dark){.overalert{background:#3a2416;color:#ffc59a}}

@@ -14,7 +14,7 @@ function loadInfo(d){const ts=dayTasks(d);const task=ts.reduce((a,t)=>a+(t.est||
 function loadBar(d){
  const L=loadInfo(d),p=v=>Math.min(100,v/L.cap*100);
  return `<div class="load${L.over>0?' over':''}"><div class="lbar"><i class="m" style="width:${p(L.meet)}%"></i><i class="t" style="width:${Math.max(0,Math.min(100-p(L.meet),p(L.task)))}%"></i></div>
- <div class="ltxt"><span>${fmtMin(L.task)} de tâches${L.meet?' · '+fmtMin(L.meet)+' de réunions':''} sur ${fmtMin(L.cap)} de travail</span><span>${L.over>0?fmtMin(L.over)+' de trop':fmtMin(-L.over)+' de marge'}</span></div></div>`;
+ <div class="ltxt"><span>${fmtMin(L.task)} de tâches${L.meet?' · '+fmtMin(L.meet)+' de rendez-vous':''} sur ${fmtMin(L.cap)} de travail</span><span>${L.over>0?fmtMin(L.over)+' de trop':fmtMin(-L.over)+' de marge'}</span></div></div>`;
 }
 const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day||''}"><input name="t" data-keep="${keep||'add-'+(day||'backlog')}" placeholder="${esc(ph)}" autocomplete="off" aria-label="Nouvelle tâche" aria-describedby="addhint-${keep||day||'b'}"><small class="addhint" id="addhint-${keep||day||'b'}">Tu peux écrire <b>45m</b>, <b>demain</b>, <b>#natation</b>, <b>+projet</b> · Entrée pour ajouter${keep?'':' · touche N pour revenir ici'}</small></form>`;
 const objChips=w=>{const os=weekObjs(w);return os.length?`<div class="objs">${os.map(o=>`<span class="obj${o.done?' done':''}">${esc(o.title)}</span>`).join('')}</div>`:''};
@@ -142,7 +142,7 @@ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 function viewDump(){
  const inbox=S.tasks.filter(t=>t.inbox&&!t.done);
  return `<div class="head"><div><h1>Vide-tête</h1><div class="sub">Écris tout ce qui t’encombre l’esprit, une idée par ligne. Tu trieras après.</div></div></div>
- <textarea class="dump" data-dump rows="10" placeholder="Rappeler le garagiste&#10;Idée cadeau pour Raf&#10;Préparer la réunion lundi 45m #pro&#10;Acheter des ampoules demain…">${esc(S.dump||'')}</textarea>
+ <textarea class="dump" data-dump rows="10" placeholder="Rappeler le garagiste&#10;Idée cadeau pour Raf&#10;Préparer le devis lundi 45m #villette&#10;Acheter des ampoules demain…">${esc(S.dump||'')}</textarea>
  <div class="row" style="flex-wrap:wrap;margin:10px 0 4px">${SR?`<button data-act="dictate">${rec?'■ Arrêter la dictée':'🎙 Dicter'}</button>`:''}<span class="sp"></span><button data-act="dumptasks">Transformer en tâches</button>${aiOn()?'<button class="pri" data-act="dumpai">Trier avec Claude</button>':''}</div>
  <p class="mute" style="font-size:13px;margin:4px 0 0">Astuce : « demain », « lundi », « 12/12 », « 30m », « 1h », « #catégorie » sont compris. Touche <kbd>D</kbd> pour revenir ici de n’importe où.</p>
  ${dumpAI?`<div class="aibox">${dumpAI.loading?'<span class="mute">Claude trie ton vide-tête…</span>':dumpAI.error?`<span class="mute">Claude : ${esc(dumpAI.error)}</span>`:`<b>Claude</b>${dumpAI.text?`<p>${esc(dumpAI.text)}</p>`:''}${propItems(dumpAI.prop).map(it=>`<div class="pitem${(dumpAI.applied||{})[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${(dumpAI.applied||{})[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="dumpapply" data-k="${it.k}">Ajouter</button>`}</div>`).join('')}<div class="row">${propItems(dumpAI.prop).some(it=>!(dumpAI.applied||{})[it.k])?'<button class="sm pri" data-act="dumpapplyall">Tout ajouter et vider</button>':''}<span class="sp"></span><button class="sm ghost" data-act="dumpaiclose">Fermer</button></div>`}</div>`:''}

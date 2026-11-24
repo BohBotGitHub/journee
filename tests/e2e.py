@@ -594,8 +594,10 @@ def _(c):
     assert pg.locator('#sheet .quote blockquote').count() == 1, 'citation du matin absente'
     pg.fill('[data-rh="e"]', '17:30'); pg.click('[data-act="ritnext"]'); tick(pg, 400)
     assert st(pg, "S.days[today()].he") == 17.5
-    assert st(pg, "dayTasks(today()).length") == 2 and st(pg, "dayTasks(addDays(today(),1)).length") == 1
-    pg.keyboard.press('Escape'); tick(pg, 100)
+    assert st(pg, "dayTasks(today()).length") == 3, 'rien ne doit glisser pendant le rituel'
+    pg.keyboard.press('Escape'); pg.evaluate("()=>{const S=window.journee.state;S.days[window.journee.fn.today()].planned=true;window.journee.save()}"); tick(pg, 400)
+    assert st(pg, "dayTasks(addDays(today(),1)).length") == 1
+    tick(pg, 100)
     assert 'à demain' in pg.inner_text('.slidnote')
     # une priorité haute ne glisse pas
     pg.evaluate("()=>{const S=window.journee.state;S.tasks.forEach(t=>{if(t.day)t.prio='high'});S.tasks.filter(t=>t.day).forEach(t=>t.day=window.journee.fn.today());window.journee.save()}"); tick(pg, 400)
@@ -603,8 +605,9 @@ def _(c):
     # tâche d'hier : revient, compteur ; visible au matin (Revenues) et à la clôture
     pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn;S.days[f.today()].he=23;S.tasks.push(Object.assign({},S.tasks[0],{id:'old',title:'Vieille tâche',day:f.addDays(f.today(),-1),prio:'',roll:3,block:null,done:false}));window.journee.save()}"); tick(pg, 400)
     t = st(pg, "S.tasks.find(t=>t.id==='old')"); assert t['day'] == d() and t['roll'] == 4
-    pg.click('[data-act="plan"] >> nth=0'); tick(pg, 200)
-    assert 'Vieille tâche' in pg.inner_text('#sheet') and pg.locator('#sheet .rrow.hot [data-act="play"]').count() == 1
+    pg.evaluate("()=>startRitual('plan',window.journee.fn.today())"); tick(pg, 200)
+    if 'Ce qui revient' not in pg.inner_text('#sheet'): pg.click('[data-act="ritnext"]'); tick(pg, 200)
+    assert 'Vieille tâche' in pg.inner_text('#sheet') and pg.locator('#sheet .rrow.hot [data-act="phare"]').count() == 1
     pg.keyboard.press('Escape'); tick(pg, 100)
     pg.evaluate("()=>startRitual('shutdown',window.journee.fn.today())"); tick(pg, 150); pg.click('[data-act="ritnext"]'); tick(pg, 150)
     assert pg.locator('#sheet .rrow.hot').count() == 1
