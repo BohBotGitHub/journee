@@ -418,7 +418,8 @@ def _(c):
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
     assert order == ['runchip', 'navset', 'navrefresh', 'navver'], order
-    ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg', '#nav .navver b')]
+    ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg', '#nav .navver .vlogo')]
+    assert round(pg.locator('#nav .navver b').bounding_box()['x']) == round(pg.locator('#nav .navrefresh .ll').bounding_box()['x'])
     assert len(set(ic)) == 1, ic
     assert not errs, errs; ctx.close()
 

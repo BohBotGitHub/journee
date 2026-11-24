@@ -648,3 +648,4 @@ code{white-space:nowrap}
 /* une seule colonne : icônes alignées, textes alignés, la version sous « Actualiser » */
 #nav button.navrefresh{padding-left:12px;padding-right:12px}
 #nav .navver{padding-left:12px}
+#nav .navver{display:flex;align-items:center;gap:10px}#nav .navver .vlogo{width:18px;height:18px;flex:none}
