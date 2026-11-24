@@ -43,7 +43,7 @@ async function loadTodoTasks(l,force){
   for(let i=0;i<5&&url;i++){const j=await graph(url);items=items.concat(j.value||[]);url=j['@odata.nextLink']?j['@odata.nextLink'].replace('https://graph.microsoft.com/v1.0',''):null}
   todo.tasks[l]=items;
  }catch(e){todo.tasks[l]=[];toast('To Do : '+e.message)}
- finally{todo.tLoading=false;render();if(ritual&&ritual.type==='plan'&&ritual.step===1)renderRitual()}
+ finally{todo.tLoading=false;render();if(ritual&&ritual.type==='plan'&&ritual.step===2)renderRitual()}
 }
 function importTodo(l,x,day){
  let t=S.tasks.find(t=>t.src&&t.src.taskId===x.id);

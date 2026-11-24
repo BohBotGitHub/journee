@@ -510,3 +510,16 @@ form.add:focus-within .addhint{display:block}
 .slidnote{background:transparent;border:0;color:var(--mute);font-size:13px;padding:6px 2px;min-height:0;margin-top:6px}
 .slidnote:hover{color:var(--ink);text-decoration:underline}
 .rollm{cursor:pointer;color:var(--mute);border-radius:6px;padding:0 4px}.rollm:hover{background:var(--panel2);color:var(--ink)}
+/* rituels : citations, heures, énergie, piliers, phare */
+.quote{margin:4px 0 18px;padding:14px 18px;border-left:3px solid var(--acc);background:var(--panel2);border-radius:0 10px 10px 0}
+.quote blockquote{margin:0;font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.5;font-style:italic}
+.quote figcaption{margin-top:8px;font-size:13px;color:var(--mute)}.quote figcaption span{font-style:italic}
+.hoursrow{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:6px 0 4px}.hoursrow label{flex:0 0 auto}.hoursrow input{width:auto;font-size:18px}.hoursrow>span{padding-bottom:10px;color:var(--mute)}
+.energy button.on{background:var(--ink);color:var(--panel)}
+.pilrow{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px}
+.pilc{font-size:13px;padding:3px 10px;border-radius:99px;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--ink);border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
+.pilc.off{opacity:.5;border-style:dashed}
+.pilidea{font-size:14px;margin:0 0 10px;color:var(--mute)}.pilidea b{color:var(--ink)}
+.rrow.hot{box-shadow:inset 3px 0 0 var(--mute)}
+.phare{color:#b8860b;margin-right:6px}
+.phareline{font-weight:600;margin:0 0 10px}

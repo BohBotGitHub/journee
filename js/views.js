@@ -6,7 +6,7 @@ function card(t){
  const act=actualSec(t);
  return `<div class="card${t.done?' done':''}${run?' running':''}" draggable="true" data-drag="task|${t.id}" data-id="${t.id}">
  <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
- <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${t.prio==='high'||t.prio==='urgent'?`<span class="pflag" title="Priorité haute">${flagSvg('high')}</span>`:t.prio==='low'?`<span class="pflag" title="Priorité basse : peut glisser">${flagSvg('low')}</span>`:''}${esc(t.title)}</div>
+ <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${(S.days[t.day]||{}).phare===t.id&&!t.done?'<span class="phare" title="Tâche phare du jour">★</span>':''}${t.prio==='high'||t.prio==='urgent'?`<span class="pflag" title="Priorité haute">${flagSvg('high')}</span>`:t.prio==='low'?`<span class="pflag" title="Priorité basse : peut glisser">${flagSvg('low')}</span>`:''}${esc(t.title)}</div>
  <div class="cmeta">${c?`<span class="chip pc" data-act="pickcat" data-id="${t.id}" style="--c:${esc(c.color)}" title="${t.aiCat?'Devinée par Claude — clique pour changer':'Changer de catégorie'}">${esc(nodeLabel(c.id))}${t.aiCat?' ✦':''}</span>`:t.done?'':`<span class="chip pc nocat" data-act="pickcat" data-id="${t.id}">+ catégorie</span>`}${t.proj&&proj(t.proj)?`<span class="pchip">◆ ${esc(proj(t.proj).name)}</span>`:''}${t.block?`<span title="${t.pinned?'Heure fixée':'Suit l’ordre de la liste'}">${hm(new Date(t.block.start))}${t.pinned?' 📌':''}</span>`:''}${(t.roll||0)>=4&&!t.done?`<span class="rollm" data-act="rollmenu" data-id="${t.id}" title="Reportée ${t.roll} fois — que veux-tu en faire ?">↻ ${t.roll}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${dueLabel(t)}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?nodeLabel(t.aiSug.channel):'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
  <div class="ctime"><span class="est" data-act="estmenu" data-id="${t.id}" data-live="t-${t.id}" title="Temps passé / estimé — clique pour changer la durée">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'<span class="nodur">+ durée</span>'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
 }
@@ -91,7 +91,7 @@ function viewToday(){
  return `<div class="head tight"><div class="htitle"><h1>${title}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
  <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}
- ${isT&&!dayHours(d).set&&flowOn()?`<form class="hoursq" data-form="hours"><span>Ta journée aujourd’hui</span><input type="time" name="s" step="900" value="${hhmm(dayHours(d).s)}" aria-label="Heure de début"><span>→</span><input type="time" name="e" step="900" value="${hhmm(dayHours(d).e)}" aria-label="Heure de fin"><button class="sm pri">OK</button></form>`:''}
+
  ${addForm(d,'Ajouter une tâche')}
  ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>`}
  ${(()=>{const sl=S.tasks.filter(t=>!t.done&&t.slid===d&&t.day===addDays(d,1));return sl.length?`<button class="slidnote" data-act="next">${sl.length} tâche${sl.length>1?'s':''} à demain →</button>`:''})()}
@@ -115,7 +115,7 @@ function dayMenu(){
   <button data-act="focusnext">Focus sur la prochaine tâche<kbd>F</kbd></button>
   <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
   ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
-  ${d===today()&&flowOn()?`<button data-act="hoursreset">Changer les heures de ma journée (${hhmm(dayHours(d).s)} → ${hhmm(dayHours(d).e)})</button>`:''}
+  ${d===today()&&flowOn()?`<button data-act="plan">Mes heures et mon plan du jour (${hhmm(dayHours(d).s)} → ${hhmm(dayHours(d).end)})</button>`:''}
   <button data-act="tplfromday">Enregistrer cette journée comme modèle</button>
   <button data-act="palopen">Rechercher ou lancer une commande<kbd>⌘K</kbd></button>
  </div></div>`);

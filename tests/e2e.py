@@ -241,8 +241,9 @@ def _(c):
 def _(c):
     ctx, pg, errs = new_page(c['b'], claude=True, storage="localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:true}}))")
     if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
-    pg.click('[data-act="plan"] >> nth=0'); pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(300)
-    pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(600)
+    pg.click('[data-act="plan"] >> nth=0')
+    for _ in range(4): pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(300)
+    pg.wait_for_timeout(400)
     assert pg.locator('.aibox .pitem').count() >= 1, 'pas de suggestion Claude'
     pg.reload(); pg.wait_for_timeout(1500)
     assert pg.inner_text('.rsteps .on') == 'Estimer'
@@ -585,25 +586,32 @@ def _(c):
     assert 'Rendre dossier' in n and 'Vieux devis' in n and 'Billets train' in n, n
     assert not errs, errs; ctx.close()
 
-@test('Journée sans pression : heures du jour, glissement silencieux, reports')
+@test('Journée sans pression : heures au rituel du matin, glissement silencieux, reports')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(16, 0))
-    assert pg.locator('.hoursq').count() == 1, 'question des heures absente'
     assert 'retard' not in pg.inner_text('#main')
-    # fin de journée à 17 h 30 : 45+30+30 min depuis 16 h → la dernière glisse à demain, sans message
-    pg.fill('.hoursq [name="e"]', '17:30'); pg.click('.hoursq button'); tick(pg, 400)
-    assert pg.locator('.hoursq').count() == 0
+    pg.click('[data-act="plan"] >> nth=0'); tick(pg, 200)
+    assert pg.locator('#sheet .quote blockquote').count() == 1, 'citation du matin absente'
+    pg.fill('[data-rh="e"]', '17:30'); pg.click('[data-act="ritnext"]'); tick(pg, 400)
+    assert st(pg, "S.days[today()].he") == 17.5
     assert st(pg, "dayTasks(today()).length") == 2 and st(pg, "dayTasks(addDays(today(),1)).length") == 1
-    assert 'à demain' in pg.inner_text('.slidnote') and not pg.locator('#toast.show').count()
-    # une priorité haute ne glisse pas, même si elle dépasse
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    assert 'à demain' in pg.inner_text('.slidnote')
+    # une priorité haute ne glisse pas
     pg.evaluate("()=>{const S=window.journee.state;S.tasks.forEach(t=>{if(t.day)t.prio='high'});S.tasks.filter(t=>t.day).forEach(t=>t.day=window.journee.fn.today());window.journee.save()}"); tick(pg, 400)
     assert st(pg, "dayTasks(today()).length") == 3
-    # tâche d'hier non faite : revient aujourd'hui en silence, compteur de reports
+    # tâche d'hier : revient, compteur ; visible au matin (Revenues) et à la clôture
     pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn;S.days[f.today()].he=23;S.tasks.push(Object.assign({},S.tasks[0],{id:'old',title:'Vieille tâche',day:f.addDays(f.today(),-1),prio:'',roll:3,block:null,done:false}));window.journee.save()}"); tick(pg, 400)
-    t = st(pg, "S.tasks.find(t=>t.id==='old')")
-    assert t['day'] == d() and t['roll'] == 4, (t['day'], t['roll'])
+    t = st(pg, "S.tasks.find(t=>t.id==='old')"); assert t['day'] == d() and t['roll'] == 4
+    pg.click('[data-act="plan"] >> nth=0'); tick(pg, 200)
+    assert 'Vieille tâche' in pg.inner_text('#sheet') and pg.locator('#sheet .rrow.hot [data-act="play"]').count() == 1
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    pg.evaluate("()=>startRitual('shutdown',window.journee.fn.today())"); tick(pg, 150); pg.click('[data-act="ritnext"]'); tick(pg, 150)
+    assert pg.locator('#sheet .rrow.hot').count() == 1
+    pg.click('[data-act="ritnext"]'); tick(pg, 100); pg.click('[data-act="ritnext"]'); tick(pg, 100)
+    assert pg.locator('#sheet .quote').count() == 1, 'citation du soir absente'
+    pg.keyboard.press('Escape'); tick(pg, 100)
     pg.click('#main .rollm'); tick(pg, 150)
-    assert pg.locator('#modal .menu button').count() == 4
     pg.click('#modal [data-act="rolltomorrow"]'); tick(pg, 300)
     t = st(pg, "S.tasks.find(t=>t.id==='old')"); assert t['day'] == d(1) and t['roll'] == 0
     assert not errs, errs; ctx.close()

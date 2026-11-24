@@ -120,6 +120,9 @@ document.addEventListener('click',async e=>{
   case'rollmenu':rollMenu(id);break;
   case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();moveTask(id,addDays(today(),1));toast('Reportée à demain');break}
   case'rolldrop':deleteTask(id);closeModal();render();toast('Tâche supprimée');break;
+  case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
+  case'keep':{const t=T(id);if(t){t.roll=0;save()}if(ritual)renderRitual();break}
+  case'phare':{const dd=ritual?ritual.day:cur,info=S.days[dd]=S.days[dd]||{},t=T(id);if(!t)break;if(info.phare===id){info.phare=null}else{info.phare=id;t.prio='high';t.order=0;renorm(dd)}save();render();if(ritual)renderRitual();break}
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
   case'mvup':closeModal();swapTask(id,-1);break;
