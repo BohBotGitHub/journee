@@ -212,6 +212,24 @@ code{background:var(--panel2);padding:2px 6px;border-radius:5px;font-size:13px;o
 kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 6px;font:600 12.5px Figtree,sans-serif}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:80;max-width:90vw}
 #toast.show{opacity:1;transform:translateX(-50%)}
+/* assistant Claude */
+.chat{display:flex;flex-direction:column;gap:10px;padding:14px}
+.msg{border-radius:12px;padding:10px 12px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.u{background:var(--acc2);align-self:flex-end;max-width:88%}
+.msg.a{background:var(--panel2);max-width:100%}
+.prop{display:flex;flex-direction:column;gap:6px;margin-top:8px;white-space:normal}
+.pitem{display:flex;gap:8px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 9px;font-size:13px}
+.pitem div{flex:1}.pitem small{display:block}
+.pitem.ok{opacity:.55}
+.aibar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;border-top:1px solid var(--line)}
+.aibar button{font-size:12.5px;min-height:30px;padding:3px 10px;border-radius:99px}
+.aiform{display:flex;gap:6px;padding:0 14px 14px}
+.aiform button{flex:none}
+.aiform textarea{min-height:42px;max-height:140px;font-size:15px}
+.aisug{display:inline-flex;align-items:center;gap:4px;background:var(--acc2);color:var(--ink);border-radius:6px;padding:0 0 0 6px;font-size:12px}
+.aisug button{min-height:22px;height:22px;padding:0 6px;border:0;background:transparent;font-size:12px}
+.badge{display:inline-block;min-width:18px;height:18px;border-radius:9px;background:var(--acc);color:#fff;font-size:11px;line-height:18px;text-align:center;margin-left:4px;padding:0 4px}
+.thinking{color:var(--mute);font-size:13px;padding:0 14px 10px}
 @media (max-width:1100px){
  #app{grid-template-columns:196px minmax(0,1fr)}
  #side{position:fixed;top:0;right:0;bottom:0;width:min(380px,92vw);z-index:40;transform:translateX(100%);transition:transform .2s;box-shadow:-10px 0 40px rgba(0,0,0,.15)}
@@ -250,7 +268,7 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2p
  </nav>
  <main id="main"></main>
  <aside id="side">
-  <div class="stabs"><button data-side="cal">Agenda</button><button data-side="todo">Microsoft To Do</button><button class="x closeside" data-act="closeside" aria-label="Fermer le panneau">×</button></div>
+  <div class="stabs"><button data-side="cal">Agenda</button><button data-side="todo">To Do</button><button data-side="ai">Claude<span id="aibadge"></span></button><button class="x closeside" data-act="closeside" aria-label="Fermer le panneau">×</button></div>
   <div id="sidebody"></div>
  </aside>
 </div>
@@ -286,7 +304,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 const KEY='journee.v1';
 const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
  channels:[{id:'c1',name:'Travail',color:'#3b6fd8'},{id:'c2',name:'Perso',color:'#2f9e6a'},{id:'c3',name:'Admin',color:'#c99a06'}],
- settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,pomo:25,brk:5}});
+ settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,pomo:25,brk:5,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true},chat:[]});
 let S;
 try{S=Object.assign(defaults(),JSON.parse(lsGet(KEY)||'{}'))}catch(e){S=defaults()}
 S.settings=Object.assign(defaults().settings,S.settings||{});
@@ -316,6 +334,11 @@ let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=nu
 let gEvents={},gLoading={};
 const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,tLoading:false};
 
+/* ---------- bus d'événements (point d'accroche des futurs modules : gamification, import…) ---------- */
+const bus=new EventTarget();
+const emit=(type,detail)=>{try{bus.dispatchEvent(new CustomEvent(type,{detail}))}catch(e){}};
+window.journee={bus,get state(){return S},save:()=>save(),render:()=>render()};
+
 /* ---------- tâches ---------- */
 function parseQuick(txt){
  let est=0,channel=null;
@@ -327,13 +350,13 @@ function parseQuick(txt){
 function addTask(text,day){
  const q=parseQuick(text);if(!q.title)return null;
  const t=mk({title:q.title,est:q.est,channel:q.channel,day,order:nextOrder(day)});
- S.tasks.push(t);save();render();return t;
+ S.tasks.push(t);save();render();aiWatch(t);emit('task:add',{task:t});return t;
 }
 async function toggleDone(id){
  const t=T(id);if(!t)return;
  if(S.running&&S.running.taskId===id)stopTimer();
  t.done=!t.done;t.doneAt=t.done?Date.now():null;if(t.done&&!t.day)t.day=today();
- save();render();if(t.done)chime(660);
+ save();render();if(t.done)chime(660);emit(t.done?'task:done':'task:undone',{task:t});
  if(t.block&&t.block.gcalId&&gTok())gFetch(`/calendars/${calId()}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{});
  if(t.src&&msOn()){
   try{await graph(`/me/todo/lists/${encodeURIComponent(t.src.listId)}/tasks/${encodeURIComponent(t.src.taskId)}`,{method:'PATCH',body:JSON.stringify({status:t.done?'completed':'notStarted'})});delete todo.tasks[t.src.listId];renderSide()}
@@ -481,12 +504,12 @@ async function driveSync(){
   const q=encodeURIComponent("name='journee.json'");
   const list=await (await dfetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,modifiedTime)`)).json();
   const f=list.files&&list.files[0];
-  const local=()=>{const c=Object.assign({},S);delete c.running;return JSON.stringify(c)};
+  const local=()=>{const c=Object.assign({},S);delete c.running;c.settings=Object.assign({},S.settings,{aiKey:''});return JSON.stringify(c)};
   if(f){
    const remote=await (await dfetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`)).json();
    const rU=remote.updatedAt||0,lU=S.updatedAt||0;
    if(!S.syncedAt||rU>lU){
-    const run=S.running;S=Object.assign(defaults(),remote);S.settings=Object.assign(defaults().settings,remote.settings||{});S.running=run;S.syncedAt=Date.now();
+    const run=S.running,key=S.settings.aiKey;S=Object.assign(defaults(),remote);S.settings=Object.assign(defaults().settings,remote.settings||{},{aiKey:key});S.running=run;S.syncedAt=Date.now();
     lsSet(KEY,JSON.stringify(S));genRecurring();render();syncState='Synchronisé';
    }else if(lU>rU||!S.syncedAt){
     await dfetch(`https://www.googleapis.com/upload/drive/v3/files/${f.id}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:local()});
@@ -592,6 +615,105 @@ async function syncTodo(){
  const v=location.hash.slice(1);if(VIEWS.includes(v))view=v;
 })();
 
+/* ---------- assistant Claude (API Anthropic, clé de l'utilisateur) ---------- */
+let aiBusy=false,aiUnread=0,aiQueue=new Set(),aiT=null;
+const aiOn=()=>!!(S.settings.aiKey||'').trim();
+const AI_TOOL={name:'proposer',description:'Propose des changements concrets au planning de l’utilisateur. Utilise uniquement des ids de tâches existants pour order et updates.',input_schema:{type:'object',properties:{
+ message:{type:'string',description:'Réponse courte à l’utilisateur, en français, au tutoiement.'},
+ order:{type:'array',items:{type:'string'},description:'Ids des tâches non terminées du jour, dans l’ordre conseillé.'},
+ updates:{type:'array',items:{type:'object',properties:{id:{type:'string'},channel:{type:'string',description:'Nom exact d’un canal existant'},est:{type:'integer',description:'Durée estimée en minutes'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['id']}},
+ new_tasks:{type:'array',items:{type:'object',properties:{title:{type:'string'},channel:{type:'string'},est:{type:'integer'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['title']}}
+},required:['message']}};
+function aiContext(){
+ const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | canal '+ch(t.channel).name:' | sans canal'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}`;
+ const hist=S.tasks.filter(t=>t.done&&t.day&&t.day>=addDays(t0,-14)&&t.est&&t.actual).slice(-25).map(t=>`- ${t.title} : estimé ${t.est} min, réel ${Math.round(t.actual/60)} min`);
+ const meet=timedEvents(d).map(e=>`- ${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))} ${e.summary||'(sans titre)'}`);
+ const wk=monday(d),days=[...Array(7)].map((_,i)=>addDays(wk,i));
+ return `Maintenant : ${cap1(fmtDay(t0))}, ${hm(now)}. Jour affiché : ${fmtDay(d)} (${d}).
+Heures de travail : ${S.settings.workStart}h–${S.settings.workEnd}h.
+Canaux : ${S.channels.map(c=>c.name).join(', ')||'aucun'}.
+Objectifs de la semaine : ${weekObjs(wk).map(o=>o.title+(o.done?' (atteint)':'')).join(' ; ')||'aucun'}.
+${(S.days[d]||{}).intent?'Intention du jour : '+S.days[d].intent+'\n':''}Réunions du jour :\n${meet.join('\n')||'- aucune connue'}
+Tâches du jour :\n${dayTasks(d).map(line).join('\n')||'- aucune'}
+En retard (jours précédents) :\n${pastUndone().slice(0,15).map(t=>line(t)+' | prévue le '+t.day).join('\n')||'- rien'}
+Reste de la semaine :\n${days.filter(x=>x!==d&&x>=t0).map(x=>dayTasks(x).filter(t=>!t.done).map(t=>line(t)+' | '+x).join('\n')).filter(Boolean).join('\n')||'- rien'}
+Backlog :\n${S.tasks.filter(t=>!t.day&&!t.done).slice(0,40).map(line).join('\n')||'- vide'}
+Historique estimé/réel :\n${hist.join('\n')||'- pas encore de données'}`;
+}
+const AI_SYS=`Tu es Claude, l'assistant de planification intégré à l'appli « Journée » (équivalent de Sunsama). Tu aides l'utilisateur à organiser son temps : ordre des tâches, catégorie (canal), durée réaliste, répartition dans la semaine, et nouvelles tâches utiles (préparer une réunion, un suivi, une étape vers un objectif de la semaine).
+Règles :
+- Français, tutoiement, ton chaleureux et direct, réponses courtes (3-6 phrases max).
+- Sois réaliste : tâches + réunions ne doivent pas dépasser les heures de travail ; s'il y a trop, propose de reporter (updates avec day) plutôt que d'entasser.
+- Ordre conseillé : tâches importantes et exigeantes tôt, petites tâches entre les réunions, liées aux objectifs de la semaine en priorité.
+- Durées : appuie-toi sur l'historique estimé/réel quand il existe (si l'utilisateur sous-estime, corrige).
+- Canaux : uniquement des noms de la liste fournie.
+- Nouvelles tâches : maximum 3, seulement si vraiment utiles, avec une raison courte.
+- Dès que tu suggères un changement concret, utilise l'outil « proposer » : l'utilisateur validera chaque élément. Ne prétends jamais avoir modifié quelque chose toi-même.`;
+async function callClaude(messages,force){
+ const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':S.settings.aiKey.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+  body:JSON.stringify({model:S.settings.aiModel||'claude-haiku-5-5',max_tokens:1600,system:AI_SYS,tools:[AI_TOOL],tool_choice:force?{type:'tool',name:'proposer'}:{type:'auto'},messages})});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(r.status===401?'clé API refusée':(j.error&&j.error.message)||('erreur '+r.status));
+ let text='',prop=null;
+ for(const b of j.content||[]){if(b.type==='text')text+=b.text;if(b.type==='tool_use'&&b.name==='proposer')prop=b.input}
+ if(prop&&prop.message){text=(text?text+'\n':'')+prop.message}
+ return{text:text.trim(),prop};
+}
+function propItems(p){
+ if(!p)return[];const out=[];
+ const tt=id=>{const t=T(id);return t?t.title:null};
+ if(p.order&&p.order.filter(tt).length>1)out.push({k:'order',label:'Réordonner : '+p.order.filter(tt).map(tt).join(' → ')});
+ (p.updates||[]).forEach((u,i)=>{const t=T(u.id);if(!t)return;const parts=[];if(u.channel)parts.push('canal '+u.channel);if(u.est)parts.push(fmtMin(u.est));if(u.day)parts.push(u.day==='backlog'?'au backlog':'le '+fmtDay(u.day,{weekday:'long',day:'numeric'}));if(parts.length)out.push({k:'u'+i,label:t.title+' : '+parts.join(', '),reason:u.reason})});
+ (p.new_tasks||[]).forEach((n,i)=>{if(n.title)out.push({k:'n'+i,label:'Nouvelle tâche : '+n.title+(n.est?' ('+fmtMin(n.est)+')':''),reason:n.reason})});
+ return out;
+}
+const chByName=n=>n?S.channels.find(c=>c.name.toLowerCase()===String(n).toLowerCase().trim()):null;
+function applyItem(m,k){
+ const p=m.prop;if(!p)return;m.applied=m.applied||{};if(m.applied[k])return;
+ if(k==='order'){const ids=p.order.filter(id=>T(id));ids.forEach((id,i)=>{T(id).order=i+1});const rest=dayTasks(cur).filter(t=>!ids.includes(t.id));rest.forEach((t,i)=>t.order=ids.length+i+1)}
+ else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}t.aiSug=null}}
+ else if(k[0]==='n'){const n=p.new_tasks[+k.slice(1)];if(n){const day=n.day==='backlog'?null:(n.day||cur);const c=chByName(n.channel);S.tasks.push(mk({title:n.title,est:n.est||0,channel:c?c.id:null,day,order:nextOrder(day)}))}}
+ m.applied[k]=true;save();render();
+}
+async function aiAsk(text,force){
+ if(!aiOn()){sideTab='ai';renderSide();toast('Ajoute ta clé API Anthropic dans Réglages');return}
+ if(aiBusy)return;aiBusy=true;
+ if(text)S.chat.push({role:'user',text,at:Date.now()});
+ S.chat=S.chat.slice(-30);save();renderSide();
+ const hist=S.chat.slice(-10).map(m=>({role:m.role,content:m.text||'(propositions)'}));
+ while(hist.length&&hist[0].role!=='user')hist.shift();
+ const last=hist[hist.length-1];if(!last||last.role!=='user')hist.push({role:'user',content:'Regarde ma journée et propose-moi une organisation.'});
+ hist[hist.length-1]={role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\n${hist[hist.length-1].content}`};
+ try{const r=await callClaude(hist,force);S.chat.push({role:'assistant',text:r.text||'Voici mes propositions.',prop:r.prop,at:Date.now()});if(sideTab!=='ai'||document.body.classList.contains('side-open')===false&&innerWidth<=1100){aiUnread++}}
+ catch(e){S.chat.push({role:'assistant',text:'Je n’ai pas pu répondre : '+e.message,at:Date.now()})}
+ finally{aiBusy=false;S.chat=S.chat.slice(-30);save();renderSide();renderBadge()}
+}
+function renderBadge(){const b=$('#aibadge');if(b)b.innerHTML=aiUnread?`<span class="badge">${aiUnread}</span>`:''}
+// en sous-marin : catégorie et durée des nouvelles tâches
+function aiWatch(t){if(!aiOn()||!S.settings.aiAuto||!t||(t.est&&t.channel))return;aiQueue.add(t.id);clearTimeout(aiT);aiT=setTimeout(aiClassify,2500)}
+async function aiClassify(){
+ const ids=[...aiQueue].filter(id=>T(id));aiQueue.clear();if(!ids.length||!aiOn())return;
+ try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nPour ces tâches uniquement, propose un canal et une durée (updates, sans order ni new_tasks, message très court) : ${ids.map(id=>'['+id+'] '+T(id).title).join(' ; ')}`}],true);
+  (r.prop&&r.prop.updates||[]).forEach(u=>{const t=T(u.id);if(!t||t.done)return;const c=chByName(u.channel);const sug={};if(c&&c.id!==t.channel)sug.channel=c.id;if(u.est&&!t.est)sug.est=u.est;if(sug.channel||sug.est)t.aiSug=sug});
+  save();render();
+ }catch(e){}
+}
+// en sous-marin : revue du matin, une fois par jour
+function aiMorning(){
+ const d=today();if(!aiOn()||!S.settings.aiAuto||cur!==d||(S.days[d]||{}).aiDone)return;
+ S.days[d]=Object.assign(S.days[d]||{},{aiDone:true});save();
+ setTimeout(()=>aiAsk('Bonjour ! Regarde ma journée : propose un ordre, complète les catégories et durées manquantes, signale si je suis surchargé, et suggère au besoin 1 à 3 tâches utiles.',true),gTok()?2500:500);
+}
+function viewAI(){
+ if(!aiOn())return `<div class="sinfo"><b>Claude, ton assistant de planification</b><span>Il propose l’ordre de tes tâches, leur catégorie et leur durée, repère quand tu es surchargé et suggère des tâches utiles. Tu valides chaque proposition.</span><span>Il faut une clé API Anthropic (payée à l’usage, quelques euros par mois). Crée-la sur console.anthropic.com, puis colle-la dans Réglages.</span><button class="pri" data-act="goset">Ouvrir les réglages</button></div>`;
+ const msgs=S.chat.map((m,mi)=>{const items=m.role==='assistant'?propItems(m.prop):[];const ap=m.applied||{};
+  return `<div class="msg ${m.role==='user'?'u':'a'}">${esc(m.text)}${items.length?`<div class="prop">${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="aiapply" data-m="${mi}" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?`<button class="sm" data-act="aiapplyall" data-m="${mi}">Tout appliquer</button>`:''}</div>`:''}</div>`}).join('');
+ return `<div class="chat">${msgs||'<div class="sinfo" style="padding:0"><span>Demande-moi d’organiser ta journée, ou pose une question.</span></div>'}</div>
+ ${aiBusy?'<div class="thinking">Claude réfléchit…</div>':''}
+ <div class="aibar"><button data-act="aiq" data-q="Organise ma journée : ordre, durées et catégories.">Organise ma journée</button><button data-act="aiq" data-q="Qu’est-ce que j’oublie cette semaine ? Suggère des tâches.">Qu’est-ce que j’oublie ?</button><button data-act="aiq" data-q="Je suis débordé, aide-moi à alléger ma journée.">Je suis débordé</button><button data-act="aiq" data-q="Répartis mon backlog sur la semaine.">Répartis mon backlog</button></div>
+ <form class="aiform" data-form="ai"><textarea name="t" data-keep="ai" rows="1" placeholder="Écris à Claude…" aria-label="Message à Claude"></textarea><button class="pri" type="submit">Envoyer</button></form>`;
+}
+
 /* ---------- rendu : morceaux communs ---------- */
 function card(t){
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
@@ -600,7 +722,7 @@ function card(t){
  return `<div class="card${t.done?' done':''}${run?' running':''}" draggable="true" data-drag="task|${t.id}" data-id="${t.id}">
  <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
  <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${esc(t.title)}</div>
- <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}${t.block?`<span>${hm(new Date(t.block.start))}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${subs}</div></div>
+ <div class="cmeta">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}${t.block?`<span>${hm(new Date(t.block.start))}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?ch(t.aiSug.channel).name:'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div></div>
  <div class="ctime"><span data-live="t-${t.id}" title="Temps passé / estimé">${act>=60||run?fmtMin(act/60)+' / ':''}${t.est?fmtMin(t.est):'—'}</span>${t.done?'':`<button class="play" data-act="play" data-id="${t.id}" aria-label="Démarrer le focus">▶</button>`}</div></div>`;
 }
 function loadInfo(d){const ts=dayTasks(d);const task=ts.reduce((a,t)=>a+(t.est||0),0),meet=meetingMin(d),cap=Math.max(60,(S.settings.workEnd-S.settings.workStart)*60);return{task,meet,cap,over:task+meet-cap}}
@@ -690,6 +812,11 @@ function viewSettings(){
  <section><h2>Microsoft To Do</h2><p>Importe tes tâches dans ta journée ; quand tu les termines ici, elles sont cochées dans To Do (et inversement à la synchro).</p>
   <label>ID d’application (client) Azure<input data-set="msClientId" value="${esc(s.msClientId)}" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off"></label>
   <div class="row" style="margin-top:12px"><span class="status${msOn()?' on':''}">${msOn()?'Connecté':'Non connecté'}</span><span class="sp"></span>${msOn()?'<button class="ghost" data-act="mout">Déconnecter</button>':''}<button class="pri" data-act="min">${msOn()?'Reconnecter':'Connecter Microsoft'}</button></div></section>
+ <section><h2>Claude (assistant)</h2><p>Colle ici ta clé API Anthropic (console.anthropic.com → API Keys). Elle reste uniquement sur cet appareil et n’est jamais synchronisée. Coût : quelques centimes par jour avec Haiku.</p>
+  <label>Clé API<input type="password" data-set="aiKey" value="${esc(s.aiKey)}" placeholder="sk-ant-…" autocomplete="off"></label>
+  <div class="grid2"><label>Modèle<select data-set="aiModel"><option value="claude-haiku-5-5" ${s.aiModel==='claude-haiku-5-5'?'selected':''}>Haiku — rapide et économique</option><option value="claude-sonnet-5-5" ${s.aiModel==='claude-sonnet-5-5'?'selected':''}>Sonnet — plus fin</option></select></label>
+  <label>En arrière-plan<select data-set="aiAuto"><option value="1" ${s.aiAuto?'selected':''}>Suggestions automatiques</option><option value="" ${s.aiAuto?'':'selected'}>Seulement quand je demande</option></select></label></div>
+  <div class="row" style="margin-top:12px"><span class="status${aiOn()?' on':''}">${aiOn()?'Clé enregistrée':'Pas de clé'}</span><span class="sp"></span><button class="ghost sm" data-act="aiclear">Effacer la conversation</button></div></section>
  <section><h2>Adresse de redirection</h2><p>À coller à l’identique dans la console Google et dans Azure.</p><div class="row"><code>${esc(REDIRECT)}</code><button class="sm" data-act="copyuri">Copier</button></div></section>
  <section><h2>Journée type</h2><div class="grid2">${num('workStart','Début du travail (h)',0,23)}${num('workEnd','Fin du travail (h)',1,24)}${num('dayStart','Agenda : première heure',0,23)}${num('dayEnd','Agenda : dernière heure',1,24)}${num('pomo','Pomodoro (min)',5,90)}${num('brk','Pause (min)',1,30)}</div></section>
  <section><h2>Canaux</h2><p>Des catégories pour classer tes tâches et voir où passe ton temps. Tape <code>#nom</code> en créant une tâche pour l’y ranger.</p>
@@ -758,8 +885,9 @@ function render(){
 function renderSide(){
  document.querySelectorAll('.stabs [data-side]').forEach(b=>b.classList.toggle('on',b.dataset.side===sideTab));
  const sb=$('#sidebody'),st=sb.scrollTop;
- sb.innerHTML=sideTab==='todo'?viewTodo():viewCal();
- if(sideTab==='cal'&&scrolledCal!==cur){scrolledCal=cur;const n=new Date(),h=cur===today()?Math.max(S.settings.dayStart,n.getHours()-1):S.settings.workStart;sb.scrollTop=(h-S.settings.dayStart)*PX}else sb.scrollTop=st;
+ sb.innerHTML=sideTab==='todo'?viewTodo():sideTab==='ai'?viewAI():viewCal();
+ if(sideTab==='ai'){aiUnread=0;renderBadge();}
+ if(sideTab==='ai'){sb.scrollTop=sb.scrollHeight}else if(sideTab==='cal'&&scrolledCal!==cur){scrolledCal=cur;const n=new Date(),h=cur===today()?Math.max(S.settings.dayStart,n.getHours()-1):S.settings.workStart;sb.scrollTop=(h-S.settings.dayStart)*PX}else sb.scrollTop=st;
 }
 function renderRun(){
  const r=S.running,t=r&&T(r.taskId);
@@ -800,7 +928,7 @@ function openTask(id){
 /* ---------- rituels ---------- */
 const RIT={plan:['Hier','Choisir','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Clôture'],weekplan:['Semaine passée','Objectifs','Aperçu'],weekreview:['Chiffres','Réflexion']};
 function startRitual(type,day){modalTask=null;ritual={type,step:0,day:day||cur,picked:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}
-function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<span class="${k===i?'on':k<i?'past':''}">${esc(s)}</span>`).join('')}<span class="sp" style="background:none"></span></div>${body}<div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':'<button class="ghost" data-act="close">Plus tard</button>'}<span class="sp"></span><button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
+function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<span class="${k===i?'on':k<i?'past':''}">${esc(s)}</span>`).join('')}<span class="sp" style="background:none"></span></div>${body}<div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':'<button class="ghost" data-act="close">Plus tard</button>'}<span class="sp"></span>${ritual.type==='plan'&&aiOn()&&ritual.step<4?'<button data-act="askclaude">Demander à Claude</button>':''}<button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
 const durBtns=t=>`<div class="durs">${[15,30,45,60,90,120].map(v=>`<button class="sm${t.est===v?' on':''}" data-act="dur" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('')}</div>`;
 function renderRitual(){
  if(!ritual)return;const d=ritual.day,i=ritual.step,dl=fmtDay(d,{weekday:'long',day:'numeric',month:'long'});let h='';
@@ -856,8 +984,8 @@ function renderRitual(){
 function ritNext(){
  const n=RIT[ritual.type].length,d=ritual.day;
  const sh=$('#sheet');
- if(ritual.type==='plan'&&ritual.step===4){const v=sh.querySelector('[data-intent]');S.days[d]=Object.assign(S.days[d]||{},{planned:true,intent:v?v.value.trim():''})}
- if(ritual.type==='shutdown'&&ritual.step===2){const v=sh.querySelector('[data-note]');S.days[d]=Object.assign(S.days[d]||{},{shutdown:true,note:v?v.value.trim():''});if(S.running)stopTimer()}
+ if(ritual.type==='plan'&&ritual.step===4){const v=sh.querySelector('[data-intent]');emit('ritual:plan',{day:d});S.days[d]=Object.assign(S.days[d]||{},{planned:true,intent:v?v.value.trim():''})}
+ if(ritual.type==='shutdown'&&ritual.step===2){const v=sh.querySelector('[data-note]');emit('ritual:shutdown',{day:d});S.days[d]=Object.assign(S.days[d]||{},{shutdown:true,note:v?v.value.trim():''});if(S.running)stopTimer()}
  if(ritual.type==='weekplan'&&ritual.step===2){const w=monday(d);S.weeks[w]=Object.assign(S.weeks[w]||{},{planned:true})}
  if(ritual.type==='weekreview'&&ritual.step===1){const w=monday(d),v=sh.querySelector('[data-review]');S.weeks[w]=Object.assign(S.weeks[w]||{},{review:v?v.value.trim():''})}
  save();
@@ -961,15 +1089,23 @@ document.addEventListener('click',async e=>{
   case'copyuri':try{await navigator.clipboard.writeText(REDIRECT);toast('Adresse copiée')}catch(err){toast('Copie impossible : sélectionne l’adresse à la main')}break;
   case'chadd':S.channels.push({id:uid(),name:'Nouveau canal',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;
-  case'export':{const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download='journee-'+today()+'.json';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);break}
+  case'aiq':sideTab='ai';document.body.classList.add('side-open');aiAsk(b.dataset.q,true);break;
+  case'aiapply':{const m=S.chat[+b.dataset.m];if(m)applyItem(m,b.dataset.k);break}
+  case'aiapplyall':{const m=S.chat[+b.dataset.m];if(m)propItems(m.prop).forEach(it=>applyItem(m,it.k));toast('Propositions appliquées');break}
+  case'aiok':{const t=T(id);if(t&&t.aiSug){if(t.aiSug.channel)t.channel=t.aiSug.channel;if(t.aiSug.est){t.est=t.aiSug.est;if(t.block)setBlock(t,new Date(t.block.start),true)}t.aiSug=null;save();render()}break}
+  case'aino':{const t=T(id);if(t){t.aiSug=null;save();render()}break}
+  case'aiclear':S.chat=[];save();renderSide();toast('Conversation effacée');break;
+  case'askclaude':sideTab='ai';closeModal();document.body.classList.add('side-open');aiAsk('Aide-moi à planifier ma journée : ordre, durées, catégories, et ce qui doit être reporté.',true);break;
+  case'export':{const blob=new Blob([JSON.stringify(Object.assign({},S,{settings:Object.assign({},S.settings,{aiKey:''})}),null,1)],{type:'application/json'}),u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download='journee-'+today()+'.json';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);break}
  }
 });
 document.addEventListener('submit',e=>{
  const f=e.target.closest('form[data-form]');if(!f)return;e.preventDefault();
- const inp=f.querySelector('input'),v=inp.value.trim();if(!v)return;
+ const inp=f.querySelector('input,textarea'),v=inp.value.trim();if(!v)return;
  const k=f.dataset.form;
  if(k==='add'){addTask(v,f.dataset.day||null);const n=document.querySelector(`[data-keep="${inp.dataset.keep}"]`);if(n)n.value='';if(ritual)renderRitual()}
  else if(k==='obj'){S.objectives.push({id:uid(),week:monday(ritual?ritual.day:cur),title:v,done:false});save();render();if(ritual)renderRitual()}
+ else if(k==='ai'){inp.value='';aiAsk(v,false);return}
  else if(k==='sub'){const t=T(f.dataset.tid);if(t){t.subtasks.push({id:uid(),t:v,d:false});save();if(focusOn)renderFocus();if(modalTask===t.id)openTask(t.id);render()}}
  const n=document.querySelector(`[data-keep="${inp.dataset.keep}"]`);if(n){n.value='';n.focus()}
 });
@@ -996,7 +1132,7 @@ document.addEventListener('change',async e=>{
   save();render();if(['day','time','recur','est'].includes(f))openTask(t.id);return;
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);await setBlock(t,dt,true)}else clearBlock(t,true);render();renderRitual()}return}
- if(el.dataset.set){const k=el.dataset.set;S.settings[k]=el.type==='number'?+el.value:el.value.trim();save();if(el.type==='number')render();return}
+ if(el.dataset.set){const k=el.dataset.set;S.settings[k]=k==='aiAuto'?!!el.value:el.type==='number'?+el.value:el.value.trim();save();if(el.type==='number'||k==='aiKey')render();return}
  if(el.dataset.chc){const c=ch(el.dataset.chc);if(c){c.color=el.value;save();render()}return}
  if(el.dataset.chn){const c=ch(el.dataset.chn);if(c){c.name=el.value.trim()||c.name;save()}return}
  if(el.hasAttribute('data-todolist')){todo.listId=el.value;S.settings.todoList=el.value;save();renderSide();return}
@@ -1030,6 +1166,7 @@ document.addEventListener('drop',async e=>{
 });
 
 /* ---------- clavier ---------- */
+document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){if(!$('#modal').classList.contains('hidden'))closeModal();else if(focusOn){focusOn=null;renderFocus();render()}else document.body.classList.remove('side-open');return}
  if(e.target.matches('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey||focusOn||!$('#modal').classList.contains('hidden'))return;
@@ -1048,6 +1185,7 @@ render();
 if(S.running&&T(S.running.taskId))renderRun();
 if(msOn()&&S.settings.msClientId)setTimeout(syncTodo,1500);
 setTimeout(driveSync,800);
+setTimeout(aiMorning,1500);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){driveSync();if(msOn())syncTodo();if(gTok()){gEvents={};render()}}});
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 }
