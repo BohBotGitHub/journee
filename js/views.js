@@ -78,6 +78,8 @@ function summaryHtml(d,isT){
  return `<div class="summary">${chips}</div>${det?`<div class="sumdet">${det}</div>`:''}`;
 }
 let uiOpen='';
+// bascule liste ⇄ grand agenda : une icône, toujours au même endroit dans l'en-tête
+const layoutBtn=()=>`<button class="layoutbtn" data-act="layout" aria-label="${layout==='cal'?'Liste au centre':'Grand agenda au centre'} (touche C)" title="${layout==='cal'?'Liste au centre':'Grand agenda au centre'} (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">${layout==='cal'?'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/>':'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16M15 4v16"/>'}</svg></button>`;
 function viewToday(){
  const d=cur,isT=d===today(),ts=dayTasks(d),info=S.days[d]||{};
  const title=isT?'Aujourd’hui':d===addDays(today(),1)?'Demain':d===addDays(today(),-1)?'Hier':cap1(fmtDay(d,{weekday:'long'}));
@@ -87,7 +89,7 @@ function viewToday(){
  const h=new Date().getHours(),past=d<today();
  const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus sur la suivante','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
  return `<div class="head tight"><div class="htitle"><h1>${title}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
- <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button></div></div>
+ <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}${layoutBtn()}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button></div></div>
  ${summaryHtml(d,isT)}
  ${addForm(d,'Ajouter une tâche')}
  ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.map(card).join(''):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>`}
@@ -100,7 +102,6 @@ function dayMenu(){
   <button data-act="plan">${info.planned?'Replanifier la journée':'Planifier la journée'}<kbd>P</kbd></button>
   <button data-act="focusnext">Focus sur la prochaine tâche<kbd>F</kbd></button>
   <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
-  <button data-act="layout">Grand agenda au centre<kbd>C</kbd></button>
   ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
   <button data-act="tplfromday">Enregistrer cette journée comme modèle</button>
   <button data-act="palopen">Rechercher ou lancer une commande<kbd>⌘K</kbd></button>
@@ -113,7 +114,7 @@ function viewWeek(){
  const tot=days.reduce((a,d)=>a+dayTasks(d).reduce((x,t)=>x+(t.est||0),0),0);
  return `<div class="head"><div><h1>Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</h1><div class="sub">${fmtMin(tot)} de tâches prévues</div></div>
  <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
- <div class="acts"><button data-act="weekplan">Planifier la semaine</button><button data-act="layout" title="Touche C">⇄ Grand agenda<kbd class="k">C</kbd></button></div></div>
+ <div class="acts"><button data-act="weekplan">Planifier la semaine</button>${layoutBtn()}</div></div>
  ${objChips(w)}
  <div class="week">${days.map(d=>{const ts=dayTasks(d),L=loadInfo(d);return `<div class="wcol${d===today()?' today':''}">
   <h3 data-act="openday" data-day="${d}">${cap1(fmtDay(d,{weekday:'short',day:'numeric'}))}<small class="${L.over>0?'':'mute'}" style="${L.over>0?'color:var(--warn)':''}">${fmtMin(L.task)}</small></h3>
@@ -324,7 +325,7 @@ const alldayHtml=d=>{const a=(gEvents[d]||[]).filter(e=>e.start.date);return a.l
 function gStateHtml(d){return gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:'')):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`}
 function viewCal(){
  const d=cur;
- return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span><button class="sm ghost" data-act="layout" title="Inverser : grand agenda au centre (touche C)">⇄ Grand agenda</button>${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
+ return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span>${layoutBtn()}${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
  ${gStateHtml(d)}${alldayHtml(d)}
  <div class="tl">${calCol(d)}</div>
  <div class="sinfo" style="padding-top:0"><span>${flowOn()?'Agenda vivant : les tâches suivent l’ordre de la liste. Glisse une tâche ici pour fixer son heure.':'Glisse une tâche sur l’agenda pour lui réserver un créneau.'}</span>${flowOn()?'':'<button class="sm" data-act="autobox">Placer automatiquement les tâches du jour</button>'}</div>`;
@@ -337,7 +338,7 @@ function viewBigCal(){
  const axis=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
  return `<div class="head"><div><h1>${days.length===1?cap1(fmtDay(days[0],{weekday:'long',day:'numeric',month:'long'})):cap1(fmtDay(days[0],{day:'numeric',month:'short'}))+' – '+fmtDay(days[days.length-1],{day:'numeric',month:'short'})}</h1><div class="sub">Grand agenda · tes tâches sont à droite</div></div>
  <div class="dnav"><button data-act="${days.length===7?'prevw':'prev'}" aria-label="Précédent">‹</button><button data-act="gotoday">Aujourd’hui</button><button data-act="${days.length===7?'nextw':'next'}" aria-label="Suivant">›</button></div>
- <div class="acts"><div class="seg">${[1,3,7].map(n=>`<button class="sm${calSpan===n?' on':''}" data-act="span" data-n="${n}">${n===1?'Jour':n===3?'3 jours':'Semaine'}</button>`).join('')}</div><button data-act="layout" title="Touche C">⇄ Liste au centre<kbd class="k">C</kbd></button></div></div>
+ <div class="acts"><div class="seg">${[1,3,7].map(n=>`<button class="sm${calSpan===n?' on':''}" data-act="span" data-n="${n}">${n===1?'Jour':n===3?'3 jours':'Semaine'}</button>`).join('')}</div>${layoutBtn()}</div></div>
  ${gStateHtml(cur)}
  <div class="bigcal" style="--n:${days.length}">
   <div class="bchead"><div></div>${days.map(d=>`<div class="bcday${d===today()?' today':''}" data-act="openday" data-day="${d}"><b>${cap1(fmtDay(d,{weekday:'short',day:'numeric'}))}</b><small>${fmtMin(loadInfo(d).task)} de tâches</small>${alldayHtml(d)}</div>`).join('')}</div>

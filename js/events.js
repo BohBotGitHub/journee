@@ -108,6 +108,7 @@ document.addEventListener('click',async e=>{
   case'archcopy':{const a=(S.archive||[]).find(x=>x.id===id);if(a){S.tasks.push(mk({title:a.t,channel:a.c,est:a.e||Math.round((a.a||0)/60)||0,day:today(),order:nextOrder(today())}));save();closeModal();go('today');toast('Ajoutée à aujourd’hui')}break}
   case'palopen':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();openPal();break;
   case'synchide':lsSet('journee.sync.hide',today());renderSyncBar();break;
+  case'timerreset':{const t=T(id);if(!t)break;const prev={a:t.actual,s:S.running&&S.running.taskId===id?S.running.start:null};t.actual=0;if(prev.s)S.running.start=Date.now();save();renderFocus();render();timerUndo={id,...prev,at:Date.now()};toast('Minuteur remis à zéro · Ctrl+Z (⌘Z) pour annuler');break}
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
   case'mvup':closeModal();swapTask(id,-1);break;
@@ -327,3 +328,7 @@ document.addEventListener('keydown',e=>{
  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,(view==='week'||view==='objectives')?7*s:s);render()}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('brand')){e.preventDefault();e.target.click()}});
+
+// annuler la remise à zéro du minuteur (Ctrl/⌘+Z dans les 10 s)
+let timerUndo=null;
+document.addEventListener('keydown',e=>{if(timerUndo&&Date.now()-timerUndo.at<15000&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){const t=T(timerUndo.id);if(t){t.actual=timerUndo.a;if(timerUndo.s&&S.running&&S.running.taskId===t.id)S.running.start=timerUndo.s;save();renderFocus();render();toast('Minuteur rétabli')}timerUndo=null;e.preventDefault()}});
