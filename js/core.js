@@ -42,6 +42,8 @@ function stamp(){
  for(const c of COLL)for(const x of S[c]||[])mark(c+':'+x.id,x);
  for(const c of MAPS)for(const [key,v] of Object.entries(S[c]||{}))if(v&&typeof v==='object')mark(c+':'+key,v);
  for(const k of SCAL){const j=scalJson(k);next['s:'+k]=j;if(prev&&prev['s:'+k]!==j)S.su[k]=now}
+ // réglages horodatés un par un : un appareil qui change un réglage n'écrase plus les autres (ex. la couleur d'accent)
+ for(const [k,v] of Object.entries(S.settings||{})){const j=JSON.stringify(v===undefined?null:v);next['st:'+k]=j;if(prev&&prev['st:'+k]!==j)S.su['set.'+k]=now}
  if(prev)for(const k in prev)if(!(k in next)&&COLL.some(c=>k.startsWith(c+':')))S.deleted[k]=now;
  const lim=now-60*864e5;for(const k in S.deleted)if(S.deleted[k]<lim)delete S.deleted[k];
  snap=next;
@@ -55,6 +57,11 @@ function mergeState(L,R){
  const ids=new Set((L.archive||[]).map(a=>a.id));out.archive=[...(L.archive||[]),...(R.archive||[]).filter(a=>!ids.has(a.id))];
  out.su=Object.assign({},L.su||{});
  for(const k of SCAL){const lu=(L.su||{})[k]||0,ru=(R.su||{})[k]||0;if(ru>lu){out[k]=R[k];out.su[k]=ru}}
+ // réglages fusionnés réglage par réglage, le plus récent gagne
+ {const ls=L.settings||{},rs=R.settings||{},lsu=L.su||{},rsu=R.su||{},st={};
+  for(const k of new Set([...Object.keys(ls),...Object.keys(rs)])){const lu=lsu['set.'+k]||0,ru=rsu['set.'+k]||0;
+   if(!(k in ls))st[k]=rs[k];else if(!(k in rs))st[k]=ls[k];else if(ru>lu){st[k]=rs[k];out.su['set.'+k]=ru}else if(lu>ru){st[k]=ls[k];out.su['set.'+k]=lu}else st[k]=(out.settings||{})[k]!==undefined?out.settings[k]:ls[k]}
+  out.settings=st}
  // la clé Claude n'est jamais effacée par un appareil qui ne l'a pas encore
  out.settings=Object.assign({},out.settings||{});if(!(out.settings.aiKey||'').trim())out.settings.aiKey=((L.settings||{}).aiKey||(R.settings||{}).aiKey||'');
  out.deleted=del;out.seeded=true;return out;

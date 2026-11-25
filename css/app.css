@@ -436,7 +436,7 @@ details.adv .set{margin-top:8px}
 .pkfoot .on{background:var(--ink);color:var(--panel)}
 @media (max-width:760px){.tvwrap{grid-template-columns:1fr}.tvp{position:static}#pickov{padding:0;align-items:stretch}.pk{border-radius:0;max-height:100vh;height:100%}.pkgrid{grid-template-columns:1fr}}
 
-@media (min-width:761px){body.wideview #app{grid-template-columns:196px minmax(0,1fr) 0}body.wideview #side{display:none}}
+@media (min-width:761px){body.wideview #app{grid-template-columns:var(--navw,196px) minmax(0,1fr) 0}body.wideview #side{display:none}}
 
 /* ---------- polissage (revue UI du 24/11) ---------- */
 /* créneaux très courts : une ligne, sans débordement sur le suivant */
@@ -1057,3 +1057,12 @@ button.pri:hover{filter:brightness(1.06)}
 }
 #nav button[data-view]{border:1px solid transparent}
 #nav button.navrefresh{border:1px solid transparent}.navver{transform:translateX(1px)}
+/* 25/11 23 h 35 : retour aux fonds de la v1.7 (gris neutre), le reste du style zen est gardé */
+:root{--bg:light-dark(#e6e6e3,#101012);--panel:light-dark(#fbfbfa,#1a1a1d);--panel2:light-dark(#dededa,#222226);
+--line:light-dark(#d3d3cf,#2a2a2e);--ink:light-dark(#121214,#efeff1);--mute:light-dark(#57575d,#93939a)}
+/* la barre d'avancement du jour s'arrête avant les boutons du haut */
+@media (min-width:761px){body.hideside #main .horizon{margin-right:44px}}
+@media (min-width:761px){body.wideview.hidenav #app{grid-template-columns:64px minmax(0,1fr) 0}}
+/* bas de la barre : Actualiser puis Réglages, toujours en bas, aussi en rail replié */
+#nav .navset,#nav .navrefresh{margin-top:0}
+@media (min-width:761px){body.hidenav #nav .navrefresh{margin-top:auto}}

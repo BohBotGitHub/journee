@@ -427,7 +427,7 @@ def _(c):
     assert 'Raccourcis clavier' in pg.inner_text('#sheet')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
-    assert order == ['runchip', 'navset', 'navrefresh', 'navver'], order
+    assert order == ['runchip', 'navrefresh', 'navset', 'navver'], order
     ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg', '#nav .navver .vlogo')]
     assert round(pg.locator('#nav .navver b').bounding_box()['x']) == round(pg.locator('#nav .navrefresh .ll').bounding_box()['x'])
     assert len(set(ic)) == 1, ic
@@ -1214,10 +1214,10 @@ def _(c):
     pg.evaluate("()=>go('settings')"); tick(pg, 150)
     assert 'Projets' not in pg.evaluate("[...document.querySelectorAll('#main section h2')].map(h=>h.textContent).join('|')")
     pg.select_option('[data-set="mode"]', 'light'); tick(pg, 200)
-    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(244, 242, 236)', bg
+    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(230, 230, 227)', bg
     assert pg.evaluate("document.documentElement.style.colorScheme") == 'light'
     pg.select_option('[data-set="mode"]', 'auto'); tick(pg, 200)
-    assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(30, 28, 25)'
+    assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(16, 16, 18)'
     assert not errs, errs; ctx.close()
 
 @test('v1.7 : croix du menu clic droit, appui long à la souris')
@@ -1382,6 +1382,17 @@ def _(c):
     # un rendez-vous passé non coché est compté comme fait (il ne revient pas le lendemain)
     pg.evaluate(f"()=>{{const t=evToTask('{eid}');t.day=window.journee.fn.addDays(t.day,-1);rollOver()}}")
     assert st(pg, "S.tasks.find(t=>t.evId).done") is True
+    assert not errs, errs; ctx.close()
+
+@test('Réglages synchronisés un par un : changer l’accent sur un appareil n’est pas écrasé par un autre réglage ailleurs')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    r = pg.evaluate("""()=>{const L={settings:{accent:'sauge',mode:'auto'},su:{'set.accent':200,settings:200}};const R={settings:{accent:'or',mode:'dark'},su:{'set.mode':300,settings:300}};const o=mergeState(L,R);return o.settings}""")
+    assert r['accent'] == 'sauge' and r['mode'] == 'dark', r
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    pg.click('.swatch[data-v="lavande"]'); tick(pg, 150)
+    assert st(pg, "S.settings.accent") == 'lavande' and st(pg, "S.su['set.accent']") > 0
+    assert pg.evaluate("document.documentElement.dataset.accent") == 'lavande'
     assert not errs, errs; ctx.close()
 
 def main():
