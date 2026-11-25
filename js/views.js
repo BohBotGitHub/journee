@@ -121,7 +121,7 @@ function dayMenu(){
   <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
   ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
   ${d===today()&&flowOn()?`<button data-act="plan">Mes heures et mon plan du jour (${hhmm(dayHours(d).s)} → ${hhmm(dayHours(d).end)})</button>`:''}
-  <button data-act="addposcycle" data-keepopen="1">${ico(ADDPOS.find(x=>x[0]===(S.settings.addPos||'bottom'))[2])}Nouvelles tâches : ${({top:'en haut',bottom:'en bas',auto:'placées par le Génie'})[S.settings.addPos||'bottom']}<small class="mute" style="margin-left:auto">changer</small></button>
+  <button class="hasic" data-act="addposcycle" data-keepopen="1">${ico(ADDPOS.find(x=>x[0]===(S.settings.addPos||'bottom'))[2])}Nouvelles tâches : ${({top:'en haut',bottom:'en bas',auto:'placées par le Génie'})[S.settings.addPos||'bottom']}<small class="mute" style="margin-left:auto;align-self:center">changer</small></button>
   <button data-act="tplfromday">Enregistrer comme modèle</button>
   <button data-act="palopen">Rechercher ou lancer une commande<kbd>⌘K</kbd></button>
  </div></div>`);
