@@ -752,3 +752,4 @@ body.hidenav #main{padding-left:clamp(56px,5vw,72px)}
  body.hideside #sidetog{right:12px}
  body:not(.hideside) .stabs{padding-left:48px}
 }
+body.sidecollapse #side{opacity:.35}body.sidecollapse .sidegrip{background:var(--warn)!important}

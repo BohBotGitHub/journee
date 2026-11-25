@@ -1029,8 +1029,8 @@ def _(c):
     pg.click('#sheet [data-act="sheetmv"][data-to="' + st(pg, "today()") + '"]'); tick(pg, 150)
     assert st(pg, "T('tm').day") == st(pg, "today()")
     g = pg.locator('#side .sidegrip').bounding_box(); W = pg.viewport_size['width']
-    pg.mouse.move(g['x']+4, 400); pg.mouse.down(); pg.mouse.move(W - 120, 400, steps=5); pg.mouse.up(); tick(pg, 150)
-    assert not pg.locator('#side').is_visible(), 'replié'
+    pg.mouse.move(g['x']+4, 400); pg.mouse.down(); pg.mouse.move(W - 225, 400, steps=5); pg.mouse.up(); tick(pg, 150)
+    assert not pg.locator('#side').is_visible(), 'replié dès qu’on passe sous la taille minimale'
     pg.click('#sidetog'); tick(pg, 150)
     assert pg.locator('#side').is_visible() and pg.locator('#side').bounding_box()['width'] > 250
     assert not errs, errs; ctx.close()
