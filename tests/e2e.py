@@ -427,7 +427,7 @@ def _(c):
     assert 'Raccourcis clavier' in pg.inner_text('#sheet')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
-    assert order == ['runchip', 'navset', 'navrefresh', 'navver'], order
+    assert order == ['runchip', 'navrefresh', 'navset', 'navver'], order
     ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg', '#nav .navver .vlogo')]
     assert round(pg.locator('#nav .navver b').bounding_box()['x']) == round(pg.locator('#nav .navrefresh .ll').bounding_box()['x'])
     assert len(set(ic)) == 1, ic
@@ -999,7 +999,7 @@ def _(c):
     pg.click('#sidetog'); tick(pg, 150)
     assert not pg.locator('#side').is_visible()
     pg.click('#navtog'); tick(pg, 150)
-    assert not pg.locator('#nav').is_visible(), 'menu caché'; mw = pg.locator('#main').bounding_box()['width']; assert mw > pg.viewport_size['width'] - 40, mw
+    nb = pg.locator('#nav').bounding_box(); assert nb and nb['width'] <= 70, ('menu replié en rail', nb); assert not pg.locator('#nav [data-view="week"] .ll').is_visible(); mw = pg.locator('#main').bounding_box()['width']; assert mw > pg.viewport_size['width'] - 110, mw
     pg.click('#navtog'); pg.click('#sidetog'); tick(pg, 150)
     assert pg.locator('#side').is_visible() and pg.locator('#nav').is_visible()
     assert not errs, errs; ctx.close()
@@ -1250,6 +1250,149 @@ def _(c):
     pg.click('#main .card[data-id="g4"] .ctitle', modifiers=['Control']); pg.click('#main .card[data-id="g5"] .ctitle', modifiers=['Control'])
     pg.evaluate(gap, ['g4', 'g2']); tick(pg, 200)
     o = order(); i = o.index('g2'); assert o[i + 1:i + 3] == ['g4', 'g5'], o
+    assert not errs, errs; ctx.close()
+
+@test('v1.8 : site rassurant (noindex sauf la page À propos, pas de champ mot de passe, clé masquée derrière un bouton)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    assert pg.locator('meta[name="robots"][content*="noindex"]').count() == 1
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    assert pg.locator('input[type="password"]').count() == 0, 'champ mot de passe présent'
+    assert pg.locator('[data-set="aiKey"]').count() == 0, 'champ de clé affiché d’office'
+    assert pg.locator('#main a[href="about.html"]').count() == 1
+    pg.click('[data-act="aikey"]'); tick(pg, 100)
+    k = pg.locator('[data-set="aiKey"]'); assert k.count() == 1 and k.get_attribute('type') == 'text' and k.input_value() == ''
+    k.fill('sk-ant-demo'); k.dispatch_event('change'); tick(pg, 150)
+    assert st(pg, "S.settings.aiKey") == 'sk-ant-demo' and pg.locator('[data-set="aiKey"]').count() == 0
+    # vide = garder l’ancienne clé
+    pg.click('[data-act="aikey"]'); tick(pg, 100); pg.dispatch_event('[data-set="aiKey"]', 'change'); tick(pg, 100)
+    assert st(pg, "S.settings.aiKey") == 'sk-ant-demo'
+    p2 = ctx.new_page(); p2.goto(BASE + 'about.html')
+    assert 'Diem' in p2.title() and p2.locator('meta[name="robots"][content*="noindex"]').count() == 0 and p2.locator('input').count() == 0
+    assert not errs, errs; ctx.close()
+
+@test('v1.8 : glisser au doigt avec la poignée (réordonner, vers le backlog, pas de clic parasite)')
+def _(c):
+    ctx = c['b'].new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True, device_scale_factor=1)
+    pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.route('https://fonts.googleapis.com/**', lambda r: r.abort()); pg.route('https://fonts.gstatic.com/**', lambda r: r.abort())
+    pg.clock.install(time=at(9, 0)); pg.goto(BASE); pg.clock.run_for(1500)
+    pg.evaluate("()=>{S.tasks.filter(t=>t.day===today()).forEach(t=>t.day=null);for(let i=1;i<=4;i++)S.tasks.push(mk({id:'h'+i,title:'H'+i,day:today(),est:10,order:i}));save();go('today');render()}"); tick(pg, 200)
+    assert pg.evaluate("matchMedia('(pointer:coarse)').matches")
+    cdp = ctx.new_cdp_session(pg)
+    def touch(pts):
+        for i, (x, y) in enumerate(pts):
+            typ = 'touchStart' if i == 0 else 'touchMove'
+            cdp.send('Input.dispatchTouchEvent', {'type': typ, 'touchPoints': [{'x': x, 'y': y}]}); pg.wait_for_timeout(30)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); pg.wait_for_timeout(50)
+    order = lambda: pg.evaluate("[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id)")
+    g = pg.locator('#main .card[data-id="h1"] .tgrip').bounding_box(); assert g and g['width'] > 10, 'poignée invisible'
+    t3 = pg.locator('#main .card[data-id="h3"]').bounding_box()
+    sx, sy = g['x'] + g['width'] / 2, g['y'] + g['height'] / 2; ty = t3['y'] + t3['height'] * 0.8
+    touch([(sx, sy)] + [(sx + 2, sy + (ty - sy) * k / 8) for k in range(1, 9)])
+    tick(pg, 200); o = order(); assert o.index('h1') == o.index('h3') + 1, o
+    assert pg.locator('#modal:not(.hidden)').count() == 0, 'la tâche s’est ouverte après le glisser'
+    assert pg.locator('.touchghost').count() == 0 and pg.locator('.dragging').count() == 0
+    # vers le backlog (barre du bas)
+    b = pg.locator('#nav [data-drop="backlog"]').bounding_box(); assert b, 'cible backlog absente'
+    g = pg.locator('#main .card[data-id="h2"] .tgrip').bounding_box(); sx, sy = g['x'] + g['width'] / 2, g['y'] + g['height'] / 2
+    bx, by = b['x'] + b['width'] / 2, b['y'] + b['height'] / 2
+    touch([(sx, sy)] + [(sx + (bx - sx) * k / 8, sy + (by - sy) * k / 8) for k in range(1, 9)])
+    tick(pg, 200); assert st(pg, "T('h2').day") is None, st(pg, "T('h2').day")
+    assert not errs, errs; ctx.close()
+
+@test('v1.8 : doublon Cuisine / Alimentation saine gardé (aucune proposition de fusion)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    assert st(pg, "dupCands().length") == 0
+    pg.evaluate("()=>{view='tree';render()}"); tick(pg, 200)
+    assert pg.locator('[data-act="dupkeep"],[data-act^="dup"]').count() == 0
+    assert not errs, errs; ctx.close()
+
+@test('v1.8 : Trier mes mails (faux Gmail, bouton masqué sans accès, tâches proposées par le Génie)')
+def _(c):
+    seen = {}
+    def gmail(route):
+        u = route.request.url
+        if '/messages?' in u:
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'messages': [{'id': 'm1'}, {'id': 'm2'}]}))
+        mid = u.split('/messages/')[1].split('?')[0]
+        data = {'m1': ('Point Relais <noreply@relais.example>', 'Votre colis vous attend jusqu’au 30/11'), 'm2': ('Alice Exemple <alice@example.com>', 'Tu viens samedi ?')}[mid]
+        route.fulfill(status=200, content_type='application/json', body=json.dumps({'id': mid, 'snippet': 'Texte fictif', 'payload': {'headers': [{'name': 'From', 'value': data[0]}, {'name': 'Subject', 'value': data[1]}, {'name': 'Date', 'value': 'Wed, 25 Nov 2026 08:00:00 +0100'}]}}))
+    def claude(route):
+        seen['body'] = route.request.post_data; return claude_route(route)
+    # sans accès Gmail : pas de bouton
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0), storage=TOKEN + "localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:false}}))")
+    pg.evaluate("()=>{sideTab='ai';renderSide()}"); tick(pg, 100)
+    assert pg.locator('#side [data-act="mailsort"]').count() == 0
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    assert pg.locator('[data-act="mailallow"][data-k="g"]').count() == 1
+    ctx.close()
+    # avec accès Gmail
+    tok = TOKEN.replace("drive.appdata'", "drive.appdata https://www.googleapis.com/auth/gmail.readonly'")
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0), storage=tok + "localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:false}}))")
+    pg.route('https://gmail.googleapis.com/**', gmail); pg.unroute('https://api.anthropic.com/**'); pg.route('https://api.anthropic.com/**', claude)
+    pg.evaluate("()=>{sideTab='ai';renderSide()}"); tick(pg, 100)
+    assert pg.locator('#side [data-act="mailsort"]').count() == 1
+    n0 = st(pg, "S.tasks.length")
+    pg.click('#side [data-act="mailsort"]'); pg.wait_for_timeout(600); tick(pg, 200)
+    assert 'Votre colis vous attend' in seen.get('body', '') and 'Tu viens samedi' in seen['body']
+    assert 'colis' not in json.dumps(st(pg, "S.chat.map(m=>m.text)")).lower(), 'contenu des mails enregistré'
+    pg.click('#side [data-act="aiapply"][data-k="n0"]'); tick(pg, 200)
+    assert st(pg, "S.tasks.length") == n0 + 1 and st(pg, "S.tasks.at(-1).title") == 'Tâche proposée'
+    # tâche automatique au-delà du seuil
+    pg.unroute('https://gmail.googleapis.com/**')
+    pg.route('https://gmail.googleapis.com/**', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps({'id': 'INBOX', 'messagesUnread': 42})))
+    pg.evaluate("()=>{S.settings.mailThresh=30;mailWatch()}"); pg.wait_for_timeout(300); tick(pg, 100)
+    assert st(pg, "S.tasks.filter(t=>t.auto==='mail'&&t.day===today()).length") == 1
+    pg.evaluate("()=>mailWatch()"); pg.wait_for_timeout(300)
+    assert st(pg, "S.tasks.filter(t=>t.auto==='mail').length") == 1, 'tâche en double'
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    assert pg.locator('[data-act="mailstop"][data-k="g"]').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('Rendez-vous Google ajouté comme tâche, à heure fixe')
+def _(c):
+    g = Google()
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0), google=g, storage=TOKEN)
+    pg.evaluate("()=>{sideTab='cal';render()}"); tick(pg, 300)
+    eid = st(pg, "Object.values(gEvents).flat().find(e=>e.summary==='Réunion équipe').id")
+    sel = f'[data-act="ev2task"][data-eid="{eid}"]'
+    assert pg.locator(sel).count() >= 1, 'bouton absent'
+    calls0 = len(g.calls)
+    pg.locator(sel).first.click(); tick(pg, 300)
+    t = st(pg, "S.tasks.find(t=>t.evId)")
+    assert t and t['title'] == 'Réunion équipe' and t['est'] == 60 and t['pinned'], t
+    assert t['block']['start'][11:13] != '' and t['day'] == st(pg, "today()")
+    # le rendez-vous laisse la place à la tâche (pas affiché deux fois), et Google n'est pas modifié
+    assert pg.locator(sel).count() == 0, 'rendez-vous encore affiché'
+    assert not [x for x in g.calls[calls0:] if x[0] in ('POST', 'PATCH', 'DELETE') and '/calendar/' in x[1]], g.calls[calls0:]
+    # les autres tâches ne passent pas dessus, et la tâche ne bouge pas
+    s0 = t['block']['start']
+    for i in range(4): add(pg, f'Tâche {i} 45m')
+    pg.evaluate("()=>{const {today}=window.journee.fn;autoBox(today());cascade(today());pushOverlaps(today())}"); tick(pg, 200)
+    assert st(pg, "S.tasks.find(t=>t.evId).block.start") == s0, 'la tâche-rendez-vous a bougé'
+    over = st(pg, """(()=>{const r=S.tasks.find(t=>t.evId).block,a=+new Date(r.start),b=+new Date(r.end);return S.tasks.filter(t=>!t.evId&&t.block&&!t.done).filter(t=>+new Date(t.block.start)<b&&+new Date(t.block.end)>a).map(t=>t.title)})()""")
+    assert not over, over
+    # annuler : le rendez-vous revient
+    pg.evaluate("()=>undoPop()"); tick(pg, 200)
+    pg.evaluate("()=>{undoPop();undoPop();undoPop();undoPop()}"); tick(pg, 200)
+    assert st(pg, "S.tasks.filter(t=>t.evId).length") == 0
+    assert pg.locator(sel).count() >= 1
+    # un rendez-vous passé non coché est compté comme fait (il ne revient pas le lendemain)
+    pg.evaluate(f"()=>{{const t=evToTask('{eid}');t.day=window.journee.fn.addDays(t.day,-1);rollOver()}}")
+    assert st(pg, "S.tasks.find(t=>t.evId).done") is True
+    assert not errs, errs; ctx.close()
+
+@test('Réglages synchronisés un par un : changer l’accent sur un appareil n’est pas écrasé par un autre réglage ailleurs')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    r = pg.evaluate("""()=>{const L={settings:{accent:'sauge',mode:'auto'},su:{'set.accent':200,settings:200}};const R={settings:{accent:'or',mode:'dark'},su:{'set.mode':300,settings:300}};const o=mergeState(L,R);return o.settings}""")
+    assert r['accent'] == 'sauge' and r['mode'] == 'dark', r
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    pg.click('.swatch[data-v="lavande"]'); tick(pg, 150)
+    assert st(pg, "S.settings.accent") == 'lavande' and st(pg, "S.su['set.accent']") > 0
+    assert pg.evaluate("document.documentElement.dataset.accent") == 'lavande'
     assert not errs, errs; ctx.close()
 
 def main():

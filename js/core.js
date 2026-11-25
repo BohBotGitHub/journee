@@ -34,7 +34,7 @@ if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null,snap=null;
 /* ---------- horodatage par élément (base de la synchro par fusion) ---------- */
-const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage'];
+const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage','merged'];
 function scalJson(k){return JSON.stringify(S[k]===undefined?null:S[k])}
 function stamp(){
  const now=Date.now(),prev=snap,next={};S.deleted=S.deleted||{};S.su=S.su||{};
@@ -42,6 +42,8 @@ function stamp(){
  for(const c of COLL)for(const x of S[c]||[])mark(c+':'+x.id,x);
  for(const c of MAPS)for(const [key,v] of Object.entries(S[c]||{}))if(v&&typeof v==='object')mark(c+':'+key,v);
  for(const k of SCAL){const j=scalJson(k);next['s:'+k]=j;if(prev&&prev['s:'+k]!==j)S.su[k]=now}
+ // réglages horodatés un par un : un appareil qui change un réglage n'écrase plus les autres (ex. la couleur d'accent)
+ for(const [k,v] of Object.entries(S.settings||{})){const j=JSON.stringify(v===undefined?null:v);next['st:'+k]=j;if(prev&&prev['st:'+k]!==j)S.su['set.'+k]=now}
  if(prev)for(const k in prev)if(!(k in next)&&COLL.some(c=>k.startsWith(c+':')))S.deleted[k]=now;
  const lim=now-60*864e5;for(const k in S.deleted)if(S.deleted[k]<lim)delete S.deleted[k];
  snap=next;
@@ -55,6 +57,11 @@ function mergeState(L,R){
  const ids=new Set((L.archive||[]).map(a=>a.id));out.archive=[...(L.archive||[]),...(R.archive||[]).filter(a=>!ids.has(a.id))];
  out.su=Object.assign({},L.su||{});
  for(const k of SCAL){const lu=(L.su||{})[k]||0,ru=(R.su||{})[k]||0;if(ru>lu){out[k]=R[k];out.su[k]=ru}}
+ // réglages fusionnés réglage par réglage, le plus récent gagne
+ {const ls=L.settings||{},rs=R.settings||{},lsu=L.su||{},rsu=R.su||{},st={};
+  for(const k of new Set([...Object.keys(ls),...Object.keys(rs)])){const lu=lsu['set.'+k]||0,ru=rsu['set.'+k]||0;
+   if(!(k in ls))st[k]=rs[k];else if(!(k in rs))st[k]=ls[k];else if(ru>lu){st[k]=rs[k];out.su['set.'+k]=ru}else if(lu>ru){st[k]=ls[k];out.su['set.'+k]=lu}else st[k]=(out.settings||{})[k]!==undefined?out.settings[k]:ls[k]}
+  out.settings=st}
  // la clé Claude n'est jamais effacée par un appareil qui ne l'a pas encore
  out.settings=Object.assign({},out.settings||{});if(!(out.settings.aiKey||'').trim())out.settings.aiKey=((L.settings||{}).aiKey||(R.settings||{}).aiKey||'');
  out.deleted=del;out.seeded=true;return out;
@@ -201,7 +208,10 @@ function setRecur(t,rule){
 function startTimer(id){stopTimer();S.running={taskId:id,start:Date.now()};save();render()}
 function stopTimer(){if(!S.running)return;const t=T(S.running.taskId);if(t)t.actual=Math.round((t.actual||0)+(Date.now()-S.running.start)/1000);S.running=null;save()}
 let actx=null;
-function chime(f){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=f||880;o.type='sine';g.gain.setValueAtTime(.0001,actx.currentTime);g.gain.exponentialRampToValueAtTime(.18,actx.currentTime+.02);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.5);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.55)}catch(e){}}
+// son « Cristal » : deux sinus clairs qui s'éteignent doucement (désactivable dans Réglages › Apparence)
+function chime(f){if(S.settings&&S.settings.sounds===false)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t=actx.currentTime,k=(f||660)/660;
+ const tone=(fr,d,v,at)=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.setValueAtTime(fr*k,t+at);g.gain.setValueAtTime(.0001,t+at);g.gain.exponentialRampToValueAtTime(v,t+at+.008);g.gain.exponentialRampToValueAtTime(.0001,t+at+d);o.connect(g).connect(actx.destination);o.start(t+at);o.stop(t+at+d+.05)};
+ tone(1568,.9,.14,0);tone(2349,.7,.06,.06)}catch(e){}}
 
 // Apparence : fonds neutres, mode clair/sombre, une couleur d'accent
 const ACCENTS=[{k:'or',n:'Or mat',l:'#94731F',d:'#D4B05A'},{k:'peche',n:'Pêche',l:'#C9714A',d:'#E8A283'},{k:'sauge',n:'Sauge',l:'#4F7D57',d:'#8DBA96'},{k:'lavande',n:'Lavande',l:'#625CA8',d:'#A9A3E6'},{k:'ardoise',n:'Bleu ardoise',l:'#41679E',d:'#86A8D8'},{k:'petrole',n:'Pétrole',l:'#26737A',d:'#6DC0C4'}];

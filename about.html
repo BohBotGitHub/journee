@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="index, follow">
+<meta name="description" content="Diem est un planificateur de journée personnel, gratuit et sans serveur. Cette page explique ce qu’il fait et ce qu’il fait de tes données.">
+<title>À propos de Diem</title>
+<link rel="icon" href="diem-icon.svg?v=1" type="image/svg+xml">
+<style>
+:root{--bg:#f4f3ef;--card:#fff;--ink:#1d1d1f;--mute:#5f5f66;--line:#e2e0da;--acc:#b8860b;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#101012;--card:#1a1a1d;--ink:#ececee;--mute:#a0a0a8;--line:#2c2c31;--acc:#e0b04a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:40px 16px 64px}
+h1{font-size:32px;margin:0 0 4px}
+h2{font-size:19px;margin:32px 0 8px}
+p,li{color:var(--ink)}
+.lead{color:var(--mute);font-size:18px;margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:16px 0}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:600}
+code{font-size:14px}
+a{color:var(--acc)}
+.open{display:inline-block;margin-top:8px;padding:10px 18px;border-radius:10px;background:var(--acc);color:#111;font-weight:600;text-decoration:none}
+footer{margin-top:40px;color:var(--mute);font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<h1>Diem</h1>
+<p class="lead">Un planificateur de journée personnel : la liste du jour, l’agenda et les rituels du matin et du soir, au même endroit.</p>
+<a class="open" href="./">Ouvrir Diem</a>
+
+<h2>Ce que c’est</h2>
+<p>Diem est un projet personnel, gratuit, sans publicité et sans compte à créer. C’est une page web installable (PWA) hébergée sur GitHub Pages ; son code source est public sur <a href="https://github.com/BohBotGitHub/journee">GitHub</a>. Il n’y a <b>aucun serveur Diem</b> : tout tourne dans ton navigateur.</p>
+
+<h2>Ce que Diem fait de tes données</h2>
+<div class="card">
+<table>
+<tr><th>Donnée</th><th>Où elle va</th></tr>
+<tr><td>Tes tâches et réglages</td><td>Dans ton navigateur (stockage local). Si tu connectes Google, une copie part dans le dossier caché de Diem de <b>ton</b> Google Drive, pour retrouver tes tâches sur ton téléphone. Personne d’autre n’y a accès.</td></tr>
+<tr><td>Ton agenda Google (facultatif)</td><td>Lu pour afficher tes rendez-vous ; Diem y écrit seulement les créneaux des tâches que tu places. La connexion passe par la page officielle de Google ; Diem ne voit jamais ton mot de passe.</td></tr>
+<tr><td>Clé Claude (facultative)</td><td>Si tu choisis d’utiliser l’assistant, ta clé Anthropic reste chez toi et n’est envoyée qu’à <code>api.anthropic.com</code>, avec les tâches que tu lui demandes de traiter.</td></tr>
+<tr><td>Statistiques, traçage</td><td>Aucun. Pas de cookies publicitaires, pas d’outil d’analyse.</td></tr>
+</table>
+</div>
+
+<h2>Diem ne te demandera jamais</h2>
+<ul>
+<li>ton mot de passe Google, Microsoft ou bancaire ;</li>
+<li>un paiement ;</li>
+<li>d’installer un logiciel hors du navigateur.</li>
+</ul>
+<p>Si une page qui ressemble à Diem te demande l’un de ces éléments, ce n’est pas Diem.</p>
+
+<h2>Fonctions principales</h2>
+<ul>
+<li>Liste du jour avec durées, catégories et sous-tâches ; backlog et vide-tête.</li>
+<li>Agenda vivant : les tâches se placent dans tes créneaux libres et se décalent au fil de la journée.</li>
+<li>Rituels du matin (planifier) et du soir (clôturer), mode focus avec minuteur.</li>
+<li>Arbre des catégories pour voir l’équilibre de ta vie.</li>
+</ul>
+
+<footer>Diem · projet personnel open source · <a href="https://github.com/BohBotGitHub/journee">code source</a></footer>
+</main>
+</body>
+</html>

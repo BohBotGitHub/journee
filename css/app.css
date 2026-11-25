@@ -436,7 +436,7 @@ details.adv .set{margin-top:8px}
 .pkfoot .on{background:var(--ink);color:var(--panel)}
 @media (max-width:760px){.tvwrap{grid-template-columns:1fr}.tvp{position:static}#pickov{padding:0;align-items:stretch}.pk{border-radius:0;max-height:100vh;height:100%}.pkgrid{grid-template-columns:1fr}}
 
-@media (min-width:761px){body.wideview #app{grid-template-columns:196px minmax(0,1fr) 0}body.wideview #side{display:none}}
+@media (min-width:761px){body.wideview #app{grid-template-columns:var(--navw,196px) minmax(0,1fr) 0}body.wideview #side{display:none}}
 
 /* ---------- polissage (revue UI du 24/11) ---------- */
 /* créneaux très courts : une ligne, sans débordement sur le suivant */
@@ -778,7 +778,7 @@ body.sidecollapse #side{opacity:.35}body.sidecollapse .sidegrip{background:var(-
 body:has(#mselbar:not(.hidden)) #toast{bottom:84px}
 @media(max-width:720px){body:has(#mselbar:not(.hidden)) #toast{bottom:138px}}
 
-.dragimg.dragmulti{box-shadow:6px 6px 0 -1px var(--panel),6px 6px 0 0 var(--line),12px 12px 0 -1px var(--panel),12px 12px 0 0 var(--line),0 12px 32px rgba(0,0,0,.25)}.dragimg.dragmulti::after{content:attr(data-n);position:absolute;top:-10px;right:-10px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--acc);color:#fff;font:700 13px/24px system-ui;text-align:center}
+.dragimg.dragmulti,.touchghost.dragmulti{box-shadow:6px 6px 0 -1px var(--panel),6px 6px 0 0 var(--line),12px 12px 0 -1px var(--panel),12px 12px 0 0 var(--line),0 12px 32px rgba(0,0,0,.25)}.dragimg.dragmulti::after,.touchghost.dragmulti::after{content:attr(data-n);position:absolute;top:-10px;right:-10px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--acc);color:#fff;font:700 13px/24px system-ui;text-align:center}
 body.wideview #sidetog{display:none}
 
 /* v1.7 tri du backlog */
@@ -957,3 +957,112 @@ body.treemap .tvwrap>.tvp{box-shadow:var(--e3)}
 .csub .chk{width:17px;height:17px;min-height:17px;font-size:10px}
 .csub.d span{color:var(--mute);text-decoration:line-through}
 .tsheet{position:relative}.tsheet h2{padding-right:40px}.sheetx{position:absolute;top:-6px;right:-8px;width:36px;height:36px;min-height:0;padding:0;border:0;background:transparent;color:var(--mute);font-size:24px;line-height:1;border-radius:10px}.sheetx:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+
+/* champ de clé masqué sans être un champ « mot de passe » (évite les faux signalements d’hameçonnage) */
+.secret{-webkit-text-security:disc;text-security:disc;font-family:monospace}
+/* glisser au doigt : poignée visible seulement sur écran tactile */
+.tgrip{display:none}
+@media (pointer:coarse){.tgrip{display:flex;position:relative;z-index:2;align-items:center;justify-content:center;flex:none;width:22px;align-self:stretch;margin:-9px -4px -9px -8px;color:var(--mute);opacity:.7;touch-action:none;cursor:grab}.rrow .grip{touch-action:none;padding:8px 6px}}
+.touchghost{position:fixed;left:0;top:0;z-index:9999;pointer-events:none;opacity:.95;box-shadow:0 10px 28px rgba(0,0,0,.25);transform-origin:top left}
+body.touchdrag{user-select:none;-webkit-user-select:none}
+.dupcard{display:flex;flex-direction:column;gap:10px;margin:10px 0 12px;padding:12px 14px;border-radius:var(--r2,12px);background:var(--panel);border:1px solid var(--acc);box-shadow:var(--e1,none)}
+.dupcard b{display:block;margin-bottom:2px}.dupcard .mute{font-size:13px}.dupacts{flex-wrap:wrap;gap:8px}
+.aibar button{display:inline-flex;align-items:center;gap:5px}.aibar .ic{width:15px;height:15px;flex:none}
+
+/* rendez-vous Google → tâche */
+.ev2t{background:none;border:0;padding:2px;margin:0;color:inherit;opacity:.55;cursor:pointer;line-height:0;border-radius:6px}
+.ev2t:hover,.ev2t:focus-visible{opacity:1;background:color-mix(in srgb,currentColor 12%,transparent)}
+.ev2t .ic{width:14px;height:14px}
+.ev .ev2t,.mev .ev2t{float:right}
+.evrow .ev2t{margin-left:4px}
+.evt-rdv .ic{width:12px;height:12px}
+@media (pointer:coarse){.mev .ev2t,.ev .ev2t{padding:9px;margin:-7px -7px -7px 0}.ev2t .ic{width:16px;height:16px}}
+
+/* ============================================================
+   v1.8 — DIEM ZEN
+   Calme façon Sunsama, précision façon macOS. Fonds gris chaud
+   « papier », titres Inter Tight, moins de traits et d'ombres.
+   ============================================================ */
+:root{
+--bg:light-dark(#F4F2EC,#1E1C19);--panel:light-dark(#FFFFFF,#2A2824);--panel2:light-dark(#EDEAE3,#24221F);
+--line:light-dark(#E4E0D6,#38352F);--ink:light-dark(#23211D,#EDEAE3);--mute:light-dark(#77716A,#A39E93);
+--e1:none;--e2:0 1px 2px rgba(40,30,10,.05),0 4px 14px -6px rgba(40,30,10,.10);--sh:none;
+--fh:'Inter Tight',Inter,system-ui,sans-serif}
+:root[data-theme=dark]{--e2:0 0 0 1px rgba(255,255,255,.04),0 6px 18px -8px rgba(0,0,0,.6)}
+body{font-family:Inter,system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* titres : Inter Tight, poids mesuré */
+.head h1,.rit h2,.ftitle,.kpis b,.brand{font-family:var(--fh);font-weight:600;letter-spacing:-.025em}
+.head h1{font-size:clamp(28px,3.2vw,36px)}
+.head .sub,.head .sub.kicker{font-size:14px;font-weight:450;letter-spacing:0;text-transform:none;color:var(--mute);margin-top:4px}
+.rit h2{font-size:24px}
+.group h3{font-size:13px;letter-spacing:0;text-transform:none;font-weight:550;color:var(--mute)}
+
+/* cartes : à plat, un trait chaud, rien qui bouge */
+.card{border:1px solid var(--line);box-shadow:none;border-radius:12px;padding:12px 14px}
+.card:hover{transform:none;box-shadow:none;border-color:color-mix(in srgb,var(--ink) 18%,var(--line))}
+.card.done{border-color:transparent}
+.ctitle{font-weight:500}
+.cmeta{color:var(--mute)}
+.chk{border-color:color-mix(in srgb,var(--mute) 45%,transparent)}
+
+/* résumé du jour : du texte posé, pas des boutons */
+.sumchip{background:transparent!important;box-shadow:none!important;border:0!important;padding-left:0;padding-right:10px;color:var(--mute)}
+.addopen{border:1px dashed var(--line);color:var(--mute);min-height:46px}
+.addopen:hover{background:transparent;border-color:color-mix(in srgb,var(--acc) 50%,var(--line))}
+.nownext>*{box-shadow:none!important}
+
+/* boutons : à plat */
+button.pri{background:var(--acc-strong);border-color:var(--acc-strong);box-shadow:none}
+button.pri:hover{filter:brightness(1.06)}
+
+/* barre de gauche : calme, l'accent seulement sur l'icône active */
+#nav{background:var(--bg);border-right:1px solid var(--line)}
+#nav button[data-view]{font-size:14.5px;font-weight:450;color:color-mix(in srgb,var(--ink) 80%,var(--mute))}
+#nav button[data-view].on{background:var(--panel);box-shadow:none!important;border:1px solid var(--line);font-weight:550;color:var(--ink)}
+.navsearch{box-shadow:none!important;border:1px solid var(--line)!important;background:var(--panel)!important}
+.navsearch kbd{display:none}
+
+/* logo plus gros */
+.brand{font-size:24px;gap:11px;padding:2px 8px 18px 46px}
+.brand svg{width:38px;height:38px}
+
+/* volet de droite : même papier que le fond */
+#side{background:var(--bg)}
+.stabs button.on,.stabs [aria-selected=true]{background:var(--panel)!important;border:1px solid var(--line)}
+
+/* agenda : blocs posés, sans ombre */
+.blk{box-shadow:inset 3px 0 0 var(--c,var(--acc));background:color-mix(in srgb,var(--c,var(--acc)) 11%,var(--panel))}
+.blk:hover{box-shadow:inset 3px 0 0 var(--c,var(--acc))}
+
+/* fenêtres : douces */
+.sheet{box-shadow:0 24px 60px -20px rgba(40,30,10,.28);border:1px solid var(--line)}
+#modal{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.horizon{height:3px!important}
+
+/* boutons des volets comme dans Claude : icône discrète en haut, toujours au même endroit */
+@media (min-width:761px){
+ .paneltog{border:0;background:transparent;color:var(--mute);width:34px;height:34px;min-height:34px;border-radius:8px;top:18px}
+ .paneltog:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink);border:0}
+ #navtog,body.hidenav #navtog{left:14px}
+ #sidetog,body.hideside #sidetog{right:14px}
+ body:not(.hideside) .stabs{padding-left:0;padding-right:46px}
+ /* menu replié : un rail d'icônes, comme la barre latérale repliée de Claude */
+ body.hidenav #app{--navw:64px}
+ body.hidenav #nav{display:flex;padding:64px 8px 14px;align-items:center}
+ body.hidenav #nav .brand,body.hidenav #nav .navver,body.hidenav #nav #runchip,body.hidenav #nav .navsearch span{display:none}
+ body.hidenav #nav button[data-view],body.hidenav #nav .navrefresh,body.hidenav #nav .navsearch{justify-content:center;padding:10px;width:44px;gap:0}
+ body.hidenav #nav button[data-view] .ll,body.hidenav #nav button[data-view] .sl,body.hidenav #nav .navrefresh span{display:none}
+ body.hidenav #main{padding-left:clamp(24px,3vw,40px)}
+}
+#nav button[data-view]{border:1px solid transparent}
+#nav button.navrefresh{border:1px solid transparent}.navver{transform:translateX(1px)}
+/* 25/11 23 h 35 : retour aux fonds de la v1.7 (gris neutre), le reste du style zen est gardé */
+:root{--bg:light-dark(#e6e6e3,#101012);--panel:light-dark(#fbfbfa,#1a1a1d);--panel2:light-dark(#dededa,#222226);
+--line:light-dark(#d3d3cf,#2a2a2e);--ink:light-dark(#121214,#efeff1);--mute:light-dark(#57575d,#93939a)}
+/* la barre d'avancement du jour s'arrête avant les boutons du haut */
+@media (min-width:761px){body.hideside #main .horizon{margin-right:44px}}
+@media (min-width:761px){body.wideview.hidenav #app{grid-template-columns:64px minmax(0,1fr) 0}}
+/* bas de la barre : Actualiser puis Réglages, toujours en bas, aussi en rail replié */
+#nav .navset,#nav .navrefresh{margin-top:0}
+@media (min-width:761px){body.hidenav #nav .navrefresh{margin-top:auto}}

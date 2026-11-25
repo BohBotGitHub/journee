@@ -10,7 +10,7 @@ const gWas=()=>!!lsGet('journee.g.on');
 function gLogin(silent){
  if(!S.settings.googleClientId){toast('Ajoute d’abord ton identifiant client Google dans Réglages');go('settings');return}
  const hint=lsGet('journee.g.email');
- const p=new URLSearchParams({client_id:S.settings.googleClientId.trim(),redirect_uri:REDIRECT,response_type:'token',scope:'email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata',include_granted_scopes:'true',state:(silent?'gs':'g')+'|'+view+'|'+cur,prompt:silent?'none':'consent'});
+ const p=new URLSearchParams({client_id:S.settings.googleClientId.trim(),redirect_uri:REDIRECT,response_type:'token',scope:'email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata'+(lsGet('journee.g.mail')?' https://www.googleapis.com/auth/gmail.readonly':''),include_granted_scopes:'true',state:(silent?'gs':'g')+'|'+view+'|'+cur,prompt:silent?'none':'consent'});
  if(hint)p.set('login_hint',hint);
  if(silent)lsSet('journee.g.last',String(Date.now()));
  location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p;
@@ -70,12 +70,23 @@ const isMine=e=>!!(e.extendedProperties&&e.extendedProperties.private&&e.extende
 const UA_DAYS=[['1','L'],['2','M'],['3','M'],['4','J'],['5','V'],['6','S'],['0','D']];
 function uaEvents(d){const L=S.unavail||[];if(!L.length)return[];const wd=String(parseYmd(d).getDay()),at=hm=>{const[h,m]=(hm||'0:0').split(':').map(Number),x=parseYmd(d);x.setHours(h||0,m||0,0,0);return x.toISOString()};
  return L.filter(u=>(u.days||[]).includes(wd)&&u.s&&u.e&&u.e>u.s&&!(S.uaSkip||{})[u.id+'|'+d]).map(u=>({id:'ua-'+u.id+'-'+d,recurringEventId:'ua-'+u.id,summary:u.label||'Indisponible',start:{dateTime:at(u.s)},end:{dateTime:at(u.e)},_cid:'diem-ua',_cal:'Indisponibilités',_ua:u.id}))}
-const timedEvents=d=>[...(gEvents[d]||[]).filter(e=>e.start.dateTime&&!isMine(e)),...uaEvents(d)].sort((a,b)=>a.start.dateTime<b.start.dateTime?-1:1);
+// rendez-vous Google ajoutés comme tâches : la tâche prend la place du rendez-vous (même créneau, fixe), le rendez-vous n'est jamais modifié dans Google
+const evTaskIds=()=>new Set(S.tasks.filter(t=>t.evId).map(t=>t.evId));
+const evTask=e=>e&&e.id&&S.tasks.find(t=>t.evId===e.id);
+function evToTask(id){
+ const e=Object.values(gEvents).flat().find(x=>x.id===id);if(!e||!e.start||!e.start.dateTime)return null;
+ const ex=evTask(e);if(ex)return ex;
+ const st=new Date(e.start.dateTime),en=new Date(e.end.dateTime),title=(e.summary||'Rendez-vous').trim(),d=ymd(st);
+ const t=mk({title,est:Math.max(5,Math.round((en-st)/60000)),day:d,order:nextOrder(d),channel:(typeof hasTree==='function'&&hasTree()&&typeof ruleFor==='function')?ruleFor(title):null,notes:'Rendez-vous de ton agenda Google'+(e._cal?' ('+e._cal+')':'')});
+ t.evId=e.id;t.evCal=e._cid||null;t.pinned=true;t.block={start:st.toISOString(),end:en.toISOString(),gcalId:null,cal:null,title};
+ S.tasks.push(t);save();render();if(typeof emit==='function')emit('task:add',{task:t});return t;
+}
+const timedEvents=d=>{const L=evTaskIds();return [...(gEvents[d]||[]).filter(e=>e.start.dateTime&&!isMine(e)&&!L.has(e.id)),...uaEvents(d)].sort((a,b)=>a.start.dateTime<b.start.dateTime?-1:1)};
 function meetingMin(d){return timedEvents(d).filter(e=>!evFree(e)).reduce((a,e)=>a+Math.max(0,(new Date(e.end.dateTime)-new Date(e.start.dateTime))/60000),0)}
 const evBody=t=>({summary:(t.done?'✓ ':'')+t.title,description:(t.notes?t.notes+'\n\n':'')+'Planifié avec Diem',start:{dateTime:t.block.start},end:{dateTime:t.block.end},extendedProperties:{private:{journeeTask:t.id}}});
 const gPend={},gDirty={};
 async function pushBlock(t){
- if(!gTok()||!t.block)return;
+ if(!gTok()||!t.block||t.evId)return;
  if(gPend[t.id]){gDirty[t.id]=true;return}
  gPend[t.id]=true;
  try{

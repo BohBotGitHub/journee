@@ -75,6 +75,10 @@ document.addEventListener('click',async e=>{
   case'tvmode':treeMode=b.dataset.m;render();break;
   case'tvaddpil':{const n={id:uid(),name:'Nouveau pilier',color:'#888780',lvl:0,parent:null,o:pillars().length};S.channels.push(n);treeColors();save();treeSel=n.id;render();break}
   case'nodedelask':closeModal();nodeDelAsk(id);break;
+  case'mailsort':mailSort();break;
+  case'mailallow':mailAllow(b.dataset.k);break;
+  case'mailstop':mailStop(b.dataset.k);break;
+  case'dupgo':dupDecide(id,b.dataset.k);break;
   case'nodedelgo':if(nodeDelGo)nodeDelGo();break;
   case'nodemove':{const n=node(id);if(!n)break;closeModal();openPicker({title:'Déplacer « '+n.name+' » vers…',levels:[n.lvl-1],current:n.parent,exclude:new Set([n.parent]),noneLabel:false,onPick:to=>{if(to){nodeMove(id,to);toast('« '+n.name+' » déplacé dans '+node(to).name)}render()}});break}
   case'pkpick':pickChoose(b.dataset.id);break;
@@ -170,6 +174,7 @@ document.addEventListener('click',async e=>{
   case'ritai':aiRitual();break;
   case'ritapply':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){applyItem(a,b.dataset.k);saveRit();renderRitual()}break}
   case'ritapplyall':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){propItems(a.prop).forEach(it=>applyItem(a,it.k));saveRit();renderRitual();toast('Suggestions appliquées')}break}
+  case'ev2task':{const pre=undoSnap(),t=evToTask(b.dataset.eid);if(t){undoCommit(pre,'ev2task');toast('« '+t.title+' » ajouté comme tâche, à son heure · ⌘/Ctrl Z pour annuler')}else toast('Rendez-vous introuvable : actualise l’agenda');break}
   case'evtoggle':{if(e.target.closest('a'))break;const k=b.dataset.k;S.evMode=S.evMode||{};const ev=Object.values(gEvents).flat().find(x=>evKey(x)===k);const cur0=ev?evFree(ev):false;S.evMode[k]=cur0?'busy':'free';save();render();toast(cur0?'Marqué occupé':'Tu peux travailler pendant ce rendez-vous');break}
   case'aisplit':{const t=T(id);if(t)aiSplit(t);break}
   case'modalapply':{if(modalAI){applyItem(modalAI,b.dataset.k);openTask(modalTask)}break}
@@ -179,6 +184,7 @@ document.addEventListener('click',async e=>{
   case'aiapplyall':{const m=S.chat[+b.dataset.m];if(m)propItems(m.prop).forEach(it=>applyItem(m,it.k));toast('Propositions appliquées');break}
   case'aiok':{const t=T(id);if(t&&t.aiSug){if(t.aiSug.channel)t.channel=t.aiSug.channel;if(t.aiSug.est){setEst(t,t.aiSug.est)}t.aiSug=null;save();render()}break}
   case'aino':{const t=T(id);if(t){t.aiSug=null;save();render()}break}
+  case'aikey':aiKeyOpen=true;render();setTimeout(()=>{const i=document.querySelector('[data-set="aiKey"]');if(i)i.focus()},30);break;
   case'aiclear':S.chat=[];save();renderSide();toast('Conversation effacée');break;
   case'askclaude':sideTab='ai';closeModal();document.body.classList.add('side-open');aiAsk('Aide-moi à planifier ma journée : ordre, durées, catégories, et ce qui doit être reporté.',true);break;
   case'export':{const blob=new Blob([JSON.stringify(Object.assign({},S,{settings:Object.assign({},S.settings,{aiKey:''})}),null,1)],{type:'application/json'}),u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download='journee-'+today()+'.json';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);break}
@@ -234,7 +240,7 @@ document.addEventListener('change',async e=>{
   save();render();if(['day','time','recur','est','due'].includes(f))openTask(t.id);return;
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(ritual.day)}else clearBlock(t,true);save();render();renderRitual()}return}
- if(el.dataset.set){const k=el.dataset.set;S.settings[k]=(k==='aiAuto'||k==='liveShift')?!!el.value:el.type==='number'?+el.value:el.value.trim();if(k==='aiBudget'){const c=document.querySelector('[data-live="aicost"]');if(c)c.textContent=costTxt()}save();if(el.type==='number'||k==='aiKey'||k==='mode')render();return}
+ if(el.dataset.set){const k=el.dataset.set;if(k==='aiKey'){const v=el.value.trim();aiKeyOpen=false;if(v){S.settings.aiKey=v;save();toast('Clé Claude enregistrée')}render();return}S.settings[k]=(k==='aiAuto'||k==='liveShift'||k==='sounds')?!!el.value:el.type==='number'?+el.value:el.value.trim();if(k==='aiBudget'){const c=document.querySelector('[data-live="aicost"]');if(c)c.textContent=costTxt()}save();if(el.type==='number'||k==='aiKey'||k==='mode')render();return}
  if(el.hasAttribute('data-tips')){lsSet('journee.tips',el.checked?'on':'off');renderTip();return}
  if(el.dataset.sheettime){const t=T(el.dataset.sheettime);if(t&&el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day);save();closeModal();render();toast('Heure fixée à '+el.value)}return}
  if(el.dataset.cal){S.settings.cals=S.settings.cals||{};S.settings.cals[el.dataset.cal]=el.checked;save();gEvents={};render();return}
@@ -266,7 +272,7 @@ document.addEventListener('dragover',e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
  document.querySelectorAll('.over').forEach(x=>{if(x!==z)x.classList.remove('over')});z.classList.add('over');
  // place d'arrivée : un trait de couleur entre les tuiles
- {const card=e.target.closest('.list .card'),cur=document.querySelector('.dropbefore,.dropafter,.dropsub');const sub=card&&drag.startsWith('task|')&&!(msel.size>1&&msel.has(drag.split('|')[1]));if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),cls=sub&&e.clientX>r.left+r.width*.55?'dropsub':e.clientY<r.top+r.height/2?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter','dropsub');card.classList.add(cls)}else if(!card&&(z.dataset.drop||'').startsWith('day:')){const n=nearCard(z,e.clientY);if(n){if(cur&&(cur!==n.c||!cur.classList.contains(n.cls)))cur.classList.remove('dropbefore','dropafter','dropsub');n.c.classList.add(n.cls)}}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter','dropsub')}
+ {const card=e.target.closest('.list .card,.mrow .card'),cur=document.querySelector('.dropbefore,.dropafter,.dropsub');const sub=card&&drag.startsWith('task|')&&!(msel.size>1&&msel.has(drag.split('|')[1]));if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),cls=sub&&e.clientX>r.left+r.width*.55?'dropsub':e.clientY<r.top+r.height/2?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter','dropsub');card.classList.add(cls)}else if(!card&&(z.dataset.drop||'').startsWith('day:')){const n=nearCard(z,e.clientY);if(n){if(cur&&(cur!==n.c||!cur.classList.contains(n.cls)))cur.classList.remove('dropbefore','dropafter','dropsub');n.c.classList.add(n.cls)}}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter','dropsub')}
  document.querySelectorAll('.ghostblk').forEach(x=>{if(!z.contains(x))x.classList.add('hidden')});const g=z.querySelector('.ghostblk');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
 });
 document.addEventListener('drop',async e=>{
@@ -292,6 +298,31 @@ document.addEventListener('drop',async e=>{
  }
 });
 
+/* ---------- glisser au doigt (le glisser HTML ne marche pas au toucher) ----------
+   On tire la poignée ⋮⋮ d'une tuile : on rejoue dragstart / dragover / drop / dragend sur les mêmes cibles qu'à la souris. */
+(function(){let T0=null;
+ const fire=(el,type,x,y,dt)=>{const ev=new Event(type,{bubbles:true,cancelable:true});Object.defineProperty(ev,'clientX',{value:x});Object.defineProperty(ev,'clientY',{value:y});Object.defineProperty(ev,'dataTransfer',{value:dt});el.dispatchEvent(ev);return ev};
+ const mkDT=()=>{try{return new DataTransfer()}catch(e){const d={};return{setData:(k,v)=>{d[k]=v},getData:k=>d[k]||'',setDragImage(){},effectAllowed:'move',dropEffect:'move',types:[]}}};
+ const scroller=el=>{for(let n=el;n&&n!==document.body;n=n.parentElement){const cs=getComputedStyle(n);if(/(auto|scroll)/.test(cs.overflowY)&&n.scrollHeight>n.clientHeight)return n}return document.scrollingElement};
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;const g=e.target.closest('[data-tgrip]'),src=g&&g.closest('[data-drag]');if(!src)return;
+  e.preventDefault();try{g.setPointerCapture(e.pointerId)}catch(err){}
+  T0={g,src,id:e.pointerId,x:e.clientX,y:e.clientY,on:false,dt:null,ghost:null,over:null,dx:0,dy:0}},{passive:false});
+ document.addEventListener('pointermove',e=>{if(!T0||e.pointerId!==T0.id)return;e.preventDefault();const x=e.clientX,y=e.clientY;
+  if(!T0.on){if(Math.hypot(x-T0.x,y-T0.y)<5)return;T0.on=true;T0.dt=mkDT();fire(T0.src,'dragstart',x,y,T0.dt);
+   const r=T0.src.getBoundingClientRect(),gh=T0.src.cloneNode(true);gh.classList.add('touchghost');gh.classList.remove('dragging');{const id=(T0.src.dataset.drag||'').split('|')[1];if(msel.size>1&&msel.has(id)){gh.classList.add('dragmulti');gh.setAttribute('data-n',msel.size)}}
+   gh.style.width=r.width+'px';T0.dx=x-r.left;T0.dy=y-r.top;document.body.appendChild(gh);T0.ghost=gh;document.body.classList.add('touchdrag');try{navigator.vibrate&&navigator.vibrate(10)}catch(err){}}
+  T0.ghost.style.transform=`translate(${x-T0.dx}px,${y-T0.dy}px)`;
+  const el=document.elementFromPoint(x,y);T0.over=el;if(el)fire(el,'dragover',x,y,T0.dt);
+  // défilement automatique près des bords
+  const m=70;if(el&&(y<m||y>innerHeight-m)){const sc=scroller(el);if(sc)sc.scrollTop+=y<m?-14:14}},{passive:false});
+ const end=(e,cancel)=>{if(!T0||e.pointerId!==T0.id)return;const t=T0;T0=null;if(!t.on)return;e.preventDefault();
+  if(t.ghost)t.ghost.remove();document.body.classList.remove('touchdrag');
+  const el=cancel?null:document.elementFromPoint(e.clientX,e.clientY);if(el)fire(el,'drop',e.clientX,e.clientY,t.dt);
+  fire(t.src.isConnected?t.src:document.body,'dragend',e.clientX,e.clientY,t.dt);
+  // le clic qui suit le relâcher ne doit pas ouvrir la tâche
+  const stop=ev=>{ev.stopPropagation();ev.preventDefault()};document.addEventListener('click',stop,true);setTimeout(()=>document.removeEventListener('click',stop,true),350)};
+ document.addEventListener('pointerup',e=>end(e,false));document.addEventListener('pointercancel',e=>end(e,true));
+})();
 // carte la plus proche du pointeur dans une liste (dépôt dans un interstice ou sous la dernière)
 function nearCard(z,y){const cs=[...z.querySelectorAll('.card[data-id]')].filter(c=>!c.classList.contains('dragging')&&c.offsetParent&&!c.closest('.donegrp'));if(!cs.length)return null;for(const c of cs){const r=c.getBoundingClientRect();if(y<r.top+r.height/2)return{c,cls:'dropbefore'}}return{c:cs[cs.length-1],cls:'dropafter'}}
 // glisser plusieurs tâches sélectionnées d'un coup
@@ -490,7 +521,7 @@ let downOnBackdrop=false;document.addEventListener('mousedown',e=>{downOnBackdro
 let msel=new Set(),mselAnchor=null,lpMode=false,lpFired=false;
 // téléphone : appui long sur une tâche = sélection ; ensuite un simple toucher ajoute ou retire
 (function(){let tm=null,st=null;
- document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&(e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey))return;const c=e.target.closest('#main .card[data-id]');if(!c||e.target.closest('.chk,button,input,textarea,select'))return;st={x:e.clientX,y:e.clientY};clearTimeout(tm);tm=setTimeout(()=>{tm=null;lpMode=true;lpFired=true;setTimeout(()=>{lpFired=false},900);msel.add(c.dataset.id);mselAnchor=c.dataset.id;renderMsel();try{navigator.vibrate&&navigator.vibrate(15)}catch(err){}},480)},{passive:true});
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&(e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey))return;const c=e.target.closest('#main .card[data-id]');if(!c||e.target.closest('.chk,button,input,textarea,select,[data-tgrip]'))return;st={x:e.clientX,y:e.clientY};clearTimeout(tm);tm=setTimeout(()=>{tm=null;lpMode=true;lpFired=true;setTimeout(()=>{lpFired=false},900);msel.add(c.dataset.id);mselAnchor=c.dataset.id;renderMsel();try{navigator.vibrate&&navigator.vibrate(15)}catch(err){}},480)},{passive:true});
  document.addEventListener('pointermove',e=>{if(tm&&st&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>6){clearTimeout(tm);tm=null}},{passive:true});
  document.addEventListener('dragstart',()=>{clearTimeout(tm);tm=null},true);
  ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(tm);tm=null},{passive:true}));
