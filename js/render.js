@@ -216,7 +216,7 @@ function ritNext(){
 function openFocus(id,sub){
  const t=T(id);if(!t)return;
  if(!$('#modal').classList.contains('hidden')){$('#modal').classList.add('hidden');modalTask=null;ritual=null}
- focusOn=id;const fs=sub&&t.subtasks.find(x=>x.id===sub)||t.subtasks.find(x=>!x.d);focusSub=fs?fs.id:null;if(!S.running||S.running.taskId!==id)startTimer(id);activate(t);renderFocus();
+ focusOn=id;const fs=sub&&t.subtasks.find(x=>x.id===sub)||t.subtasks.find(x=>!x.d);focusSub=fs?fs.id:null;if(!S.running||S.running.taskId!==id){startTimer(id);chime(523)}activate(t);renderFocus();
 }
 function renderFocus(){
  const el=$('#focus');

@@ -977,3 +977,83 @@ body.touchdrag{user-select:none;-webkit-user-select:none}
 .evrow .ev2t{margin-left:4px}
 .evt-rdv .ic{width:12px;height:12px}
 @media (pointer:coarse){.mev .ev2t,.ev .ev2t{padding:9px;margin:-7px -7px -7px 0}.ev2t .ic{width:16px;height:16px}}
+
+/* ============================================================
+   v1.8 — DIEM ZEN
+   Calme façon Sunsama, précision façon macOS. Fonds gris chaud
+   « papier », titres Inter Tight, moins de traits et d'ombres.
+   ============================================================ */
+:root{
+--bg:light-dark(#F4F2EC,#1E1C19);--panel:light-dark(#FFFFFF,#2A2824);--panel2:light-dark(#EDEAE3,#24221F);
+--line:light-dark(#E4E0D6,#38352F);--ink:light-dark(#23211D,#EDEAE3);--mute:light-dark(#77716A,#A39E93);
+--e1:none;--e2:0 1px 2px rgba(40,30,10,.05),0 4px 14px -6px rgba(40,30,10,.10);--sh:none;
+--fh:'Inter Tight',Inter,system-ui,sans-serif}
+:root[data-theme=dark]{--e2:0 0 0 1px rgba(255,255,255,.04),0 6px 18px -8px rgba(0,0,0,.6)}
+body{font-family:Inter,system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* titres : Inter Tight, poids mesuré */
+.head h1,.rit h2,.ftitle,.kpis b,.brand{font-family:var(--fh);font-weight:600;letter-spacing:-.025em}
+.head h1{font-size:clamp(28px,3.2vw,36px)}
+.head .sub,.head .sub.kicker{font-size:14px;font-weight:450;letter-spacing:0;text-transform:none;color:var(--mute);margin-top:4px}
+.rit h2{font-size:24px}
+.group h3{font-size:13px;letter-spacing:0;text-transform:none;font-weight:550;color:var(--mute)}
+
+/* cartes : à plat, un trait chaud, rien qui bouge */
+.card{border:1px solid var(--line);box-shadow:none;border-radius:12px;padding:12px 14px}
+.card:hover{transform:none;box-shadow:none;border-color:color-mix(in srgb,var(--ink) 18%,var(--line))}
+.card.done{border-color:transparent}
+.ctitle{font-weight:500}
+.cmeta{color:var(--mute)}
+.chk{border-color:color-mix(in srgb,var(--mute) 45%,transparent)}
+
+/* résumé du jour : du texte posé, pas des boutons */
+.sumchip{background:transparent!important;box-shadow:none!important;border:0!important;padding-left:0;padding-right:10px;color:var(--mute)}
+.addopen{border:1px dashed var(--line);color:var(--mute);min-height:46px}
+.addopen:hover{background:transparent;border-color:color-mix(in srgb,var(--acc) 50%,var(--line))}
+.nownext>*{box-shadow:none!important}
+
+/* boutons : à plat */
+button.pri{background:var(--acc-strong);border-color:var(--acc-strong);box-shadow:none}
+button.pri:hover{filter:brightness(1.06)}
+
+/* barre de gauche : calme, l'accent seulement sur l'icône active */
+#nav{background:var(--bg);border-right:1px solid var(--line)}
+#nav button[data-view]{font-size:14.5px;font-weight:450;color:color-mix(in srgb,var(--ink) 80%,var(--mute))}
+#nav button[data-view].on{background:var(--panel);box-shadow:none!important;border:1px solid var(--line);font-weight:550;color:var(--ink)}
+.navsearch{box-shadow:none!important;border:1px solid var(--line)!important;background:var(--panel)!important}
+.navsearch kbd{display:none}
+
+/* logo plus gros */
+.brand{font-size:24px;gap:11px;padding:2px 8px 18px 46px}
+.brand svg{width:38px;height:38px}
+
+/* volet de droite : même papier que le fond */
+#side{background:var(--bg)}
+.stabs button.on,.stabs [aria-selected=true]{background:var(--panel)!important;border:1px solid var(--line)}
+
+/* agenda : blocs posés, sans ombre */
+.blk{box-shadow:inset 3px 0 0 var(--c,var(--acc));background:color-mix(in srgb,var(--c,var(--acc)) 11%,var(--panel))}
+.blk:hover{box-shadow:inset 3px 0 0 var(--c,var(--acc))}
+
+/* fenêtres : douces */
+.sheet{box-shadow:0 24px 60px -20px rgba(40,30,10,.28);border:1px solid var(--line)}
+#modal{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.horizon{height:3px!important}
+
+/* boutons des volets comme dans Claude : icône discrète en haut, toujours au même endroit */
+@media (min-width:761px){
+ .paneltog{border:0;background:transparent;color:var(--mute);width:34px;height:34px;min-height:34px;border-radius:8px;top:18px}
+ .paneltog:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink);border:0}
+ #navtog,body.hidenav #navtog{left:14px}
+ #sidetog,body.hideside #sidetog{right:14px}
+ body:not(.hideside) .stabs{padding-left:0;padding-right:46px}
+ /* menu replié : un rail d'icônes, comme la barre latérale repliée de Claude */
+ body.hidenav #app{--navw:64px}
+ body.hidenav #nav{display:flex;padding:64px 8px 14px;align-items:center}
+ body.hidenav #nav .brand,body.hidenav #nav .navver,body.hidenav #nav #runchip,body.hidenav #nav .navsearch span{display:none}
+ body.hidenav #nav button[data-view],body.hidenav #nav .navrefresh,body.hidenav #nav .navsearch{justify-content:center;padding:10px;width:44px;gap:0}
+ body.hidenav #nav button[data-view] .ll,body.hidenav #nav button[data-view] .sl,body.hidenav #nav .navrefresh span{display:none}
+ body.hidenav #main{padding-left:clamp(24px,3vw,40px)}
+}
+#nav button[data-view]{border:1px solid transparent}
+#nav button.navrefresh{border:1px solid transparent}.navver{transform:translateX(1px)}

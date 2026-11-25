@@ -1,13 +1,16 @@
 // Démo Diem : panneau « à tester » (n'existe pas dans la vraie appli)
 (function(){
  const ITEMS=[
-  ['Rendez-vous Google → tâche (nouveau)','Agenda du volet droit (ou liste des rendez-vous de la journée) : un petit + sur chaque rendez-vous. Il devient une tâche à la même heure, fixe : rien ne passe dessus, elle se coche, se classe dans l’Arbre et compte dans les statistiques. Le rendez-vous Google n’est pas modifié. ⌘/Ctrl Z pour annuler ; un rendez-vous passé non coché est compté comme fait.','cal'],
-  ['Trier mes mails (nouveau)','Onglet Claude du volet droit : bouton « Trier mes mails ». Le Génie lit les non-lus (ici 4 faux mails) et propose des tâches à appliquer une par une ; la newsletter est ignorée. Réglages › Réglages avancés › Trier mes mails : autoriser Gmail / Outlook (lecture seule) et le seuil de la tâche « Lire mes mails ».','mail'],
-  ['Doublon Cuisine / Alimentation saine (nouveau)','Page Arbre (et Réglages › Arbre) : une carte propose de fusionner les deux catégories, dans Corps ou dans Foyer, ou de garder les deux. Annulable.','tree'],
-  ['Glisser au doigt (téléphone)','Sur téléphone ou tablette, chaque tuile a une poignée ⋮⋮ à gauche. Tire-la : la tuile suit ton doigt ; lâche-la entre deux tâches, sur la moitié droite d’une autre (sous-tâche), ou sur Backlog / Aujourd’hui dans la barre du bas. La liste défile toute seule près des bords. Sur ordinateur rien ne change.','today'],
-  ['Clé Claude cachée','Réglages › Claude : plus de champ de clé affiché d’office (Google s’en méfie). Bouton « Saisir une clé » ou « Changer la clé » ; laisser vide garde l’ancienne.','settings'],
-  ['Page À propos','En bas des Réglages : « À propos de Diem et de tes données ». Page simple qui explique l’appli à Google et aux visiteurs (sans serveur, ce qui part où, ce que Diem ne demande jamais).','settings']];
- const K='journee.demo51.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+  ['Diem zen (nouveau)','Fond gris chaud « papier », titres Inter Tight, cartes à plat sans ombre, résumé du jour en simple texte. Regarde en clair et en sombre (Réglages › Mode).','today'],
+  ['Son Cristal','Coche une tâche, ou lance un focus : petit son clair. Réglages › Apparence › Sons pour passer en silence.','today'],
+  ['Volets comme dans Claude','Icône en haut à gauche : le menu se replie en rail d’icônes. Icône en haut à droite : l’agenda se cache. Elles restent toujours au même endroit.','today'],
+  ['Logo plus gros','En haut de la barre de gauche.','today'],
+  ['Rendez-vous → tâche','Le petit + sur un rendez-vous (agenda de droite) en fait une tâche à heure fixe, sans toucher Google.','today'],
+  ['Trier mes mails','Onglet Claude du volet droit (bouton visible quand la lecture Gmail ou Outlook est autorisée dans Réglages avancés).','settings'],
+  ['Glisser au doigt','Sur téléphone : poignée ⋮⋮ à gauche de chaque tuile.','today'],
+  ['Cuisine et Alimentation','Les deux catégories restent séparées, plus de proposition de fusion.','tree'],
+  ['Page À propos','Lien en bas des Réglages ; cette page seule est trouvable sur Google.','settings']];
+ const K='journee.demo40.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const box=document.createElement('div');box.id='demopanel';document.body.appendChild(box);
  const css=document.createElement('style');css.textContent=`body:has(#mselbar:not(.hidden)) #demopanel{bottom:190px}#demopanel{position:fixed;right:12px;bottom:12px;z-index:90;width:min(360px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:2px solid #c2410c;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);font-size:14px}
@@ -50,6 +53,6 @@
   if(d==='tog'){min=!min;draw()}
   if(d==='show')show(b.dataset.k);
   if(d==='ok'||d==='ko'){const i=b.dataset.i;st[i]=st[i]===d?undefined:d;save();draw()}
-  if(d==='reset'){['journee.v1','journee.demo','journee.demo51.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
+  if(d==='reset'){['journee.v1','journee.demo','journee.demo40.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
  draw();
 })();

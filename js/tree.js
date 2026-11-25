@@ -86,7 +86,8 @@ const ruleFor=title=>{const t=norm(title||'');for(const [re,id] of CAT_RULES)if(
 // catégories fusionnées : l'ancienne adresse renvoie vers celle qui reste
 function mergedTo(id){const m=(typeof S!=='undefined'&&S.merged)||{};let g=0;while(id&&m[id]&&g++<5)id=m[id];return id}
 /* ---------- doublons connus de l'arbre par défaut : on propose la fusion, rien n'est fait sans accord ---------- */
-const DUPS=[{id:'cuisine',a:'c-alimentation',b:'c-cuisine',na:'Alimentation & cuisine',nb:'Cuisine & alimentation'}];
+// 25/11 : le propriétaire garde Cuisine et Alimentation saine séparées ; plus de proposition de fusion
+const DUPS=[];
 function dupCands(){S.fixes=S.fixes||{};return DUPS.filter(d=>!S.fixes['dup-'+d.id]&&node(d.a)&&node(d.b))}
 const nodeUse=id=>S.tasks.filter(t=>t.channel===id).length+(S.archive||[]).filter(a=>a.c===id).length;
 function mergeNodes(from,to,name){

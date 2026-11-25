@@ -201,7 +201,10 @@ function setRecur(t,rule){
 function startTimer(id){stopTimer();S.running={taskId:id,start:Date.now()};save();render()}
 function stopTimer(){if(!S.running)return;const t=T(S.running.taskId);if(t)t.actual=Math.round((t.actual||0)+(Date.now()-S.running.start)/1000);S.running=null;save()}
 let actx=null;
-function chime(f){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=f||880;o.type='sine';g.gain.setValueAtTime(.0001,actx.currentTime);g.gain.exponentialRampToValueAtTime(.18,actx.currentTime+.02);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+.5);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.55)}catch(e){}}
+// son « Cristal » : deux sinus clairs qui s'éteignent doucement (désactivable dans Réglages › Apparence)
+function chime(f){if(S.settings&&S.settings.sounds===false)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t=actx.currentTime,k=(f||660)/660;
+ const tone=(fr,d,v,at)=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.setValueAtTime(fr*k,t+at);g.gain.setValueAtTime(.0001,t+at);g.gain.exponentialRampToValueAtTime(v,t+at+.008);g.gain.exponentialRampToValueAtTime(.0001,t+at+d);o.connect(g).connect(actx.destination);o.start(t+at);o.stop(t+at+d+.05)};
+ tone(1568,.9,.14,0);tone(2349,.7,.06,.06)}catch(e){}}
 
 // Apparence : fonds neutres, mode clair/sombre, une couleur d'accent
 const ACCENTS=[{k:'or',n:'Or mat',l:'#94731F',d:'#D4B05A'},{k:'peche',n:'Pêche',l:'#C9714A',d:'#E8A283'},{k:'sauge',n:'Sauge',l:'#4F7D57',d:'#8DBA96'},{k:'lavande',n:'Lavande',l:'#625CA8',d:'#A9A3E6'},{k:'ardoise',n:'Bleu ardoise',l:'#41679E',d:'#86A8D8'},{k:'petrole',n:'Pétrole',l:'#26737A',d:'#6DC0C4'}];

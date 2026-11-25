@@ -999,7 +999,7 @@ def _(c):
     pg.click('#sidetog'); tick(pg, 150)
     assert not pg.locator('#side').is_visible()
     pg.click('#navtog'); tick(pg, 150)
-    assert not pg.locator('#nav').is_visible(), 'menu caché'; mw = pg.locator('#main').bounding_box()['width']; assert mw > pg.viewport_size['width'] - 40, mw
+    nb = pg.locator('#nav').bounding_box(); assert nb and nb['width'] <= 70, ('menu replié en rail', nb); assert not pg.locator('#nav [data-view="week"] .ll').is_visible(); mw = pg.locator('#main').bounding_box()['width']; assert mw > pg.viewport_size['width'] - 110, mw
     pg.click('#navtog'); pg.click('#sidetog'); tick(pg, 150)
     assert pg.locator('#side').is_visible() and pg.locator('#nav').is_visible()
     assert not errs, errs; ctx.close()
@@ -1214,10 +1214,10 @@ def _(c):
     pg.evaluate("()=>go('settings')"); tick(pg, 150)
     assert 'Projets' not in pg.evaluate("[...document.querySelectorAll('#main section h2')].map(h=>h.textContent).join('|')")
     pg.select_option('[data-set="mode"]', 'light'); tick(pg, 200)
-    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(230, 230, 227)', bg
+    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(244, 242, 236)', bg
     assert pg.evaluate("document.documentElement.style.colorScheme") == 'light'
     pg.select_option('[data-set="mode"]', 'auto'); tick(pg, 200)
-    assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(16, 16, 18)'
+    assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(30, 28, 25)'
     assert not errs, errs; ctx.close()
 
 @test('v1.7 : croix du menu clic droit, appui long à la souris')
@@ -1252,7 +1252,7 @@ def _(c):
     o = order(); i = o.index('g2'); assert o[i + 1:i + 3] == ['g4', 'g5'], o
     assert not errs, errs; ctx.close()
 
-@test('v1.8 : site rassurant (noindex, page À propos, pas de champ mot de passe, clé masquée derrière un bouton)')
+@test('v1.8 : site rassurant (noindex sauf la page À propos, pas de champ mot de passe, clé masquée derrière un bouton)')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
     assert pg.locator('meta[name="robots"][content*="noindex"]').count() == 1
@@ -1268,7 +1268,7 @@ def _(c):
     pg.click('[data-act="aikey"]'); tick(pg, 100); pg.dispatch_event('[data-set="aiKey"]', 'change'); tick(pg, 100)
     assert st(pg, "S.settings.aiKey") == 'sk-ant-demo'
     p2 = ctx.new_page(); p2.goto(BASE + 'about.html')
-    assert 'Diem' in p2.title() and p2.locator('meta[name="robots"][content*="noindex"]').count() == 1 and p2.locator('input').count() == 0
+    assert 'Diem' in p2.title() and p2.locator('meta[name="robots"][content*="noindex"]').count() == 0 and p2.locator('input').count() == 0
     assert not errs, errs; ctx.close()
 
 @test('v1.8 : glisser au doigt avec la poignée (réordonner, vers le backlog, pas de clic parasite)')
@@ -1301,21 +1301,12 @@ def _(c):
     tick(pg, 200); assert st(pg, "T('h2').day") is None, st(pg, "T('h2').day")
     assert not errs, errs; ctx.close()
 
-@test('v1.8 : doublon Cuisine / Alimentation saine proposé, fusion, annulation, « garder les deux »')
+@test('v1.8 : doublon Cuisine / Alimentation saine gardé (aucune proposition de fusion)')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
-    pg.evaluate("()=>{S.tasks.push(mk({id:'k1',title:'Batch cooking',channel:'c-cuisine',day:null}),mk({id:'k2',title:'Légumes',channel:'c-alimentation',day:null}));S.recurring=S.recurring||[];save();go('tree');render()}"); tick(pg, 300)
-    assert pg.locator('#main .dupcard').count() == 1
-    pg.click('#main .dupcard [data-k="a"]'); tick(pg, 200)
-    assert st(pg, "!!node('c-cuisine')") is False and st(pg, "node('c-alimentation').name") == 'Alimentation & cuisine'
-    assert st(pg, "T('k1').channel") == 'c-alimentation' and pg.locator('#main .dupcard').count() == 0
-    assert st(pg, "ruleFor('Faire une recette de gâteau')") == 'c-alimentation'
-    assert st(pg, "findNode('#cuisine').id") == 'c-alimentation'
-    pg.click('#toast .tact'); tick(pg, 200)
-    assert st(pg, "!!node('c-cuisine')") and st(pg, "T('k1').channel") == 'c-cuisine' and st(pg, "node('c-alimentation').name") == 'Alimentation saine'
-    assert pg.locator('#main .dupcard').count() == 1
-    pg.click('#main .dupcard [data-k="both"]'); tick(pg, 200)
-    assert pg.locator('#main .dupcard').count() == 0 and st(pg, "!!node('c-cuisine')")
+    assert st(pg, "dupCands().length") == 0
+    pg.evaluate("()=>{view='tree';render()}"); tick(pg, 200)
+    assert pg.locator('[data-act="dupkeep"],[data-act^="dup"]').count() == 0
     assert not errs, errs; ctx.close()
 
 @test('v1.8 : Trier mes mails (faux Gmail, bouton masqué sans accès, tâches proposées par le Génie)')
