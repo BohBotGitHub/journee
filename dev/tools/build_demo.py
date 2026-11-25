@@ -4,6 +4,7 @@ import re,shutil,os,sys
 R=os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'));D=sys.argv[1] if len(sys.argv)>1 else '/tmp/diem-demo'
 shutil.rmtree(D,ignore_errors=True);os.makedirs(D)
 for x in ('js','css'):shutil.copytree(f'{R}/{x}',f'{D}/{x}')
+shutil.copy(f'{R}/about.html',f'{D}/about.html')
 for f in os.listdir(f'{R}/dev/demo'):shutil.copy(f'{R}/dev/demo/{f}',f'{D}/{f}')
 s=open(f'{R}/index.html').read()
 s=re.sub(r'<link rel="manifest"[^>]*>','',s)

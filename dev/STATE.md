@@ -4,14 +4,19 @@ mode: veille
 (« veille » = le propriétaire est absent, les lancements automatiques travaillent ; « actif » = ils s'arrêtent aussitôt. Claude le change quand il dit « mode veille » ou quand il revient.)
 
 ## Dernier lot
-v1.7 prêt en démo (25/11) : refonte visuelle, arbre étoile en grand avec zoom, tri et filtre du backlog, sous-tâches par glisser et dépliables, journée entière ajustable, indisponibilités récurrentes, sélection clavier / appui long, accent Or par défaut. En ligne le 25/11 à 15 h 45.
+Lancement autonome du 25/11 (soir), sur `dev`, en démo (v=49), pas en ligne :
+- Lot 1 « site marqué dangereux », côté site : balise noindex, page `about.html` qui explique Diem et ce qui part où (lien en bas des Réglages), plus aucun champ « mot de passe » dans la page (la clé Claude se saisit derrière un bouton « Saisir une clé », champ texte masqué, vide = garder l’ancienne).
+- Lot 2 « glisser au doigt » : poignée ⋮⋮ sur chaque tuile, visible seulement sur écran tactile ; on la tire, la tuile suit le doigt, on dépose entre deux tâches, en sous-tâche, sur Backlog / Aujourd’hui ; défilement automatique près des bords. Corrigé au passage : sur la frise téléphone, déposer sur la moitié basse d’une tuile range bien après elle.
+- Tests : 60/61. Le seul rouge est « Import Sunsama », qui a besoin de ton vrai export CSV (absent ici, et on n’utilise pas tes vraies données) : rien à voir avec ces lots.
+
+Précédent : v1.7 en ligne le 25/11 à 15 h 45.
 
 ## File d'attente (validée par le propriétaire le 25/11 à 20 h 24 — suivre cet ordre)
 Source de vérité : section « File d'attente » du plan (doc Claude). Une nouvelle remarque se range à sa place, sans passer devant.
 
 ### 1. Bugs et fonctions gênantes
-1. Site marqué dangereux par Google : préparer côté site ce qui aide la révision (page d'accueil explicative, champ de clé hors de la première page, noindex) ; la démarche Search Console est à faire par le propriétaire.
-2. Glisser-déposer au doigt sur téléphone (le glisser HTML ne marche pas au toucher).
+1. ~~Site marqué dangereux~~ : côté site fait (démo v=49). Reste de ton côté, après mise en ligne : Search Console › Problèmes de sécurité › « Demander un examen », en citant la page about.html.
+2. ~~Glisser-déposer au doigt~~ : fait (démo v=49), à essayer sur ton téléphone.
 3. Doublon Cuisine / Alimentation saine dans l'arbre (proposer la fusion, noter la question si un choix est nécessaire).
 4. Bug « tâches pas dans le lendemain » : à confirmer à l'usage, ne rien faire sans nouveau signalement.
 
@@ -37,4 +42,5 @@ Source de vérité : section « File d'attente » du plan (doc Claude). Une nouv
 Gamification (XP, skill tree, mode Fantasy).
 
 ## Questions en suspens
-(aucune)
+- Glisser au doigt : j’ai mis une poignée ⋮⋮ à gauche des tuiles (sur tactile seulement) plutôt qu’« appui long puis glisser », parce que l’appui long sert déjà à la sélection. Choix par défaut : la poignée. Dis-moi si tu préfères l’appui long.
+- Page À propos : elle est en noindex comme le reste (le site n’apparaît pas dans Google). Choix par défaut : noindex partout. Si tu veux que la page À propos soit trouvable, je retire la balise de cette page seulement.

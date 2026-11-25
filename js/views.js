@@ -7,6 +7,7 @@ function card(t){
  const subl=so?`<div class="csubs">${t.subtasks.map(x=>`<div class="csub${x.d?' d':''}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${x.id}" aria-label="${x.d?'Rouvrir':'Terminer'} : ${esc(x.t)}">${x.d?'✓':''}</button><span>${esc(x.t)}</span></div>`).join('')}</div>`:'';
  const act=actualSec(t);
  return `<div class="card${t.done?' done':''}${run?' running':''}" draggable="true" data-drag="task|${t.id}" data-id="${t.id}">
+ <span class="tgrip" data-tgrip aria-hidden="true" title="Glisse pour déplacer"><svg viewBox="0 0 12 20" width="10" height="18"><g fill="currentColor"><circle cx="3" cy="4" r="1.6"/><circle cx="9" cy="4" r="1.6"/><circle cx="3" cy="10" r="1.6"/><circle cx="9" cy="10" r="1.6"/><circle cx="3" cy="16" r="1.6"/><circle cx="9" cy="16" r="1.6"/></g></svg></span>
  <button class="chk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button>
  <div class="cbody" data-act="open" data-id="${t.id}"><div class="ctitle">${(S.days[t.day]||{}).phare===t.id&&!t.done?'<span class="phare" title="Tâche phare du jour">★</span>':''}${t.prio==='high'||t.prio==='urgent'?`<span class="pflag" title="Priorité haute">${flagSvg('high')}</span>`:t.prio==='low'?`<span class="pflag" title="Priorité basse : peut glisser">${flagSvg('low')}</span>`:''}${esc(t.title)}</div>
  <div class="cmeta">${(()=>{const w=whereOf(t);return w==="home"?`<span class="wh" title="Chez moi">${ico("home")}chez moi</span>`:w==="out"?`<span class="wh" title="Dehors">${ico("walk")}dehors</span>`:""})()}${c?`<span class="chip pc" data-act="pickcat" data-id="${t.id}" style="--c:${esc(c.color)}" title="${t.aiCat?'Devinée par Claude — clique pour changer':'Changer de catégorie'}">${esc(nodeLabel(c.id))}${t.aiCat?' ✦':''}</span>`:t.done?'':`<span class="chip pc nocat" data-act="pickcat" data-id="${t.id}">+ catégorie</span>`}${t.proj&&proj(t.proj)?`<span class="pchip">◆ ${esc(proj(t.proj).name)}</span>`:''}${t.block?`<span title="${t.pinned?'Heure fixée':'Suit l’ordre de la liste'}">${hm(new Date(t.block.start))}${t.pinned?' 📌':''}</span>`:''}${(t.roll||0)>=4&&!t.done?`<span class="rollm" data-act="rollmenu" data-id="${t.id}" title="Reportée ${t.roll} fois — que veux-tu en faire ?">↻ ${t.roll}</span>`:''}${t.src?'<span class="src">To Do</span>':''}${t.recurId?'<span title="Récurrente">↻</span>':''}${dueLabel(t)}${subs}${t.aiSug&&!t.done?`<span class="aisug">Claude : ${esc([t.aiSug.channel&&ch(t.aiSug.channel)?nodeLabel(t.aiSug.channel):'',t.aiSug.est?fmtMin(t.aiSug.est):''].filter(Boolean).join(' · '))}<button data-act="aiok" data-id="${t.id}" aria-label="Accepter la suggestion">✓</button><button data-act="aino" data-id="${t.id}" aria-label="Refuser la suggestion">✕</button></span>`:''}</div>${subl}</div>
@@ -59,7 +60,7 @@ function taskSheet(id){
 }
 function swapTask(id,dir){const t=T(id);if(!t)return;const d=t.day,ts=dayTasks(d).filter(x=>!x.done),i=ts.indexOf(t),j=i+dir;if(j<0||j>=ts.length)return;const o=ts[j].order;ts[j].order=t.order;t.order=o;renorm(d);if(!flowOn())reflow(d);save();render()}
 let lp=null;
-document.addEventListener('touchstart',e=>{const c=e.target.closest('.card[data-id]');if(!c||e.target.closest('button'))return;const x=e.touches[0];lp={id:c.dataset.id,x:x.clientX,y:x.clientY,t:setTimeout(()=>{lp=null;if(navigator.vibrate)navigator.vibrate(15);taskSheet(c.dataset.id)},480)}},{passive:true});
+document.addEventListener('touchstart',e=>{const c=e.target.closest('.card[data-id]');if(!c||e.target.closest('button,[data-tgrip]'))return;const x=e.touches[0];lp={id:c.dataset.id,x:x.clientX,y:x.clientY,t:setTimeout(()=>{lp=null;if(navigator.vibrate)navigator.vibrate(15);taskSheet(c.dataset.id)},480)}},{passive:true});
 document.addEventListener('touchmove',e=>{if(!lp)return;const x=e.touches[0];if(Math.abs(x.clientX-lp.x)+Math.abs(x.clientY-lp.y)>10){clearTimeout(lp.t);lp=null}},{passive:true});
 document.addEventListener('touchend',()=>{if(lp){clearTimeout(lp.t);lp=null}});
 document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data-id]');if(c&&isMobile()){e.preventDefault()}});
@@ -282,7 +283,7 @@ function viewReview(){
  return tabs+(tab==='stats'?viewStats():viewObjectives());
 }
 /* ---------- vue Réglages ---------- */
-let advOpen=false;
+let advOpen=false,aiKeyOpen=false;
 function viewSettings(){
  const s=S.settings,num=(k,l,min,max)=>`<label>${l}<input type="number" min="${min}" max="${max}" data-set="${k}" value="${esc(s[k])}"></label>`;
  return `<div class="head"><div><h1>Réglages</h1><div class="sub">L’essentiel ici ; le reste dans « Réglages avancés » en bas.</div></div></div>
@@ -309,7 +310,7 @@ function viewSettings(){
  <section><h2>Notifications</h2><p>Début de chaque créneau, rendez-vous occupé dans 5 minutes, rappel de planifier le matin et de clôturer le soir. Elles s’affichent tant que Diem est ouverte (onglet ou appli installée, même en arrière-plan sur ordinateur). Sur téléphone, le système peut mettre l’appli en pause quand elle n’est pas à l’écran.</p>
   <div class="row"><span class="status${notifOk()?' on':''}">${notifOk()?'Activées':('Notification' in window&&Notification.permission==='denied')?'Bloquées par le navigateur':'Désactivées'}</span><span class="sp"></span>${notifOk()?'<button class="ghost sm" data-act="notifoff">Désactiver</button><button class="sm" data-act="notiftest">Tester</button>':'<button class="pri" data-act="notifon">Activer</button>'}</div></section>
  <section><h2>Claude (assistant)</h2><p>Colle ici ta clé API Anthropic (console.anthropic.com → API Keys), une seule fois : elle est recopiée sur tes autres appareils par la synchro, dans le dossier caché de Diem de ton Google Drive (invisible pour les autres applis). Coût : quelques centimes par jour avec Haiku.</p>
-  <label>Clé API<input type="password" data-set="aiKey" value="${esc(s.aiKey)}" placeholder="sk-ant-…" autocomplete="off"></label>
+  ${aiKeyOpen?`<label>Clé API<input type="text" class="secret" data-set="aiKey" name="diem-claude" value="" placeholder="${aiOn()?'Colle la nouvelle clé (laisser vide = garder l’ancienne)':'sk-ant-…'}" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>`:`<div class="row"><button class="sm" data-act="aikey">${aiOn()?'Changer la clé':'Saisir une clé'}</button><span class="mute" style="font-size:13px">Facultatif : la clé reste sur tes appareils et ne part que vers api.anthropic.com.</span></div>`}
   <div class="grid2"><label>Modèle<select data-set="aiModel"><option value="claude-haiku-5-5" ${s.aiModel==='claude-haiku-5-5'?'selected':''}>Haiku — rapide et économique</option><option value="claude-sonnet-5-5" ${s.aiModel==='claude-sonnet-5-5'?'selected':''}>Sonnet — plus fin</option></select></label>
   <label>En arrière-plan<select data-set="aiAuto"><option value="1" ${s.aiAuto?'selected':''}>Suggestions automatiques</option><option value="" ${s.aiAuto?'':'selected'}>Seulement quand je demande</option></select></label></div>
   <div class="grid2"><label>Plafond mensuel ($, 0 = aucun)<input type="number" min="0" step="0.5" data-set="aiBudget" value="${esc(s.aiBudget)}"></label></div>
@@ -331,6 +332,7 @@ function viewSettings(){
  <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
  <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Vide-tête</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Semaine et projets</span><kbd>Espace</kbd><span>Focus : pause / reprise</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
  </div></details>
+ <p class="mute about" style="font-size:13px;margin:14px 2px 0"><a href="about.html" target="_blank" rel="noopener">À propos de Diem et de tes données</a> · projet personnel, sans serveur ni publicité.</p>
  </div>`;
 }
 

@@ -151,7 +151,7 @@ function renderRitual(){
    h=shell(`<h2>Combien de temps ?</h2><p class="lead">Estime chaque tâche. ${gTok()?'Tes rendez-vous sont comptés.':'Connecte Google Agenda pour compter aussi tes rendez-vous.'}</p>${loadBar(d)}
    ${L.over>0?`<div class="overalert" role="alert"><b>${fmtMin(L.over)} de trop</b> pour ta journée (${hhmm(H.s)} → ${hhmm(H.e)}). Retire ou reporte quelque chose, ou laisse faire : au fil de la journée, les drapeaux bas puis les tâches normales glisseront à demain.</div>`:''}
    <p class="mute pzhint">Pour repousser une tâche, glisse-la sur une des zones.</p>${pushZones(d)}
-   <div class="rlist">${ts.map(t=>`<div class="rrow drg" draggable="true" data-drag="task|${t.id}"><span class="grip" aria-hidden="true">⋮⋮</span><div style="flex:1 1 180px"><b>${esc(t.title)}</b></div>${durBtns(t)}</div>`).join('')||'<p class="mute">Aucune tâche à estimer.</p>'}</div>`);
+   <div class="rlist">${ts.map(t=>`<div class="rrow drg" draggable="true" data-drag="task|${t.id}"><span class="grip" data-tgrip aria-hidden="true">⋮⋮</span><div style="flex:1 1 180px"><b>${esc(t.title)}</b></div>${durBtns(t)}</div>`).join('')||'<p class="mute">Aucune tâche à estimer.</p>'}</div>`);
   }else if(i===5){const ts=dayTasks(d).filter(t=>!t.done),free=ts.filter(t=>!t.block).length;
    h=shell(`<h2>Quand vas-tu le faire ?</h2><p class="lead">Les créneaux suivent l’ordre de la liste. Fixe une heure seulement si elle compte.</p>
    <button class="${free?'pri':''}" data-act="ritauto" ${free?'':'disabled'}>Placer automatiquement ${free?free+' tâche'+(free>1?'s':''):''} dans mes créneaux libres</button>

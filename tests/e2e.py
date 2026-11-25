@@ -1252,6 +1252,55 @@ def _(c):
     o = order(); i = o.index('g2'); assert o[i + 1:i + 3] == ['g4', 'g5'], o
     assert not errs, errs; ctx.close()
 
+@test('v1.8 : site rassurant (noindex, page À propos, pas de champ mot de passe, clé masquée derrière un bouton)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    assert pg.locator('meta[name="robots"][content*="noindex"]').count() == 1
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    assert pg.locator('input[type="password"]').count() == 0, 'champ mot de passe présent'
+    assert pg.locator('[data-set="aiKey"]').count() == 0, 'champ de clé affiché d’office'
+    assert pg.locator('#main a[href="about.html"]').count() == 1
+    pg.click('[data-act="aikey"]'); tick(pg, 100)
+    k = pg.locator('[data-set="aiKey"]'); assert k.count() == 1 and k.get_attribute('type') == 'text' and k.input_value() == ''
+    k.fill('sk-ant-demo'); k.dispatch_event('change'); tick(pg, 150)
+    assert st(pg, "S.settings.aiKey") == 'sk-ant-demo' and pg.locator('[data-set="aiKey"]').count() == 0
+    # vide = garder l’ancienne clé
+    pg.click('[data-act="aikey"]'); tick(pg, 100); pg.dispatch_event('[data-set="aiKey"]', 'change'); tick(pg, 100)
+    assert st(pg, "S.settings.aiKey") == 'sk-ant-demo'
+    p2 = ctx.new_page(); p2.goto(BASE + 'about.html')
+    assert 'Diem' in p2.title() and p2.locator('meta[name="robots"][content*="noindex"]').count() == 1 and p2.locator('input').count() == 0
+    assert not errs, errs; ctx.close()
+
+@test('v1.8 : glisser au doigt avec la poignée (réordonner, vers le backlog, pas de clic parasite)')
+def _(c):
+    ctx = c['b'].new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True, device_scale_factor=1)
+    pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.route('https://fonts.googleapis.com/**', lambda r: r.abort()); pg.route('https://fonts.gstatic.com/**', lambda r: r.abort())
+    pg.clock.install(time=at(9, 0)); pg.goto(BASE); pg.clock.run_for(1500)
+    pg.evaluate("()=>{S.tasks.filter(t=>t.day===today()).forEach(t=>t.day=null);for(let i=1;i<=4;i++)S.tasks.push(mk({id:'h'+i,title:'H'+i,day:today(),est:10,order:i}));save();go('today');render()}"); tick(pg, 200)
+    assert pg.evaluate("matchMedia('(pointer:coarse)').matches")
+    cdp = ctx.new_cdp_session(pg)
+    def touch(pts):
+        for i, (x, y) in enumerate(pts):
+            typ = 'touchStart' if i == 0 else 'touchMove'
+            cdp.send('Input.dispatchTouchEvent', {'type': typ, 'touchPoints': [{'x': x, 'y': y}]}); pg.wait_for_timeout(30)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); pg.wait_for_timeout(50)
+    order = lambda: pg.evaluate("[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id)")
+    g = pg.locator('#main .card[data-id="h1"] .tgrip').bounding_box(); assert g and g['width'] > 10, 'poignée invisible'
+    t3 = pg.locator('#main .card[data-id="h3"]').bounding_box()
+    sx, sy = g['x'] + g['width'] / 2, g['y'] + g['height'] / 2; ty = t3['y'] + t3['height'] * 0.8
+    touch([(sx, sy)] + [(sx + 2, sy + (ty - sy) * k / 8) for k in range(1, 9)])
+    tick(pg, 200); o = order(); assert o.index('h1') == o.index('h3') + 1, o
+    assert pg.locator('#modal:not(.hidden)').count() == 0, 'la tâche s’est ouverte après le glisser'
+    assert pg.locator('.touchghost').count() == 0 and pg.locator('.dragging').count() == 0
+    # vers le backlog (barre du bas)
+    b = pg.locator('#nav [data-drop="backlog"]').bounding_box(); assert b, 'cible backlog absente'
+    g = pg.locator('#main .card[data-id="h2"] .tgrip').bounding_box(); sx, sy = g['x'] + g['width'] / 2, g['y'] + g['height'] / 2
+    bx, by = b['x'] + b['width'] / 2, b['y'] + b['height'] / 2
+    touch([(sx, sy)] + [(sx + (bx - sx) * k / 8, sy + (by - sy) * k / 8) for k in range(1, 9)])
+    tick(pg, 200); assert st(pg, "T('h2').day") is None, st(pg, "T('h2').day")
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')
