@@ -726,13 +726,29 @@ form.add .qprev{order:3;flex-basis:100%;margin-top:0}
 .paneltog:hover{color:var(--ink);border-color:var(--acc)}.paneltog svg{width:19px;height:19px}
 #navtog{left:152px}#sidetog{right:14px}
 body.hidenav #navtog{left:12px}
-@media (min-width:1101px){body.hideside #app{grid-template-columns:196px minmax(0,1fr) 0}body.hideside #side{display:none}body.hideside #main .head .layoutbtn{--sidew:0px;right:64px}}
-@media (min-width:761px){body.hidenav #app{grid-template-columns:0 minmax(0,1fr) var(--sidew,360px)}body.hidenav #nav{display:none}}
-@media (min-width:761px) and (max-width:1100px){body.hidenav #app{grid-template-columns:0 minmax(0,1fr)}}
-@media (min-width:1101px){body.hidenav.hideside #app{grid-template-columns:0 minmax(0,1fr) 0}}
-@media (max-width:1100px){#main .head .layoutbtn{right:64px}}
 @media (max-width:760px){.paneltog{display:none}}
 body.hidenav #main{padding-left:clamp(56px,5vw,72px)}
 @media (min-width:761px){#nav{grid-column:1}#main{grid-column:2;grid-row:1}#side{grid-column:3;grid-row:1}}
 @media (min-width:761px) and (max-width:1100px){#main .head:has(.layoutbtn) .acts{margin-right:104px}}body.hideside #main .head:has(.layoutbtn) .acts{margin-right:104px}
 .sheet:has(>.addsheet){height:auto}
+/* v1.5 : volets identiques à gauche et à droite, à toutes les largeurs d'ordinateur */
+@media (min-width:761px){
+ #app{grid-template-columns:var(--navw,196px) minmax(0,1fr) var(--sidecol,var(--sidew,300px))}
+ body.hidenav #app{--navw:0px}body.hidenav #nav{display:none}
+ body.hideside #app{--sidecol:0px}body.hideside #side{display:none}
+ #side{position:relative;transform:none;width:auto;box-shadow:none;z-index:auto;transition:none}
+ #nav #sidebtn{display:none}.stabs .closeside{display:none}
+ .sidegrip{display:block}
+ #main .head .layoutbtn{--sidew:0px;right:calc(var(--sidewr,300px) + 24px)}
+ body.hideside #main .head .layoutbtn{right:64px}
+ #main .head:has(.layoutbtn) .acts{margin-right:52px}
+ body.hideside #main .head:has(.layoutbtn) .acts{margin-right:104px}
+}
+/* téléphone : le volet de droite s’ouvre avec « Plus » dans la barre du bas */
+.prsec{font-size:18px;margin:22px 0 10px}
+/* le bouton de droite suit le bord du volet, comme celui de gauche */
+@media (min-width:761px){
+ #sidetog{right:calc(var(--sidewr,300px) - 48px)}
+ body.hideside #sidetog{right:12px}
+ body:not(.hideside) .stabs{padding-left:48px}
+}

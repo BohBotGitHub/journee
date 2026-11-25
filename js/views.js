@@ -45,10 +45,12 @@ function taskSheet(id){
   ${i>=0&&ts.length>1?`<div class="mvrow"><button class="mvico" data-act="mvup" data-id="${t.id}" aria-label="Monter d’un cran" title="Monter d’un cran" ${i>0?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><button class="mvico" data-act="mvdown" data-id="${t.id}" aria-label="Descendre d’un cran" title="Descendre d’un cran" ${i<ts.length-1?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button></div>`:''}
   <div class="mvrow">${PRIOS.map(([v,l])=>`<button class="mvico pbtn${(t.prio||'')===v?' on':''}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="Priorité ${l.toLowerCase()}" title="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</div>
   <button data-act="play" data-id="${t.id}">Focus</button>
+  ${t.day!==today()?`<button data-act="sheetmv" data-id="${t.id}" data-to="${today()}">Aujourd’hui</button>`:''}
   <button data-act="sheetmv" data-id="${t.id}" data-to="${addDays(today(),1)}">Demain</button>
   <button data-act="sheetmv" data-id="${t.id}" data-to="backlog">Backlog</button>
   <label class="full">Fixer l’heure<input type="time" step="900" data-sheettime="${t.id}" value="${t.block?hm(new Date(t.block.start)):''}"></label>
   <button data-act="open" data-id="${t.id}">Détail</button>
+  <button class="danger" data-act="rmsheet" data-id="${t.id}">Supprimer</button>
  </div></div>`);
 }
 function swapTask(id,dir){const t=T(id);if(!t)return;const d=t.day,ts=dayTasks(d).filter(x=>!x.done),i=ts.indexOf(t),j=i+dir;if(j<0||j>=ts.length)return;const o=ts[j].order;ts[j].order=t.order;t.order=o;renorm(d);if(!flowOn())reflow(d);save();render()}
@@ -203,7 +205,6 @@ function viewBacklog(){
  const ts=S.tasks.filter(t=>!t.day&&!t.done).sort((a,b)=>a.order-b.order);
  const gkey=t=>{const p=pathOf(t.channel);return p.length?(p[1]||p[0]).id:null};const groups=hasTree()?[...S.channels.filter(c=>c.lvl===1).sort((a,b)=>(pillarOf(a.id).o-pillarOf(b.id).o)||(a.o-b.o)).map(c=>({c,items:ts.filter(t=>gkey(t)===c.id)})),...pillars().map(c=>({c,items:ts.filter(t=>gkey(t)===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length):[...S.channels.map(c=>({c,items:ts.filter(t=>t.channel===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length);
  return `<div class="head"><div><h1>Backlog</h1><div class="sub">${ts.length} tâche${ts.length>1?'s':''} en attente d’un jour</div></div></div>
- ${tplHtml()}
  ${addForm(null,'Ajouter au backlog… (ex. « Réserver le garage 1h #admin »)')}
  <div class="list" data-drop="backlog" style="gap:0">${groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.lvl===1?pillarOf(g.c.id).name+' › '+g.c.name:g.c.name)}</span>`:'Sans catégorie'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
 }
@@ -399,9 +400,11 @@ function viewProjects(){
   <div class="projmeta"><span>${g.n?`${g.done}/${g.n} tâches faites`:'Aucune tâche pour l’instant'}</span>${left!==null&&!p.done?`<span class="${late?'warn':left<=7?'soon':''}">${late?'en retard de '+(-left)+' j':left===0?'se termine aujourd’hui':'encore '+left+' j'}</span>`:''}<code>+${esc(projKey(p))}</code></div>
   ${p.done?'':`<form class="add" data-form="add" data-day="" data-proj="${esc(p.id)}"><input name="t" data-keep="pj-${esc(p.id)}" placeholder="Ajouter une tâche à ce projet…" autocomplete="off" aria-label="Nouvelle tâche du projet"></form>`}
   ${open.length?`<div class="list">${open.map(card).join('')}</div>`:''}</section>`};
- return `<div class="head"><div><h1>Projets</h1><div class="sub">Des étiquettes qui traversent l’arbre, avec une date de fin. Tape <code>+nom</code> en créant une tâche pour l’y rattacher.</div></div><div class="acts"><button class="pri" data-act="projadd">Nouveau projet</button></div></div>
+ return `<div class="head"><div><h1>Projets & Routines</h1><div class="sub">Les projets ont une date de fin (tape <code>+nom</code> en créant une tâche pour l’y rattacher) ; les routines et modèles s’ajoutent à un jour en un clic.</div></div><div class="acts"><button class="pri" data-act="projadd">Nouveau projet</button></div></div>
+ <h2 class="prsec">Projets</h2>
  ${act.length?act.map(one).join(''):'<div class="empty">Aucun projet en cours. Crée-en un : un spectacle, un déménagement, une formation…</div>'}
- ${fin.length?`<details class="projfin"><summary>Terminés (${fin.length})</summary>${fin.map(one).join('')}</details>`:''}`;
+ ${fin.length?`<details class="projfin"><summary>Terminés (${fin.length})</summary>${fin.map(one).join('')}</details>`:''}
+ <div style="margin-top:26px">${tplHtml()}</div>`;
 }
 
 /* ---------- Maintenant / Ensuite ---------- */

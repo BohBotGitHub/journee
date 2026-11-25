@@ -246,8 +246,8 @@ function quickPreview(txt){const q=parseQuick(txt||'');if(!q.title)return '';con
  if(q.channel)out.push(nodeLabel(q.channel));if(q.proj){const p=proj(q.proj);if(p)out.push('+'+p.name)}
  return out.length?out.map(x=>`<span>${esc(x)}</span>`).join(''):''}
 
-// durées proposées : de 5 en 5 min jusqu'à 1 h, puis de 15 en 15 min jusqu'à 8 h
-const DUR_OPTS=[...Array.from({length:12},(_,i)=>5*(i+1)),...Array.from({length:28},(_,i)=>75+15*i)];
+// durées proposées : de 5 en 5 min jusqu'à 1 h, de 15 en 15 min jusqu'à 2 h 30, puis de 30 en 30 min jusqu'à 8 h
+const DUR_OPTS=[...Array.from({length:12},(_,i)=>5*(i+1)),...Array.from({length:6},(_,i)=>75+15*i),...Array.from({length:11},(_,i)=>180+30*i)];
 const durOpts=v=>{const a=DUR_OPTS.slice();if(v&&!a.includes(v)){a.push(v);a.sort((x,y)=>x-y)}return a};
 const durSelect=(t,cls)=>`<select class="dursel ${cls||''}" data-durset="${t.id}" aria-label="Durée estimée"><option value="0" ${t.est?'':'selected'}>${t.est?'—':'Durée…'}</option>${durOpts(t.est).map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${fmtMin(v)}</option>`).join('')}</select>`;
 

@@ -16,13 +16,21 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){setTimeou
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 
 // volet de droite : largeur réglable à la souris, gardée sur cet appareil
-(function(){const r=document.documentElement,K='journee.sidew',set=w=>{w=Math.max(260,Math.min(Math.round(innerWidth*0.55),w));r.style.setProperty('--sidew',w+'px');return w};
+(function(){const r=document.documentElement,K='journee.sidew',set=w=>{w=Math.max(200,Math.min(Math.round(innerWidth*0.6),w));r.style.setProperty('--sidew',w+'px');r.style.setProperty('--sidewr',w+'px');return w};
  const v=+lsGet(K);if(v)set(v);
  document.addEventListener('pointerdown',e=>{const g=e.target.closest&&e.target.closest('.sidegrip');if(!g)return;e.preventDefault();g.setPointerCapture(e.pointerId);document.body.classList.add('sizing');
-  const mv=ev=>set(innerWidth-ev.clientX),up=ev=>{g.removeEventListener('pointermove',mv);g.removeEventListener('pointerup',up);document.body.classList.remove('sizing');lsSet(K,String(set(innerWidth-ev.clientX)))};
+  const mv=ev=>{set(innerWidth-ev.clientX)},w0=+lsGet(K)||0,up=ev=>{g.removeEventListener('pointermove',mv);g.removeEventListener('pointerup',up);document.body.classList.remove('sizing');const w=innerWidth-ev.clientX;
+   // glissé sous la taille minimale : le volet se replie (on garde la largeur d'avant pour sa réouverture)
+   if(w<200){if(w0)set(w0);else{r.style.removeProperty('--sidew');r.style.removeProperty('--sidewr')}lsSet('journee.pside','hide');applyPanes();if(typeof render==='function')render();return}
+   lsSet(K,String(set(w)))};
   g.addEventListener('pointermove',mv);g.addEventListener('pointerup',up)});
  document.addEventListener('dblclick',e=>{if(e.target.closest&&e.target.closest('.sidegrip')){r.style.removeProperty('--sidew');lsDel(K)}});
 })();
 
-// volets cachés : on retrouve l'état d'avant
-if(lsGet('journee.hidenav'))document.body.classList.add('hidenav');if(lsGet('journee.hideside'))document.body.classList.add('hideside');
+// volets : ton choix (bouton) l'emporte ; sinon ils se cachent tout seuls quand la fenêtre est trop étroite
+function applyPanes(){const b=document.body;if(innerWidth<=760){b.classList.remove('hidenav','hideside');return}
+ const sw=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidew'))||300,MIN=520,ps=lsGet('journee.pside'),pn=lsGet('journee.pnav');
+ const showS=ps==='show'||(ps!=='hide'&&innerWidth-196-sw>=MIN),showN=pn==='show'||(pn!=='hide'&&innerWidth-(showS?sw:0)-196>=MIN);
+ b.classList.toggle('hideside',!showS);b.classList.toggle('hidenav',!showN)}
+applyPanes();
+let paneW=innerWidth;addEventListener('resize',()=>{if(Math.abs(innerWidth-paneW)>40){lsDel("journee.pside");lsDel("journee.pnav");paneW=innerWidth}applyPanes()});

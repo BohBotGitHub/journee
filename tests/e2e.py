@@ -307,7 +307,7 @@ def _(c):
 @test('Modèles : créer, appliquer, depuis aujourd’hui')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
-    pg.click('#nav [data-view="backlog"]'); pg.click('[data-act="tplnew"]')
+    pg.click('#nav [data-view="projects"]'); pg.click('[data-act="tplnew"]')
     pg.fill('[data-tplname]', 'Routine du matin'); pg.fill('[data-tpltext]', 'Méditer 10m\nPréparer le sac 10m\n- Gourde\n- Clés')
     pg.click('[data-act="tplsave"]'); pg.wait_for_timeout(200)
     assert st(pg, 'S.templates.length') == 1 and st(pg, 'S.templates[0].items[1].subs.length') == 2
@@ -328,7 +328,7 @@ def _(c):
     pg.click('[data-act="close"]'); pg.goto(BASE + '#stats'); pg.wait_for_timeout(500)
     txt = pg.inner_text('#main')
     assert 'NaN' not in txt and 'undefined' not in txt and 'Infinity' not in txt, 'valeur invalide dans les stats'
-    pg.click('#nav [data-view="backlog"]'); pg.wait_for_timeout(200)
+    pg.click('#nav [data-view="projects"]'); pg.wait_for_timeout(200)
     assert pg.locator('[data-act="tplsug"]').count() >= 1, 'pas de suggestion de routine'
     pg.keyboard.press('Control+k'); pg.keyboard.type('lessive'); pg.wait_for_timeout(200)
     assert pg.locator('.palgrp', has_text='Historique').count() == 1
@@ -443,7 +443,9 @@ def _(c):
             assert ow[0] <= 0 and not ow[1], f'{v} {w}px déborde : {ow}'
             if v == 'today' and w > 760:
                 sd = pg.evaluate("(()=>{const r=document.getElementById('side').getBoundingClientRect();return [r.top, r.left, innerWidth]})()")
-                assert sd[0] <= 1 and (sd[1] >= sd[2] - 2 or w > 1100), f'agenda mal placé à {w}px : {sd}'
+                vis = pg.locator('#side').is_visible()
+                assert (not vis) or (sd[0] <= 1 and sd[1] < sd[2]), f'agenda mal placé à {w}px : {sd}'
+                mw = pg.locator('#main').bounding_box()['width']; assert mw >= 480, f'liste trop étroite à {w}px : {mw}'
         assert not errs, errs; ctx.close()
 
 @test('Synchro par fusion : modifications sur deux appareils, aucune perte, suppressions respectées')
@@ -941,9 +943,9 @@ def _(c):
     # volet de droite
     g = pg.locator('#side .sidegrip').bounding_box()
     pg.mouse.move(g['x']+4, 400); pg.mouse.down(); pg.mouse.move(g['x']-150, 400, steps=5); pg.mouse.up(); tick(pg, 100)
-    w = pg.locator('#side').bounding_box()['width']; assert w > 470, w
+    w = pg.locator('#side').bounding_box()['width']; assert w > 420, w
     pg.dblclick('#side .sidegrip'); tick(pg, 100)
-    assert abs(pg.locator('#side').bounding_box()['width'] - 360) < 3
+    assert abs(pg.locator('#side').bounding_box()['width'] - 300) < 3
     assert not errs, errs; ctx.close()
 
 @test('v1.5 : durée en menu (5 min puis 15 min), ajout en haut / bas / Génie')
@@ -1011,6 +1013,26 @@ def _(c):
     tick(pg, 15 * 60 * 1000)
     assert st(pg, "today()") != d0
     assert st(pg, "dayTasks(today()).filter(t=>!t.done).length") >= n, 'reportées à minuit'
+    assert not errs, errs; ctx.close()
+
+@test('Clic droit : Supprimer (annulable), Aujourd’hui ; volet replié en le glissant sous sa taille minimale')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id"); n = st(pg, "S.tasks.length")
+    pg.click(f'#main .card[data-id="{tid}"] .ctitle', button='right'); tick(pg, 150)
+    pg.click('#sheet [data-act="rmsheet"]'); tick(pg, 150)
+    assert st(pg, "S.tasks.length") == n - 1
+    pg.keyboard.press('Control+z'); tick(pg, 150)
+    assert st(pg, "S.tasks.length") == n
+    pg.evaluate("()=>{const S=window.journee.state;S.tasks.push(Object.assign({},S.tasks[0],{id:'tm',title:'Pour demain',day:window.journee.fn.addDays(window.journee.fn.today(),1),block:null,done:false}));window.journee.save();render()}")
+    pg.evaluate("()=>taskSheet('tm')"); tick(pg, 100)
+    pg.click('#sheet [data-act="sheetmv"][data-to="' + st(pg, "today()") + '"]'); tick(pg, 150)
+    assert st(pg, "T('tm').day") == st(pg, "today()")
+    g = pg.locator('#side .sidegrip').bounding_box(); W = pg.viewport_size['width']
+    pg.mouse.move(g['x']+4, 400); pg.mouse.down(); pg.mouse.move(W - 120, 400, steps=5); pg.mouse.up(); tick(pg, 150)
+    assert not pg.locator('#side').is_visible(), 'replié'
+    pg.click('#sidetog'); tick(pg, 150)
+    assert pg.locator('#side').is_visible() and pg.locator('#side').bounding_box()['width'] > 250
     assert not errs, errs; ctx.close()
 
 def main():

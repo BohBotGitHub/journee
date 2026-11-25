@@ -51,7 +51,7 @@ const ico=n=>IC[n]?`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="curr
 function icoFor(b){
  const a=b.dataset.act,to=b.dataset.to;
  if(['sheetmv','mv'].includes(a))return to==='backlog'?'tray':'next';
- return ({play:'play',focusnext:'play',tobacklog:'tray',rolltomorrow:'next',mvday:'next',mvall:'next',rm:'trash',del:'trash',rolldrop:'trash',nodedelask:'trash',nodedelgo:'trash',open:'open',
+ return ({play:'play',focusnext:'play',tobacklog:'tray',rolltomorrow:'next',mvday:'next',mvall:'next',rm:'trash',rmsheet:'trash',del:'trash',rolldrop:'trash',nodedelask:'trash',nodedelgo:'trash',open:'open',
   plan:'sunrise',weekplan:'calendar',weekreview:'chart',shutdown:'moon',freeze:'snow',tplfromday:'copy',palopen:'search',ritdone:'check',keep:'pin',phare:'star',ritback:'left',ritnext:'right',ritauto:'wand',ritunblock:'x',
   pushtodo:'send',refine:'spark',aisplit:'cut',ritai:'spark',nodeadd:'plus',projadd:'plus',tvaddpil:'plus',nodemove:'move',nodeup:'up',nodedown:'down',tvfocus:'zoom',gin:'link',export:'download',notifon:'bell',notiftest:'bell',
   tplnew:'plus',tplapply:'copy',hardrefresh:'',refineok:'check',treego:'check',dumpapplyall:'check',ritapplyall:'check',aiapplyall:'check',modalapplyall:'check',hoursreset:'clock',aiok:'check'})[a]||'';

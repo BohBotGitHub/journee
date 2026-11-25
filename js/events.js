@@ -6,7 +6,7 @@ function toast(msg,act,fn){const el=$('#toast');el.textContent=msg;toastFn=act&&
 document.addEventListener('click',async e=>{
  const nv=e.target.closest('#nav [data-view]');if(nv){go(nv.dataset.view);return}
  const sd=e.target.closest('[data-side]');if(sd){sideTab=sd.dataset.side;renderSide();return}
- if(e.target.id==='modal'){if(!ritual)closeModal();return}
+ if(e.target.id==='modal'){if(!ritual&&downOnBackdrop)closeModal();return}
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,id=b.dataset.id;
  const pre=UNDO_ACTS.has(a)?undoSnap():null;
@@ -43,6 +43,7 @@ document.addEventListener('click',async e=>{
   case'mv':moveTask(id,b.dataset.to);if(ritual)renderRitual();break;
   case'mvall':rolloverAll(b.dataset.to);renderRitual();break;
   case'mvday':dayTasks(ritual.day).filter(t=>!t.done).forEach(t=>moveTask(t.id,b.dataset.to,true));save();render();renderRitual();break;
+  case'rmsheet':{const tt=T(id);closeModal();deleteTask(id);render();toast('Supprimée : '+(tt?tt.title:''),'Annuler',()=>undoPop());break}
   case'rm':deleteTask(id);render();if(ritual)renderRitual();break;
   case'dur':{const t=T(id);if(t){setEst(t,+b.dataset.v);renderRitual()}break}
   case'totoday':moveTask(id,today());toast('Ajoutée à aujourd’hui');break;
@@ -277,7 +278,7 @@ document.addEventListener('drop',async e=>{
 });
 
 /* ---------- interactions fluides liste ↔ agenda ---------- */
-const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['J','Projets'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['J','Projets & Routines'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
 let tipI=0;
 function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
@@ -312,7 +313,7 @@ setInterval(gSilent,60000);setTimeout(gSilent,2000);
 let pal=null;
 function palItems(q){
  const out=[],ql=norm(q).trim();
- const cmds=[['Aujourd’hui','go:today'],['Semaine','go:week'],['Vide-tête','go:dump'],['Backlog et modèles','go:backlog'],['Revue : semaine et projets','go:objectives'],['Projets','go:projects'],['Arbre des catégories','go:tree'],['Revue : statistiques','go:stats'],['Figer ou libérer la journée','freeze'],['Réglages','go:settings'],['Planifier ma journée','plan'],['Clôturer la journée','shutdown'],['Focus sur la prochaine tâche','focus'],['Inverser liste et grand agenda','layout'],['Planifier la semaine','weekplan'],['Revue de la semaine','weekreview'],['Nouveau modèle','tplnew'],...(S.templates||[]).map(t=>['Appliquer « '+t.name+' » aujourd’hui','tpl:'+t.id])];
+ const cmds=[['Aujourd’hui','go:today'],['Semaine','go:week'],['Vide-tête','go:dump'],['Backlog et modèles','go:backlog'],['Revue : semaine et projets','go:objectives'],['Projets & Routines','go:projects'],['Arbre des catégories','go:tree'],['Revue : statistiques','go:stats'],['Figer ou libérer la journée','freeze'],['Réglages','go:settings'],['Planifier ma journée','plan'],['Clôturer la journée','shutdown'],['Focus sur la prochaine tâche','focus'],['Inverser liste et grand agenda','layout'],['Planifier la semaine','weekplan'],['Revue de la semaine','weekreview'],['Nouveau modèle','tplnew'],...(S.templates||[]).map(t=>['Appliquer « '+t.name+' » aujourd’hui','tpl:'+t.id])];
  const cmdHit=ql&&cmds.some(([l])=>norm(l).startsWith(ql));
  if(cmdHit)cmds.filter(([l])=>norm(l).includes(ql)).slice(0,6).forEach(([l,k])=>out.push({k,label:l,grp:'Commandes'}));
  if(ql){
@@ -391,7 +392,7 @@ function undoTimer(){if(!timerUndo)return;const t=T(timerUndo.id);if(t){t.actual
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'&&!e.target.matches('input,textarea')){if(timerUndo&&Date.now()-timerUndo.at<15000)undoTimer();else undoPop();e.preventDefault()}});
 
 // clic droit sur une tâche : le même menu que l'appui long sur téléphone (monter, reporter, backlog, heure…)
-document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data-id],.blk[data-id]');if(!c||e.target.closest('input,textarea'))return;const t=T(c.dataset.id);if(!t||t.done)return;e.preventDefault();taskSheet(t.id)});
+document.addEventListener('contextmenu',e=>{const c=e.target.closest('.card[data-id],.blk[data-id]');if(!c||e.target.closest('input,textarea'))return;const t=T(c.dataset.id);if(!t)return;e.preventDefault();taskSheet(t.id)});
 
 // petite récompense visuelle quand une tâche est cochée
 function celebrate(id){requestAnimationFrame(()=>{document.querySelectorAll(`[data-id="${id}"] .chk, .chk[data-id="${id}"]`).forEach(c=>{c.classList.remove('burst');void c.offsetWidth;c.classList.add('burst');setTimeout(()=>c.classList.remove('burst'),700)});const r=document.querySelector('.dayring');if(r){r.classList.remove('bump');void r.offsetWidth;r.classList.add('bump')}})}
@@ -406,7 +407,7 @@ function keepUnder(b){
 }
 
 // ---------- annuler partout : Ctrl/⌘ Z revient avant la dernière action sur les tâches ----------
-const UNDO_ACTS=new Set(['toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
+const UNDO_ACTS=new Set(['rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
 let undoStack=[];
 const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[]});
 function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}
@@ -432,5 +433,8 @@ function adKeep(){const i=document.querySelector('[data-adtitle]');if(ad&&i)ad.t
 document.addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('[data-adtitle]')&&e.key==='Enter'){e.preventDefault();adKeep();addSubmit()}},true);
 let adT=null;document.addEventListener('input',e=>{if(!e.target.matches||!e.target.matches('[data-adtitle]'))return;adKeep();const p=e.target.parentElement.querySelector('.qprev');if(p)p.innerHTML=quickPreview(e.target.value);clearTimeout(adT);adT=setTimeout(()=>{if(ad&&document.activeElement&&document.activeElement.matches('[data-adtitle]'))renderAdd()},350)});
 // ---------- volets : un bouton en haut à gauche (menu) et un en haut à droite (agenda) ----------
-function paneTog(which){if(which==='side'&&innerWidth<=1100){document.body.classList.toggle('side-open');return}
- const c=which==='nav'?'hidenav':'hideside',on=!document.body.classList.contains(c);document.body.classList.toggle(c,on);lsSet('journee.'+c,on?'1':'');scrolledBig=false;render()}
+function paneTog(which){if(innerWidth<=760){if(which==='side')document.body.classList.toggle('side-open');return}
+ const hidden=document.body.classList.contains(which==='nav'?'hidenav':'hideside');lsSet('journee.p'+which,hidden?'show':'hide');applyPanes();scrolledBig=false;render()}
+
+// fermer en cliquant à côté seulement si le clic a aussi COMMENCÉ à côté (une sélection de texte qui déborde ne ferme plus la fenêtre)
+let downOnBackdrop=false;document.addEventListener('mousedown',e=>{downOnBackdrop=e.target.id==='modal'},true);
