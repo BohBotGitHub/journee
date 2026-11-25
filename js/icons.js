@@ -1,5 +1,7 @@
 // Diem — icônes : chaque action se reconnaît d'un coup d'œil, le texte vient en appui
 const IC={
+ tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+ cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
  addtop:'<path d="M5 4h14M12 20V9M7 13l5-5 5 5"/>',
  addbottom:'<path d="M5 20h14M12 4v11M7 11l5 5 5-5"/>',
  genie:'<path d="M4 17c0-2 2.5-3 6.5-3 2.6 0 4.2.7 5.2 1.6l3-2.2c.5-.4 1 .2.7.7L17 17.2zM8 17h7l-1 2H9zM18 12c-1.8-1 .8-2.6-.6-4.2S14.5 7.5 15 6M14 4l.6 1.6L16.2 6l-1.6.6L14 8.2l-.6-1.6L11.8 6l1.6-.4z"/>',

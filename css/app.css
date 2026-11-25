@@ -709,3 +709,28 @@ form.add .qprev{order:3;flex-basis:100%;margin-top:0}
 .wcol form.add .addpos,#side form.add .addpos,form.add[data-day=""] .addpos{display:none}
 @media (max-width:760px){.nownext .nextc{display:none}}
 .menu button>svg{width:18px;height:18px;flex:none}
+/* bouton d'ajout + fenêtre d'ajout */
+.addopen{width:100%;justify-content:flex-start;gap:10px;min-height:44px;margin-bottom:10px;border:1px dashed var(--line);background:var(--panel);color:var(--mute);font-weight:500;display:flex;align-items:center}
+.addopen:hover{border-color:var(--acc);color:var(--ink)}.addopen svg{width:18px;height:18px}.addopen kbd{margin-left:auto}
+.addsheet .adt{font-size:18px;min-height:48px;margin:6px 0 4px}
+.addsheet .qprev{min-height:24px;margin:4px 0 10px}
+.adrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.adbtn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:14px;font-weight:500;color:var(--ink);flex-direction:row}
+.adbtn svg{width:17px;height:17px;flex:none;color:var(--mute)}
+.adbtn select{border:0;background:transparent;min-height:0;padding:0;font-size:14px;width:auto;color:var(--ink)}
+.adbtn span{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.addsheet .mfoot small{font-size:12.5px}
+@media (max-width:720px){.addsheet .mfoot small{display:none}}
+/* boutons des volets */
+.paneltog{position:fixed;z-index:30;top:16px;width:36px;height:36px;min-height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--panel);border:1px solid var(--line);color:var(--mute)}
+.paneltog:hover{color:var(--ink);border-color:var(--acc)}.paneltog svg{width:19px;height:19px}
+#navtog{left:152px}#sidetog{right:14px}
+body.hidenav #navtog{left:12px}
+@media (min-width:1101px){body.hideside #app{grid-template-columns:196px minmax(0,1fr) 0}body.hideside #side{display:none}body.hideside #main .head .layoutbtn{--sidew:0px;right:64px}}
+@media (min-width:761px){body.hidenav #app{grid-template-columns:0 minmax(0,1fr) var(--sidew,360px)}body.hidenav #nav{display:none}}
+@media (min-width:761px) and (max-width:1100px){body.hidenav #app{grid-template-columns:0 minmax(0,1fr)}}
+@media (min-width:1101px){body.hidenav.hideside #app{grid-template-columns:0 minmax(0,1fr) 0}}
+@media (max-width:1100px){#main .head .layoutbtn{right:64px}}
+@media (max-width:760px){.paneltog{display:none}}
+body.hidenav #main{padding-left:clamp(56px,5vw,72px)}
+@media (min-width:761px){#nav{grid-column:1}#main{grid-column:2;grid-row:1}#side{grid-column:3;grid-row:1}}

@@ -74,7 +74,8 @@ function planFlow(d){
  // la journée déborde : ce qui finirait après l'heure de fin glisse au lendemain, sans message.
  // D'abord les drapeaux bas, puis les tâches normales ; jamais une priorité haute ni une échéance qui tombe ce jour-là.
  // aujourd'hui, rien ne glisse tant que tu n'as pas confirmé tes heures du jour
- if(!frozen&&(d!==t0||(S.days[d]||{}).planned)){
+ // v1.5 : plus de report en cours de journée (trop brutal) — ce qui n'est pas fait passe au lendemain à minuit (rollOver)
+ if(S.settings.autoSlide&&!frozen&&(d!==t0||(S.days[d]||{}).planned)){
   const end=+parseYmd(d)+dayHours(d).e*3600e3,next=addDays(d,1),canGo=t=>t.prio!=='high'&&!(t.due&&t.due<=d);
   for(let g=0;g<80&&plan.length&&plan[plan.length-1][2]>end;g++){
    const over=plan.filter(p=>p[2]>end).map(p=>p[0]);

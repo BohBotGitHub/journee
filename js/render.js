@@ -41,7 +41,7 @@ function go(v){
 
 /* ---------- modale ---------- */
 function showModal(html){$('#sheet').innerHTML=html;$('#modal').classList.remove('hidden');iconize($('#sheet'))}
-function closeModal(){
+function closeModal(){if(typeof ad!=='undefined')ad=null;
  if(modalTask){const t=T(modalTask);if(t&&t.block&&t.block.gcalId&&t.block.title!==t.title&&gTok()){t.block.title=t.title;save();gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{})}}
  $('#modal').classList.add('hidden');modalTask=null;ritual=null;render();
 }

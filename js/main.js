@@ -23,3 +23,6 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator
   g.addEventListener('pointermove',mv);g.addEventListener('pointerup',up)});
  document.addEventListener('dblclick',e=>{if(e.target.closest&&e.target.closest('.sidegrip')){r.style.removeProperty('--sidew');lsDel(K)}});
 })();
+
+// volets cachés : on retrouve l'état d'avant
+if(lsGet('journee.hidenav'))document.body.classList.add('hidenav');if(lsGet('journee.hideside'))document.body.classList.add('hideside');

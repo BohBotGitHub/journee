@@ -96,7 +96,7 @@ function viewToday(){
  <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}
 
- ${addForm(d,'Ajouter une tâche')}
+ <button class="addopen" data-act="addopen" data-d="${d}" aria-label="Ajouter une tâche (touche N)">${ico('plus')}<span>Ajouter une tâche</span><kbd>N</kbd></button>
  ${isT?nowNext(d):''}
  ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.filter(t=>!t.done).map(card).join('')||'<div class="empty">Tout est fait.</div>':'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>${done.length?`<details class="donegrp" data-donegrp ${uiDoneOpen?'open':''}><summary>${ico('check')}Faites (${done.length})</summary><div class="list donelist">${done.map(card).join('')}</div></details>`:''}`}
  ${(()=>{const sl=S.tasks.filter(t=>!t.done&&t.slid===d&&t.day===addDays(d,1));return sl.length?`<button class="slidnote" data-act="next">${sl.length} tâche${sl.length>1?'s':''} à demain →</button>`:''})()}
@@ -121,7 +121,6 @@ function dayMenu(){
   <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
   ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
   ${d===today()&&flowOn()?`<button data-act="plan">Mes heures et mon plan du jour (${hhmm(dayHours(d).s)} → ${hhmm(dayHours(d).end)})</button>`:''}
-  <button class="hasic" data-act="addposcycle" data-keepopen="1">${ico(ADDPOS.find(x=>x[0]===(S.settings.addPos||'bottom'))[2])}Nouvelles tâches : ${({top:'en haut',bottom:'en bas',auto:'placées par le Génie'})[S.settings.addPos||'bottom']}<small class="mute" style="margin-left:auto;align-self:center">changer</small></button>
   <button data-act="tplfromday">Enregistrer comme modèle</button>
   <button data-act="palopen">Rechercher ou lancer une commande<kbd>⌘K</kbd></button>
  </div></div>`);
@@ -412,3 +411,32 @@ function nowNext(d){
  const cur=r&&r.day===d?r:ts.find(inWin)||ts[0],nx=ts.filter(t=>t!==cur).sort((a,b)=>(a.block?+new Date(a.block.start):9e15)-(b.block?+new Date(b.block.start):9e15))[0];
  const run=r===cur,end=cur.block?hm(new Date(cur.block.end)):null;
  return `<div class="nownext"><div class="nowc${run?' run':''}"><small>${run?'En cours':'Maintenant'}</small><button class="nowt" data-act="open" data-id="${cur.id}">${esc(cur.title)}</button><span class="mute">${end?'jusqu’à '+end:cur.est?fmtMin(cur.est):''}</span><button class="nowplay" data-act="${run?'timer':'play'}" data-id="${cur.id}" aria-label="${run?'Pause':'Lancer le focus'}" title="${run?'Pause':'Lancer le focus'}">${ico(run?'pause':'play')}</button></div>${nx?`<div class="nextc"><small>Ensuite</small><button class="nowt" data-act="open" data-id="${nx.id}">${esc(nx.title)}</button><span class="mute">${nx.block?'à '+hm(new Date(nx.block.start)):''}</span></div>`:''}</div>`}
+
+/* ---------- fenêtre d'ajout d'une tâche ---------- */
+let ad=null;
+function openAdd(day){ad={day:day===undefined?cur:day,est:0,channel:null,prio:'',where:'',title:''};renderAdd(true)}
+function addSheetHtml(){
+ const pos=S.settings.addPos||'bottom',P=ADDPOS.find(x=>x[0]===pos),q=parseQuick(ad.title||''),dd=q.day!==undefined?q.day:ad.day;
+ const days=[[today(),'Aujourd’hui'],[addDays(today(),1),'Demain'],...[2,3,4,5,6].map(k=>[addDays(today(),k),cap1(fmtDay(addDays(today(),k),{weekday:'long',day:'numeric'}))]),['','Backlog']];
+ if(dd&&!days.some(x=>x[0]===dd))days.splice(2,0,[dd,cap1(fmtDay(dd,{weekday:'long',day:'numeric',month:'short'}))]);
+ const est=ad.est||q.est||0,cat=ad.channel||q.channel;
+ return `<div class="rit addsheet"><h2>Nouvelle tâche</h2>
+ <input class="adt" data-adtitle value="${esc(ad.title)}" placeholder="Titre de la tâche" autocomplete="off" aria-label="Titre de la tâche">
+ <div class="qprev">${quickPreview(ad.title)}</div>
+ <div class="adrow">
+  <button class="adbtn" data-act="addposcycle" title="Où placer la tâche : clique pour changer">${ico(P[2])}<span>${({top:'En haut',bottom:'En bas',auto:'Génie'})[pos]}</span></button>
+  <label class="adbtn">${ico('clock')}<select data-adest aria-label="Durée"><option value="0">Durée</option>${durOpts(est).map(m=>`<option value="${m}" ${m===est?'selected':''}>${fmtMin(m)}</option>`).join('')}</select></label>
+  <button class="adbtn" data-act="adcat" title="Catégorie">${ico('tag')}<span>${cat&&node(cat)?esc(nodeLabel(cat)):'Catégorie'}</span></button>
+  <label class="adbtn">${ico('cal')}<select data-adday aria-label="Jour">${days.map(([v,l])=>`<option value="${v}" ${(v||null)===(dd||null)?'selected':''}>${l}</option>`).join('')}</select></label>
+ </div>
+ <div class="adrow">
+  <span class="prow" role="radiogroup" aria-label="Priorité">${[['high','Haute'],['','Normale'],['low','Basse']].map(([v,l])=>`<button type="button" class="pbtn${(ad.prio||q.prio||'')===v?' on':''}" data-act="adprio" data-v="${v}" aria-label="Priorité ${l.toLowerCase()}" title="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>
+  <span class="prow" role="radiogroup" aria-label="Lieu">${WHERES.map(([v,l])=>`<button type="button" class="pbtn${(ad.where||q.where||'')===v?' on':''}" data-act="adwhere" data-v="${v}" aria-label="${v?l:'Auto'}" title="${v?l:'Lieu : selon la catégorie'}">${ico({'':'auto',any:'laptop',home:'home',out:'walk'}[v])}</button>`).join('')}</span>
+ </div>
+ <div class="mfoot"><small class="mute">Entrée pour ajouter et enchaîner · Échap pour fermer</small><span class="sp"></span><button class="ghost" data-act="close">Fermer</button><button class="pri" data-act="adok">Ajouter</button></div></div>`}
+function renderAdd(first){if(!ad)return;const i=document.querySelector('[data-adtitle]'),pos=i?i.selectionStart:null;showModal(addSheetHtml());const n=document.querySelector('[data-adtitle]');if(n){n.focus();if(pos!==null&&!first)n.setSelectionRange(pos,pos)}}
+function addSubmit(){if(!ad)return;const t0=(document.querySelector('[data-adtitle]')||{}).value||'';if(!t0.trim()){toast('Écris d’abord un titre');return}
+ const t=addTask(t0,ad.day);if(!t)return;
+ if(ad.est)setEst(t,ad.est);if(ad.channel)t.channel=ad.channel;if(ad.prio!=='')t.prio=ad.prio;if(ad.where)t.where=ad.where;
+ if(ad.prio||ad.where||ad.channel)placeNew(t);save();render();toast('Ajoutée : '+t.title);
+ ad=Object.assign(ad,{title:'',est:0,channel:null,prio:'',where:''});renderAdd(true)}

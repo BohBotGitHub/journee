@@ -130,8 +130,11 @@ def new_page(b, w=1440, h=900, clock=None, real=False, google=None, claude=False
 
 def st(pg, expr): return pg.evaluate(f'()=>{{const S=window.journee.state;const {{dayTasks,today,addDays,loadInfo,pushBlock,monday}}=window.journee.fn;return {expr}}}')
 def add(pg, text):
-    sel = f'[data-keep="add-{st(pg, "today()") if False else d()}"]'
-    pg.fill(sel, text); pg.keyboard.press('Enter'); pg.wait_for_timeout(250)
+    # on passe par la fenêtre d'ajout : bouton « Ajouter une tâche », titre, Entrée, Échap
+    if pg.locator('#modal:not(.hidden) [data-adtitle]').count() == 0:
+        pg.click('#main [data-act="addopen"]'); pg.wait_for_timeout(120)
+    pg.fill('[data-adtitle]', text); pg.keyboard.press('Enter'); pg.wait_for_timeout(250)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(120)
 def tick(pg, ms=400):
     try: pg.clock.run_for(ms)
     except Exception: pg.wait_for_timeout(ms)
@@ -623,7 +626,7 @@ def _(c):
     assert 'Rendre dossier' in n and 'Vieux devis' in n and 'Billets train' in n, n
     assert not errs, errs; ctx.close()
 
-@test('Journée sans pression : heures au rituel du matin, glissement silencieux, reports')
+@test('Journée sans pression : heures au rituel du matin, rien ne glisse avant minuit, reports')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(16, 0))
     assert 'retard' not in pg.inner_text('#main')
@@ -633,9 +636,8 @@ def _(c):
     assert st(pg, "S.days[today()].he") == 17.5
     assert st(pg, "dayTasks(today()).length") == 3, 'rien ne doit glisser pendant le rituel'
     pg.keyboard.press('Escape'); pg.evaluate("()=>{const S=window.journee.state;S.days[window.journee.fn.today()].planned=true;window.journee.save()}"); tick(pg, 400)
-    assert st(pg, "dayTasks(addDays(today(),1)).length") == 1
-    tick(pg, 100)
-    assert 'à demain' in pg.inner_text('.slidnote')
+    # v1.5 : plus de report en cours de journée, tout reste aujourd'hui jusqu'à minuit
+    assert st(pg, "dayTasks(addDays(today(),1)).length") == 0 and st(pg, "dayTasks(today()).length") == 3
     # une priorité haute ne glisse pas
     pg.evaluate("()=>{const S=window.journee.state;S.tasks.forEach(t=>{if(t.day)t.prio='high'});S.tasks.filter(t=>t.day).forEach(t=>t.day=window.journee.fn.today());window.journee.save()}"); tick(pg, 400)
     assert st(pg, "dayTasks(today()).length") == 3
@@ -920,10 +922,11 @@ def _(c):
     assert 'prévues' in pg.inner_text('#main .summary')
     # durée apprise + saisie rapide
     pg.evaluate("()=>{const S=window.journee.state;S.archive=(S.archive||[]).concat([{id:'a1',t:'Tonte barbe',a:14*60,d:'2026-11-01'},{id:'a2',t:'Tonte barbe',a:11*60,d:'2026-11-08'},{id:'a3',t:'tonte  barbe',a:13*60,d:'2026-11-15'}]);window.journee.save()}")
-    inp = '#main form[data-form="add"] input'
+    pg.click('#main [data-act="addopen"]'); tick(pg, 100)
+    inp = '[data-adtitle]'
     pg.fill(inp, 'Tonte barbe demain ! @maison'); pg.dispatch_event(inp, 'input'); tick(pg, 100)
-    prev = pg.inner_text('#main .qprev'); assert 'priorité haute' in prev and 'chez moi' in prev and '15 min' in prev, prev
-    pg.press(inp, 'Enter'); tick(pg, 200)
+    prev = pg.inner_text('#sheet .qprev'); assert 'priorité haute' in prev and 'chez moi' in prev and '15 min' in prev, prev
+    pg.press(inp, 'Enter'); tick(pg, 200); pg.keyboard.press('Escape'); tick(pg, 100)
     t = st(pg, "S.tasks.find(t=>t.title==='Tonte barbe')")
     assert t['est'] == 15 and t['prio'] == 'high' and t['where'] == 'home' and t['day'] == st(pg, "addDays(today(),1)"), t
     # clavier : ↓ choisit, X coche, Ctrl+Z annule
@@ -956,7 +959,7 @@ def _(c):
     assert pg.locator('#sheet select[data-f="est"] option[value="105"]').count() == 1
     pg.keyboard.press('Escape'); tick(pg, 100)
     # position d'ajout
-    cyc = lambda: (pg.click('#main [data-act="daymenu"]'), tick(pg, 100), pg.click('#modal [data-act="addposcycle"]'), tick(pg, 100), pg.keyboard.press('Escape'), tick(pg, 100))
+    cyc = lambda: (pg.click('#main [data-act="addopen"]'), tick(pg, 100), pg.click('#sheet [data-act="addposcycle"]'), tick(pg, 100), pg.keyboard.press('Escape'), tick(pg, 100))
     assert pg.locator('#main [data-act="addpos"]').count() == 0, 'plus d’icônes à côté du champ'
     cyc()  # en bas → en haut
     add(pg, 'En haut 10m')
@@ -970,6 +973,44 @@ def _(c):
     add(pg, 'Pas pressée !bas 10m')
     assert st(pg, "dayTasks(today()).filter(t=>!t.done).at(-1).title") == 'Pas pressée'
     assert st(pg, "S.settings.addPos") == 'auto'
+    assert not errs, errs; ctx.close()
+
+@test('Fenêtre d’ajout : actions rapides, enchaîner ; boutons des volets')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    pg.keyboard.press('n'); tick(pg, 150)
+    assert pg.locator('#sheet [data-adtitle]').count() == 1, 'N ouvre la fenêtre d’ajout'
+    pg.fill('[data-adtitle]', 'Ranger le bureau')
+    pg.select_option('#sheet [data-adest]', '25'); tick(pg, 80)
+    assert pg.input_value('[data-adtitle]') == 'Ranger le bureau', 'le titre reste après un réglage'
+    pg.click('#sheet [data-act="adprio"][data-v="high"]'); pg.click('#sheet [data-act="adwhere"][data-v="home"]'); tick(pg, 80)
+    pg.select_option('#sheet [data-adday]', st(pg, "addDays(today(),1)")); tick(pg, 80)
+    pg.click('#sheet [data-act="adcat"]'); pg.wait_for_selector('#pickov')
+    pg.click('#pickov [data-act="pkup"][data-i="0"]'); pg.click('#pickov .pkt:has-text("Bâtir")'); pg.click('#pickov .pkt:has-text("Foyer")'); pg.click('#pickov .pkt:has-text("Ménage")'); tick(pg, 100)
+    assert 'Ménage' in pg.inner_text('#sheet')
+    pg.press('[data-adtitle]', 'Enter'); tick(pg, 200)
+    t = st(pg, "S.tasks.find(t=>t.title==='Ranger le bureau')")
+    assert t['est'] == 25 and t['prio'] == 'high' and t['where'] == 'home' and t['channel'] == 'c-menage' and t['day'] == st(pg, "addDays(today(),1)"), t
+    assert pg.locator('#sheet [data-adtitle]').count() == 1 and pg.input_value('[data-adtitle]') == '', 'on enchaîne'
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    # volets
+    pg.click('#sidetog'); tick(pg, 150)
+    assert not pg.locator('#side').is_visible()
+    pg.click('#navtog'); tick(pg, 150)
+    assert not pg.locator('#nav').is_visible(), 'menu caché'; mw = pg.locator('#main').bounding_box()['width']; assert mw > pg.viewport_size['width'] - 40, mw
+    pg.click('#navtog'); pg.click('#sidetog'); tick(pg, 150)
+    assert pg.locator('#side').is_visible() and pg.locator('#nav').is_visible()
+    assert not errs, errs; ctx.close()
+
+@test('Report à minuit : ce qui n’est pas fait passe au lendemain au changement de jour')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(23, 50))
+    pg.evaluate("()=>{const S=window.journee.state;S.days[window.journee.fn.today()]={hs:7,he:22,planned:true};window.journee.save()}"); tick(pg, 300)
+    n = st(pg, "dayTasks(today()).filter(t=>!t.done).length"); d0 = st(pg, "today()")
+    assert n >= 1 and st(pg, f"dayTasks(addDays('{d0}',1)).length") == 0
+    tick(pg, 15 * 60 * 1000)
+    assert st(pg, "today()") != d0
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done).length") >= n, 'reportées à minuit'
     assert not errs, errs; ctx.close()
 
 def main():

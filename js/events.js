@@ -131,7 +131,14 @@ document.addEventListener('click',async e=>{
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
   case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();if(ritual)renderRitual();break}
   case'setwhere':{const t=T(id);if(t){t.where=b.dataset.v||'';save();render();openTask(id)}break}
-  case'addposcycle':{const o=['bottom','top','auto'],k=o[(o.indexOf(S.settings.addPos||'bottom')+1)%3];S.settings.addPos=k;save();dayMenu();toast(ADDPOS.find(x=>x[0]===k)[1]);break}
+  case'addposcycle':{const o=['bottom','top','auto'],k=o[(o.indexOf(S.settings.addPos||'bottom')+1)%3];S.settings.addPos=k;save();if(ad){adKeep();renderAdd()}else dayMenu();break}
+  case'navtog':paneTog('nav');break;
+  case'sidetog':paneTog('side');break;
+  case'addopen':openAdd(b.dataset.d||cur);break;
+  case'adok':adKeep();addSubmit();break;
+  case'adprio':adKeep();ad.prio=b.dataset.v;renderAdd();break;
+  case'adwhere':adKeep();ad.where=b.dataset.v;renderAdd();break;
+  case'adcat':{adKeep();openPicker({title:'Catégorie de la nouvelle tâche',current:ad.channel,noneLabel:'Sans catégorie',onPick:to=>{ad.channel=to;renderAdd()}});break}
   case'accent':{S.settings.accent=b.dataset.v;save();render();break}
   case'ritdone':{await toggleDone(id);if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
   case'keep':{const t=T(id);if(t){t.roll=0;save()}if(ritual)renderRitual();break}
@@ -190,6 +197,8 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',async e=>{
  const el=e.target,f=el.dataset.f;
+ if(el.hasAttribute('data-adest')){adKeep();ad.est=+el.value||0;renderAdd();return}
+ if(el.hasAttribute('data-adday')){adKeep();ad.day=el.value||null;renderAdd();return}
  if(el.dataset.durset){const t=T(el.dataset.durset);if(t){setEst(t,+el.value||0);if(ritual)renderRitual();render()}return}
  if(el.dataset.jobcal){S.settings.jobCals=Object.assign({},S.settings.jobCals||{},{[el.dataset.jobcal]:el.value});save();render();return}
  if(el.dataset.jh){const dd=el.dataset.d,[a,b2]=String(el.value||'').split(':').map(Number);if(!isNaN(a)){S.days[dd]=Object.assign(S.days[dd]||{},{[el.dataset.jh==='s'?'js':'je']:a+(b2||0)/60});save();render();if(ritual)renderRitual()}return}
@@ -359,7 +368,7 @@ document.addEventListener('keydown',e=>{
  if(e.target.matches('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey||focusOn||!$('#modal').classList.contains('hidden'))return;
  const k=e.key.toLowerCase();
  if(kbList(e))return;
- if(k==='n'){e.preventDefault();const i=document.querySelector('[data-keep^="add-"]');if(i)i.focus()}
+ if(k==='n'){e.preventDefault();if(view==='today'||view==='week')openAdd(cur);else{const i=document.querySelector('[data-keep^="add-"]');if(i)i.focus()}}
  else if(k==='t'){cur=today();go('today')}
  else if(k==='c'){toggleLayout()}
  else if(e.key==='?'){showKeys()}
@@ -417,3 +426,11 @@ function kbList(e){if(!['today','week','backlog','projects'].includes(view))retu
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('[data-donegrp]'))uiDoneOpen=e.target.open},true);
 // aperçu de ce que la saisie rapide a compris, sous le champ d'ajout
 document.addEventListener('input',e=>{const i=e.target;if(!i.matches||!i.matches('form[data-form="add"] input'))return;const f=i.form;let p=f.querySelector('.qprev');if(!p){p=document.createElement('div');p.className='qprev';f.appendChild(p)}p.innerHTML=quickPreview(i.value)});
+
+// fenêtre d'ajout : garder le titre tapé, Entrée pour ajouter, aperçu en direct
+function adKeep(){const i=document.querySelector('[data-adtitle]');if(ad&&i)ad.title=i.value}
+document.addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('[data-adtitle]')&&e.key==='Enter'){e.preventDefault();adKeep();addSubmit()}},true);
+document.addEventListener('input',e=>{if(!e.target.matches||!e.target.matches('[data-adtitle]'))return;adKeep();const p=e.target.parentElement.querySelector('.qprev');if(p)p.innerHTML=quickPreview(e.target.value)});
+// ---------- volets : un bouton en haut à gauche (menu) et un en haut à droite (agenda) ----------
+function paneTog(which){if(which==='side'&&innerWidth<=1100){document.body.classList.toggle('side-open');return}
+ const c=which==='nav'?'hidenav':'hideside',on=!document.body.classList.contains(c);document.body.classList.toggle(c,on);lsSet('journee.'+c,on?'1':'');scrolledBig=false;render()}
