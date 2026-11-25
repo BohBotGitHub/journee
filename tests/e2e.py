@@ -1071,6 +1071,28 @@ def _(c):
     assert pg.locator('#main .horizon .hsun').count() == 1
     assert not errs, errs; ctx.close()
 
+@test('v1.6 : sélection en haut / en bas, glisser plusieurs tâches')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    pg.evaluate("()=>{for(let i=1;i<=5;i++)S.tasks.push(mk({id:'m'+i,title:'Tâche '+i,day:today(),est:10,order:i}));save();render()}"); tick(pg, 150)
+    order = lambda: pg.evaluate("[...document.querySelectorAll('#main .card[data-id^=\"m\"]')].map(c=>c.dataset.id)")
+    o0 = order()
+    pg.click('#main .card[data-id="m4"] .ctitle', modifiers=['Control']); pg.click('#main .card[data-id="m5"] .ctitle', modifiers=['Control']); tick(pg, 100)
+    pg.click('#mselbar [data-v="top"]'); tick(pg, 150)
+    o = order(); assert o[:2] == ['m4', 'm5'], o
+    assert pg.locator('#main .card.msel').count() == 2
+    pg.click('#mselbar [data-v="bottom"]'); tick(pg, 150)
+    o = order(); assert o[-2:] == ['m4', 'm5'], o
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    # glisser m1 + m2 (sélectionnées) vers le backlog
+    pg.click('#main .card[data-id="m1"] .ctitle', modifiers=['Control']); pg.click('#main .card[data-id="m2"] .ctitle', modifiers=['Control']); tick(pg, 100)
+    pg.evaluate("""()=>{const src=document.querySelector('#main .card[data-id="m1"]'),dst=document.querySelector('[data-drop="backlog"],[data-pz="backlog"]');const dt=new DataTransfer();src.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:dt}));dst.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt}));dst.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));src.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer:dt}))}""")
+    tick(pg, 200)
+    assert st(pg, "T('m1').day") is None and st(pg, "T('m2').day") is None, (st(pg, "T('m1').day"), st(pg, "T('m2').day"))
+    pg.keyboard.press('Control+z'); tick(pg, 150)
+    assert st(pg, "T('m1').day") == d() and st(pg, "T('m2').day") == d()
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

@@ -249,8 +249,8 @@ document.addEventListener('change',async e=>{
 function calMinute(z,y){const r=z.getBoundingClientRect();let m=S.settings.dayStart*60+(y-r.top)/PX*60;m=Math.round(m/15)*15;return Math.max(S.settings.dayStart*60,Math.min(S.settings.dayEnd*60-15,m))}
 document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]');if(!c)return;drag=c.dataset.drag;try{e.dataTransfer.setData('text/plain',drag);e.dataTransfer.effectAllowed='move'}catch(err){}
  // la tuile reste bien visible sous la souris : copie nette (pas l'original estompé) comme image de glissement
- try{const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragimg');g.style.width=r.width+'px';document.body.appendChild(g);e.dataTransfer.setDragImage(g,Math.min(e.clientX-r.left,r.width-10),Math.min(e.clientY-r.top,r.height-6));setTimeout(()=>g.remove(),0)}catch(err){}
- requestAnimationFrame(()=>c.classList.add('dragging'))});
+ try{const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragimg');{const id=(c.dataset.drag||'').split('|')[1];if(msel.size>1&&msel.has(id)){g.classList.add('dragmulti');g.setAttribute('data-n',msel.size)}}g.style.width=r.width+'px';document.body.appendChild(g);e.dataTransfer.setDragImage(g,Math.min(e.clientX-r.left,r.width-10),Math.min(e.clientY-r.top,r.height-6));setTimeout(()=>g.remove(),0)}catch(err){}
+ requestAnimationFrame(()=>{c.classList.add('dragging');const id=drag.split('|')[1];if(msel.size>1&&msel.has(id))msel.forEach(x=>document.querySelectorAll(`#main .card[data-id="${x}"]`).forEach(k=>k.classList.add('dragging')))})});
 document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over,.dropbefore,.dropafter').forEach(x=>x.classList.remove('dragging','over','dropbefore','dropafter'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
 document.addEventListener('dragover',e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
@@ -267,6 +267,7 @@ document.addEventListener('drop',async e=>{
  if(src[0]==='todo'){const x=(todo.tasks[src[1]]||[]).find(x=>x.id===src[2]);if(!x)return;t=importTodo(src[1],x,dz==='backlog'?null:dz.startsWith('day:')?dz.slice(4):(z.dataset.day||cur))}
  else t=T(src[1]);
  if(!t)return;
+ if(src[0]!=='todo'&&msel.size>1&&msel.has(t.id)){const grp=mselOrdered([...msel]);msel.clear();renderMsel();return dropGroup(grp,z,dz,e)}
  if(dz==='cal'){const dd=z.dataset.day||cur,dt=parseYmd(dd);dt.setMinutes(calMinute(z,e.clientY));t.pinned=true;if(t.day!==dd)t.order=nextOrder(dd);const p=setBlock(t,dt,true);syncOrder(dd);save();render();await p;return}
  if(z.dataset.pz){const to=z.dataset.pz;moveTask(t.id,to);toast(to==='backlog'?'Au backlog':'Repoussée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
  if(dz==='backlog'){if(t.day!==null){moveTask(t.id,'backlog');toast('Renvoyée au backlog')}else render();return}
@@ -280,6 +281,19 @@ document.addEventListener('drop',async e=>{
  }
 });
 
+// glisser plusieurs tâches sélectionnées d'un coup
+async function dropGroup(grp,z,dz,e){
+ const n=grp.length,ts=grp.map(T);
+ if(dz==='cal'){const dd=z.dataset.day||cur,dt=parseYmd(dd);dt.setMinutes(calMinute(z,e.clientY));let at=+dt;
+  ts.forEach(t=>{t.pinned=true;if(t.day!==dd){moveTask(t.id,dd,true);t.order=nextOrder(dd)}setBlock(t,new Date(at),true);at+=((t.est||30)*60000)});syncOrder(dd);save();render();toast(n+' tâches placées à la suite');return}
+ const to=z.dataset.pz||(dz==='backlog'?'backlog':dz.startsWith('day:')?dz.slice(4):null);if(!to)return;
+ if(z.dataset.pz||dz==='backlog'){ts.forEach(t=>{if(to==='backlog')t.roll=0;moveTask(t.id,to,true)});save();render();toast(to==='backlog'?n+' tâches au backlog':n+' tâches repoussées au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
+ const day=to,hit=e.target.closest('.card'),after=hit&&hit.classList.contains('dropafter');document.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));
+ ts.forEach(t=>{if(t.day!==day)moveTask(t.id,day,true)});
+ const b=hit&&!grp.includes(hit.dataset.id)&&T(hit.dataset.id);
+ if(b&&b.day===day){const base=b.order+(after?.5:-.5);ts.forEach((t,i)=>t.order=base+(i-n/2)*0.001);renorm(day)}
+ if(!flowOn())reflow(day);save();render();toast(n+' tâches déplacées · ⌘/Ctrl Z pour annuler');
+}
 /* ---------- interactions fluides liste ↔ agenda ---------- */
 const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['J','Projets & Routines'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
@@ -457,7 +471,15 @@ function renderMsel(){
  if(!msel.size){bar.className='hidden';bar.innerHTML='';return}
  const B=(v,i,l)=>`<button data-act="mselact" data-v="${v}" title="${l}" aria-label="${l}">${ico(i)}<span>${l}</span></button>`;
  bar.className='';
- bar.innerHTML=`<b>${msel.size} sélectionnée${msel.size>1?'s':''}</b>${B('done','check','Cocher')}${B('today','sun','Aujourd’hui')}${B('tomorrow','next','Demain')}${B('backlog','tray','Backlog')}<span class="mselprio">${PRIOS.map(([v,l])=>`<button data-act="mselact" data-v="p:${v}" title="Priorité ${l.toLowerCase()}" aria-label="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>${B('del','trash','Supprimer')}<button class="mselx" data-act="mselact" data-v="clear" title="Tout désélectionner (Échap)" aria-label="Tout désélectionner">×</button>`}
+ bar.innerHTML=`<b>${msel.size} sélectionnée${msel.size>1?'s':''}</b>${B('done','check','Cocher')}${B('today','sun','Aujourd’hui')}${B('tomorrow','next','Demain')}${B('backlog','tray','Backlog')}${B('top','addtop','En haut')}${B('bottom','addbottom','En bas')}<span class="mselprio">${PRIOS.map(([v,l])=>`<button data-act="mselact" data-v="p:${v}" title="Priorité ${l.toLowerCase()}" aria-label="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>${B('del','trash','Supprimer')}<button class="mselx" data-act="mselact" data-v="clear" title="Tout désélectionner (Échap)" aria-label="Tout désélectionner">×</button>`}
+function mselOrdered(ids){const pos=[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id);return ids.filter(id=>T(id)).sort((a,b)=>{const x=pos.indexOf(a),y=pos.indexOf(b);return (x<0?1e9:x)-(y<0?1e9:y)||(T(a).order||0)-(T(b).order||0)})}
+function mselMove(ids,top){
+ const days=new Set(ids.map(id=>T(id).day));
+ days.forEach(day=>{const grp=mselOrdered(ids.filter(id=>T(id).day===day)),all=day==null?S.tasks.filter(t=>t.day==null&&!t.done):dayTasks(day);
+  const os=all.map(t=>t.order||0),lo=Math.min(0,...os),hi=Math.max(0,...os);
+  grp.forEach((id,i)=>{const t=T(id);t.order=top?lo-grp.length+i:hi+1+i});
+  if(day!=null){renorm(day);if(!flowOn()&&reflow(day)){}}});
+}
 function mselAct(v){
  const ids=[...msel].filter(id=>T(id));if(v==='clear'||!ids.length){msel.clear();renderMsel();return}
  const n=ids.length;let msg='';
@@ -465,6 +487,7 @@ function mselAct(v){
  else if(v==='today'){ids.forEach(id=>moveTask(id,today(),true));msg='Pour aujourd’hui'}
  else if(v==='tomorrow'){ids.forEach(id=>moveTask(id,nextFreeDay(T(id)),true));msg='Reportées'}
  else if(v==='backlog'){ids.forEach(id=>{T(id).roll=0;moveTask(id,'backlog',true)});msg='Au backlog'}
+ else if(v==='top'||v==='bottom'){mselMove(ids,v==='top');save();render();renderMsel();toast((v==='top'?'En haut':'En bas')+' · ⌘/Ctrl Z pour annuler');return}
  else if(v.startsWith('p:')){ids.forEach(id=>{T(id).prio=v.slice(2)});msg='Priorité changée'}
  else if(v==='del'){ids.forEach(id=>deleteTask(id));msg=n+' supprimée'+(n>1?'s':'')}
  msel.clear();save();render();renderMsel();toast(msg+' · ⌘/Ctrl Z pour annuler')}
