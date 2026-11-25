@@ -704,3 +704,5 @@ form.add>input{flex:1;min-width:0;order:1}
 form.add .addpos{order:2;display:flex;gap:2px}
 form.add .addpos .pbtn{width:34px;height:34px;min-height:34px}
 form.add .qprev{order:3;flex-basis:100%;margin-top:0}
+.wcol form.add .addpos,#side form.add .addpos,form.add[data-day=""] .addpos{display:none}
+@media (max-width:760px){.nownext .nextc{display:none}}
