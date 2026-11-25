@@ -778,3 +778,4 @@ body:has(#mselbar:not(.hidden)) #toast{bottom:84px}
 @media(max-width:720px){body:has(#mselbar:not(.hidden)) #toast{bottom:138px}}
 
 .dragimg.dragmulti{box-shadow:6px 6px 0 -1px var(--panel),6px 6px 0 0 var(--line),12px 12px 0 -1px var(--panel),12px 12px 0 0 var(--line),0 12px 32px rgba(0,0,0,.25)}.dragimg.dragmulti::after{content:attr(data-n);position:absolute;top:-10px;right:-10px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--acc);color:#fff;font:700 13px/24px system-ui;text-align:center}
+body.wideview #sidetog{display:none}
