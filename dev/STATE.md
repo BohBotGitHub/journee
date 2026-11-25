@@ -1,6 +1,6 @@
 # Diem : état du travail autonome
 
-mode: actif
+mode: veille
 (« veille » = le propriétaire est absent, les lancements automatiques travaillent ; « actif » = ils s'arrêtent aussitôt. Claude le change quand il dit « mode veille » ou quand il revient.)
 
 ## Dernier lot
