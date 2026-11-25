@@ -774,3 +774,5 @@ body.sidecollapse #side{opacity:.35}body.sidecollapse .sidegrip{background:var(-
 .hsun{position:absolute;top:50%;left:calc(var(--p)*100%);width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#fff6d8,#f6c35b 55%,#ee9a4a);box-shadow:0 0 0 3px color-mix(in srgb,#f6c35b 30%,transparent),0 0 14px 4px color-mix(in srgb,#f6c35b 45%,transparent);transition:left 1s ease}
 .hsun.moon{background:radial-gradient(circle at 60% 40%,#fdfdf6,#d9dbe8 60%,#aeb3cc);box-shadow:0 0 12px 3px color-mix(in srgb,#c9cdf0 50%,transparent)}
 @media (prefers-reduced-motion:reduce){.hsun{transition:none}}
+body:has(#mselbar:not(.hidden)) #toast{bottom:84px}
+@media(max-width:720px){body:has(#mselbar:not(.hidden)) #toast{bottom:138px}}
