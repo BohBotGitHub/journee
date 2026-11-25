@@ -935,3 +935,13 @@ body.treemap .tvwrap>.tvp{box-shadow:var(--e3)}
 @keyframes tvdraw{from{stroke-dashoffset:1}}
 .tvstar .tvpaths path{stroke-dasharray:none}
 @media (prefers-reduced-motion:reduce){.tvstar.anim .tvpaths path,.tvstar .tvcore circle:first-child{animation:none}}
+[data-act=uaadd]{display:inline-flex;align-items:center;gap:6px}
+[data-act=uaadd] svg,.uarow svg{width:16px;height:16px;flex:none}
+.uarow{display:grid;grid-template-columns:minmax(120px,1fr) auto auto auto auto auto;align-items:center}
+.uarow input[type=time]{width:118px}
+.uarow [data-act=uadel]{width:34px;height:34px;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;color:var(--mute)}
+.uarow [data-act=uadel]:hover{color:var(--warn)}
+@media (max-width:1100px){.uarow{grid-template-columns:1fr auto auto auto}.uarow [data-ua=label]{grid-column:1/-1}.uarow .uadays{grid-column:1/-1}.uarow [data-act=uadel]{justify-self:end}}
+.uarow{grid-template-columns:auto auto auto auto 1fr}.uarow [data-ua=label]{grid-column:1/-1}.uarow .uadays{grid-column:auto}.uarow input[type=time]{width:132px}.uarow [data-act=uadel]{justify-self:end}
+@media (max-width:1100px){.uarow{grid-template-columns:auto auto auto 1fr}.uarow .uadays{grid-column:1/-1}}
+@media (max-width:520px){.uarow input[type=time]{width:104px;padding-left:8px;padding-right:6px}.uarow{gap:6px}}

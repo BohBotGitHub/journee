@@ -4,7 +4,7 @@ function render(){applyLook();
  const a=document.activeElement,keep=a&&a.dataset&&a.dataset.keep,val=keep?a.value:null;
  document.querySelectorAll('#nav [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===view||(b.dataset.view==='review'&&(view==='objectives'||view==='stats'))));
  {const nb=document.querySelector('#nav [data-view="dump"]'),n=S.tasks.filter(t=>t.inbox&&!t.done).length;if(nb){const o=nb.querySelector('.badge');if(o)o.remove();if(n)nb.insertAdjacentHTML('beforeend',`<span class="badge">${n}</span>`)}}
- document.body.classList.toggle('wideview',view==='tree');document.body.classList.toggle('treemap',view==='tree'&&hasTree()&&(treeMode||(isNarrow()?'list':'map'))==='map');
+ document.body.classList.toggle('wideview',view==='tree');document.body.classList.toggle('treemap',view==='tree'&&hasTree()&&(treeMode||'map')==='map');
  const m=$('#main'),st=m.scrollTop,bc0=document.querySelector('.bigcal'),bst=bc0?bc0.scrollTop:null;
  m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='projects'?viewProjects():view==='settings'?viewSettings():view==='tree'?viewTree():viewToday();
  m.scrollTop=st;

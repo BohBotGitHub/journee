@@ -81,7 +81,7 @@ function tvPanel(){
 }
 function viewTree(){
  if(!hasTree())return `<div class="head"><div><h1>Arbre des catégories</h1></div></div><div class="empty">Tes tâches utilisent encore les anciennes catégories Sunsama.<br><button class="pri" data-act="treeask" style="margin-top:10px">Passer à l’arbre</button></div>`;
- const mode=treeMode||(isNarrow()?'list':'map');
+ const mode=treeMode||'map';
  const tabs=`<div class="seg tvtabs"><button class="sm${!treeFocus?' on':''}" data-act="tvfocus" data-id="">Tout</button>${pillars().map(p=>`<button class="sm${treeFocus&&pillarOf(treeFocus)&&pillarOf(treeFocus).id===p.id?' on':''}" data-act="tvfocus" data-id="${esc(p.id)}" style="--c:${esc(p.color)}"><i class="pdot"></i>${esc(p.name)}</button>`).join('')}</div>`;
  const rn=refineCands().length,refine=rn?`<button class="sm tvrefine" data-act="refine" ${aiOn()?`title="${rn} tâche${rn>1?'s':''} à classer ou rangée${rn>1?'s':''} seulement dans un domaine : Claude propose une catégorie"`:'disabled title="Ajoute ta clé Claude dans Réglages"'}>${ico('wand')}<span>${rn} à classer · Affiner</span></button>`:'';
  const modeSeg=`<div class="seg tvmodes"><button class="sm${mode==='map'?' on':''}" data-act="tvmode" data-m="map">Diagramme</button><button class="sm${mode==='list'?' on':''}" data-act="tvmode" data-m="list">Liste</button></div>`;
