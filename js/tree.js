@@ -27,7 +27,14 @@ const domainOf=id=>pathOf(id)[1]||null;
 function nodeLabel(id){const p=pathOf(id);if(!p.length)return '';if(p.length>=3)return p[1].name+' › '+p[p.length-1].name;return p[p.length-1].name}
 // couleurs : le pilier donne la teinte, chaque domaine une nuance, la catégorie hérite de son domaine
 const shadeHex=(hex,k)=>{const n=parseInt(String(hex||'#888888').slice(1),16),cl=v=>Math.max(0,Math.min(255,v+k));return '#'+[n>>16,(n>>8)&255,n&255].map(v=>cl(v).toString(16).padStart(2,'0')).join('')};
-function treeColors(){for(const p of pillars())kids(p.id).forEach((d,i)=>{d.color=shadeHex(p.color,[0,-26,22,-46][i%4]);kids(d.id).forEach(c=>c.color=d.color)})}
+// chaque domaine a sa propre teinte, voisine de celle de son pilier (rotation de teinte + léger écart de clarté)
+function hueHex(hex,dh,dl,ds){let r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h=0,s=0,l=(mx+mn)/2;
+ if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h*=60}
+ h=(h+dh+360)%360;l=Math.max(.26,Math.min(.68,l+dl));s=Math.max(.35,Math.min(.85,s+ds));
+ const c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs(h/60%2-1)),m=l-c/2;let [R,G,B]=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];
+ return '#'+[R,G,B].map(v=>Math.round((v+m)*255).toString(16).padStart(2,'0')).join('')}
+const DOM_SHIFT=[[0,0,0],[-16,.13,.02],[16,-.12,.08],[-6,-.2,.04],[8,.2,-.06]];
+function treeColors(){for(const p of pillars()){const ds=kids(p.id);ds.forEach((d,i)=>{const n=ds.length,k=n<=1?[0,0,0]:DOM_SHIFT[i%DOM_SHIFT.length];d.color=hueHex(p.color,k[0],k[1],k[2]);kids(d.id).forEach(c=>c.color=d.color)})}}
 // sélection par #raccourci : raccourci exact, puis début du nom (catégorie d'abord, puis domaine, puis pilier)
 function findNode(q){
  q=norm(String(q||'')).replace(/^#/,'').trim();if(!q)return null;
