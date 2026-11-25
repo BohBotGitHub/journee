@@ -956,13 +956,15 @@ def _(c):
     assert pg.locator('#sheet select[data-f="est"] option[value="105"]').count() == 1
     pg.keyboard.press('Escape'); tick(pg, 100)
     # position d'ajout
-    pg.click('#main [data-act="addpos"][data-v="top"]'); tick(pg, 100)
+    cyc = lambda: (pg.click('#main [data-act="daymenu"]'), tick(pg, 100), pg.click('#modal [data-act="addposcycle"]'), tick(pg, 100), pg.keyboard.press('Escape'), tick(pg, 100))
+    assert pg.locator('#main [data-act="addpos"]').count() == 0, 'plus d’icônes à côté du champ'
+    cyc()  # en bas → en haut
     add(pg, 'En haut 10m')
     assert st(pg, "dayTasks(today()).filter(t=>!t.done)[0].title") == 'En haut'
-    pg.click('#main [data-act="addpos"][data-v="bottom"]'); tick(pg, 100)
+    cyc(); cyc()  # → Génie → en bas
     add(pg, 'En bas 10m')
     assert st(pg, "dayTasks(today()).filter(t=>!t.done).at(-1).title") == 'En bas'
-    pg.click('#main [data-act="addpos"][data-v="auto"]'); tick(pg, 100)
+    cyc(); cyc()  # → en haut → Génie
     add(pg, 'Urgente ! 10m')
     assert st(pg, "dayTasks(today()).filter(t=>!t.done)[0].title") == 'Urgente'
     add(pg, 'Pas pressée !bas 10m')

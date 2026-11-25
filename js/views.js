@@ -16,7 +16,7 @@ function loadBar(d){
  return `<div class="load${L.over>0?' over':''}"><div class="lbar"><i class="m" style="width:${p(L.meet)}%"></i><i class="t" style="width:${Math.max(0,Math.min(100-p(L.meet),p(L.task)))}%"></i></div>
  <div class="ltxt"><span>${fmtMin(L.task)} de tâches${L.meet?' · '+fmtMin(L.meet)+' de rendez-vous':''} sur ${fmtMin(L.cap)} de travail</span><span>${L.over>0?fmtMin(L.over)+' de trop':fmtMin(-L.over)+' de marge'}</span></div></div>`;
 }
-const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day||''}"><div class="addpos" role="radiogroup" aria-label="Où ajouter">${ADDPOS.map(([k,l,i])=>`<button type="button" class="pbtn${(S.settings.addPos||'bottom')===k?' on':''}" role="radio" aria-checked="${(S.settings.addPos||'bottom')===k}" data-act="addpos" data-v="${k}" aria-label="${l}" title="${l}">${ico(i)}</button>`).join('')}</div><input name="t" data-keep="${keep||'add-'+(day||'backlog')}" placeholder="${esc(ph)}" autocomplete="off" aria-label="Nouvelle tâche" aria-describedby="addhint-${keep||day||'b'}"><small class="addhint" id="addhint-${keep||day||'b'}">Tu peux écrire <b>45m</b>, <b>demain</b>, <b>!</b> (priorité), <b>@maison</b>, <b>#natation</b>, <b>+projet</b> · Entrée pour ajouter${keep?'':' · touche N pour revenir ici'}</small></form>`;
+const addForm=(day,ph,keep)=>`<form class="add" data-form="add" data-day="${day||''}"><input name="t" data-keep="${keep||'add-'+(day||'backlog')}" placeholder="${esc(ph)}" autocomplete="off" aria-label="Nouvelle tâche" aria-describedby="addhint-${keep||day||'b'}"><small class="addhint" id="addhint-${keep||day||'b'}">Tu peux écrire <b>45m</b>, <b>demain</b>, <b>!</b> (priorité), <b>@maison</b>, <b>#natation</b>, <b>+projet</b> · Entrée pour ajouter${keep?'':' · touche N pour revenir ici'}</small></form>`;
 const objChips=w=>{const os=weekObjs(w);return os.length?`<div class="objs">${os.map(o=>`<span class="obj${o.done?' done':''}">${esc(o.title)}</span>`).join('')}</div>`:''};
 
 /* ---------- vue Aujourd'hui ---------- */
@@ -121,6 +121,7 @@ function dayMenu(){
   <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
   ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
   ${d===today()&&flowOn()?`<button data-act="plan">Mes heures et mon plan du jour (${hhmm(dayHours(d).s)} → ${hhmm(dayHours(d).end)})</button>`:''}
+  <button data-act="addposcycle" data-keepopen="1">${ico(ADDPOS.find(x=>x[0]===(S.settings.addPos||'bottom'))[2])}Nouvelles tâches : ${({top:'en haut',bottom:'en bas',auto:'placées par le Génie'})[S.settings.addPos||'bottom']}<small class="mute" style="margin-left:auto">changer</small></button>
   <button data-act="tplfromday">Enregistrer comme modèle</button>
   <button data-act="palopen">Rechercher ou lancer une commande<kbd>⌘K</kbd></button>
  </div></div>`);

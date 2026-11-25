@@ -131,7 +131,7 @@ document.addEventListener('click',async e=>{
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
   case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();if(ritual)renderRitual();break}
   case'setwhere':{const t=T(id);if(t){t.where=b.dataset.v||'';save();render();openTask(id)}break}
-  case'addpos':{S.settings.addPos=b.dataset.v;save();render();toast(ADDPOS.find(x=>x[0]===b.dataset.v)[1]+' : réglage gardé');const i=document.querySelector('#main form[data-form="add"] input');if(i)i.focus();break}
+  case'addposcycle':{const o=['bottom','top','auto'],k=o[(o.indexOf(S.settings.addPos||'bottom')+1)%3];S.settings.addPos=k;save();dayMenu();toast(ADDPOS.find(x=>x[0]===k)[1]);break}
   case'accent':{S.settings.accent=b.dataset.v;save();render();break}
   case'ritdone':{await toggleDone(id);if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
   case'keep':{const t=T(id);if(t){t.roll=0;save()}if(ritual)renderRitual();break}
