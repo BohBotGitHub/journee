@@ -53,12 +53,13 @@ Source de vérité : section « File d'attente » du plan (doc Claude). Une nouv
 ### Plus tard
 Gamification (XP, skill tree, mode Fantasy).
 
+## Décisions du propriétaire (25/11 22 h 55) — à appliquer au prochain lot
+- Doublon Cuisine / Alimentation saine : **garder les deux**. Retirer la carte de fusion (ou la marquer comme réglée) ; ne rien fusionner.
+- Glisser au doigt : **poignée ⋮⋮** (choix par défaut confirmé).
+- Rendez-vous → tâche passé non coché : **compté comme fait** (confirmé).
+- Page À propos : **trouvable sur Google, cette page seulement** (retirer noindex de about.html uniquement ; le reste de l'appli reste en noindex).
+- Habitudes : **page dédiée « Habitudes » dans le menu** (en plus des pastilles et des Statistiques) ; mesure : **score de régularité ET série**, les deux visibles ; **6 pastilles au plus** en haut de la journée.
+- Habitudes + Statistiques : **pas encore de feu vert pour coder** ; le propriétaire relit d'abord la proposition. Ne rien coder sur ce sujet.
+
 ## Questions en suspens
-- Doublon Cuisine : quelle fusion ? Rien n’est fait tout seul : la carte attend ton choix dans l’Arbre. Bouton mis en avant par défaut : tout dans Corps › « Alimentation & cuisine ».
-- Mails : par défaut, la tâche « Lire mes mails » arrive à partir de 20 non-lus, au plus une par jour, dans Gestion › Administratif. Le seuil se règle.
-- Gmail : gmail.readonly est un accès « restreint » chez Google. En mode test de la console (toi seul comme testeur), ça marche sans vérification ; une publication pour d’autres demanderait un audit Google.
-- Glisser au doigt : j’ai mis une poignée ⋮⋮ à gauche des tuiles (sur tactile seulement) plutôt qu’« appui long puis glisser », parce que l’appui long sert déjà à la sélection. Choix par défaut : la poignée. Dis-moi si tu préfères l’appui long.
-- Page À propos : elle est en noindex comme le reste (le site n’apparaît pas dans Google). Choix par défaut : noindex partout. Si tu veux que la page À propos soit trouvable, je retire la balise de cette page seulement.
-- Rendez-vous → tâche : un rendez-vous passé que tu n’as pas coché est compté comme fait à minuit (il ne revient pas le lendemain comme une tâche oubliée). Autre option : le supprimer. Choix par défaut : compté comme fait.
-- Rendez-vous → tâche : si tu déplaces la tâche dans l’agenda, le rendez-vous Google reste à son heure d’origine (Diem ne le modifie jamais) et reste caché. Choix par défaut : Google intouché.
-- Habitudes : trois questions dans la proposition du plan (page dédiée ou non, score ou série, nombre de pastilles), avec mes choix par défaut. Prochain lot autonome possible : « Le Génie propose une suggestion selon l’heure », en attendant ta validation des habitudes.
+(aucune)
