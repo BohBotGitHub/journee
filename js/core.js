@@ -132,7 +132,9 @@ async function toggleDone(id){
  const t=T(id);if(!t)return;
  if(S.running&&S.running.taskId===id)stopTimer();
  t.done=!t.done;t.doneAt=t.done?Date.now():null;if(t.done&&!t.day)t.day=today();
- if(t.done)finishBlock(t);
+ // faite maintenant alors qu'elle était prévue plus tard (ou un autre jour) : on la range dans l'agenda juste avant l'heure actuelle
+ if(t.done){const now=Date.now(),later=t.day!==today()||(t.block&&+new Date(t.block.start)>now);
+  if(later&&typeof setRange==='function'){const mins=t.actual>=60?Math.round(t.actual/60):(t.est||15);t.pinned=true;setRange(t,new Date(now-mins*60000),new Date(now),true)}else finishBlock(t)}
  save();render();if(t.done)chime(660);emit(t.done?'task:done':'task:undone',{task:t});
  if(t.block&&t.block.gcalId&&gTok())gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{});
  if(t.src&&msOn()){
@@ -257,3 +259,12 @@ function placeNew(t){const pos=S.settings.addPos||'bottom';if(!t.day||pos==='bot
  // Génie : priorité haute ou échéance du jour d'abord, basse à la fin, sinon après les urgentes
  const was=t.prio;if(t.due&&t.due<=t.day&&was!=='low')t.prio='high';placeByPrio(t);t.prio=was}
 const ADDPOS=[['top','Ajouter en haut','addtop'],['bottom','Ajouter en bas','addbottom'],['auto','Le Génie place la tâche','genie']];
+
+// place libre d'un jour (minutes) : heures du jour, moins les rendez-vous occupés et le boulot, moins les tâches déjà prévues
+function dayFree(d){const h=dayHours(d);let free=(h.e-h.s)*60;
+ try{for(const e of (typeof timedEvents==='function'?timedEvents(d):[]))if(!(typeof evFree==='function'&&evFree(e)))free-=Math.max(0,(new Date(e.end.dateTime)-new Date(e.start.dateTime))/60000)}catch(err){}
+ const j=typeof jobOf==='function'?jobOf(d):null;if(j&&j.mode!=='watch')free-=(j.e-j.s)*60;
+ return free-dayTasks(d).filter(x=>!x.done).reduce((s,x)=>s+(x.est||30),0)}
+// « demain » : si demain est plein, le prochain jour qui a de la place (jusqu'à 2 semaines, et jamais après l'échéance)
+function nextFreeDay(t,from){let d=from||addDays(today(),1);const need=t&&t.est||30;
+ for(let i=0;i<14;i++){const x=addDays(d,i);if(t&&t.due&&x>t.due)break;if(dayFree(x)>=need)return x}return d}

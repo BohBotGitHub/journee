@@ -9,6 +9,7 @@ const AI_TOOL={name:'proposer',description:'Propose des changements concrets au 
  pick:{type:'array',items:{type:'string'},description:'Ids de tâches existantes (backlog, autres jours) à ajouter au jour affiché'},
  blocks:{type:'array',items:{type:'object',properties:{id:{type:'string'},start:{type:'string',description:'HH:MM'}},required:['id','start']},description:'Créneaux horaires proposés pour des tâches du jour'},
  intent:{type:'string',description:'Intention courte pour la journée'},
+ new_projects:{type:'array',items:{type:'object',properties:{name:{type:'string'},end:{type:'string',description:'YYYY-MM-DD, date de fin (facultative)'},tasks:{type:'array',items:{type:'string'},description:'Titres de tâches à créer dans ce projet'}},required:['name']},description:'Nouveaux projets à créer (quand l’utilisateur en demande un ou qu’un objectif en plusieurs étapes s’y prête)'},
  new_tasks:{type:'array',items:{type:'object',properties:{title:{type:'string'},channel:{type:'string'},est:{type:'integer'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['title']}}
 },required:['message']}};
 function aiContext(){
@@ -32,6 +33,7 @@ Règles :
 - Français, tutoiement, ton chaleureux et direct, réponses courtes (3-6 phrases max).
 - Sois réaliste : tâches + rendez-vous ne doivent pas dépasser les heures de travail ; s'il y a trop, propose de reporter (updates avec day) plutôt que d'entasser.
 - Ordre conseillé : tâches importantes et exigeantes tôt, petites tâches entre les rendez-vous, liées aux projets en cours en priorité.
+- Tu peux créer des projets (new_projects : nom, date de fin, premières tâches) quand on te le demande ou qu’un objectif en plusieurs étapes s’y prête.
 - Durées : appuie-toi sur l'historique estimé/réel quand il existe (si l'utilisateur sous-estime, corrige).
 - Catégories : uniquement des noms de la liste fournie.
 - Échéances : une tâche doit être planifiée avant sa date d’échéance ; signale celles qui sont menacées.
@@ -77,6 +79,7 @@ function propItems(p){
  (p.blocks||[]).forEach((b,i)=>{const t=T(b.id);if(t&&/^\d{1,2}:\d{2}$/.test(b.start||''))out.push({k:'b'+i,label:'Créneau '+b.start+' : '+t.title})});
  if(p.intent)out.push({k:'i',label:'Intention : '+p.intent});
  (p.objectives||[]).forEach((o,i)=>{if(o)out.push({k:'o'+i,label:'Objectif : '+o})});
+ (p.new_projects||[]).forEach((n,i)=>{if(n.name)out.push({k:'j'+i,label:'Nouveau projet : '+n.name+(n.end?' (fin '+fmtDay(n.end,{day:'numeric',month:'short'})+')':'')+(n.tasks&&n.tasks.length?' · '+n.tasks.length+' tâche'+(n.tasks.length>1?'s':''):'')})});
  (p.new_tasks||[]).forEach((n,i)=>{if(n.title)out.push({k:'n'+i,label:'Nouvelle tâche : '+n.title+(n.est?' ('+fmtMin(n.est)+')':''),reason:n.reason})});
  return out;
 }
@@ -90,6 +93,7 @@ function applyItem(m,k){
  else if(k[0]==='o'){const o=p.objectives[+k.slice(1)];if(o)S.objectives.push({id:uid(),week:monday(cur),title:o,done:false})}
  else if(k[0]==='u'&&p.updates[+k.slice(1)]&&p.updates[+k.slice(1)].drop){const t=T(p.updates[+k.slice(1)].id);if(t)deleteTask(t.id)}
  else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){if(u.subtasks)u.subtasks.forEach(x=>t.subtasks.push({id:uid(),t:x,d:false}));const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}t.aiSug=null}}
+ else if(k[0]==='j'){const n=p.new_projects[+k.slice(1)];if(n){S.projects=S.projects||[];const pj={id:uid(),name:n.name,end:/^\d{4}-\d{2}-\d{2}$/.test(n.end||'')?n.end:null,done:false};S.projects.push(pj);(n.tasks||[]).forEach(tt=>{if(tt)S.tasks.push(mk({title:tt,est:0,day:null,order:nextOrder(null),proj:pj.id}))})}}
  else if(k[0]==='n'){const n=p.new_tasks[+k.slice(1)];if(n){const day=n.day==='backlog'?null:(n.day||cur);const c=chByName(n.channel);S.tasks.push(mk({title:n.title,est:n.est||0,channel:c?c.id:null,day,order:nextOrder(day)}))}}
  m.applied[k]=true;save();render();
 }

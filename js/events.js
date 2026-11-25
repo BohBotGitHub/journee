@@ -7,6 +7,8 @@ document.addEventListener('click',async e=>{
  const nv=e.target.closest('#nav [data-view]');if(nv){go(nv.dataset.view);return}
  const sd=e.target.closest('[data-side]');if(sd){sideTab=sd.dataset.side;renderSide();return}
  if(e.target.id==='modal'){if(!ritual&&downOnBackdrop)closeModal();return}
+ // multi-sélection : ⌘/Ctrl-clic ajoute ou retire une tâche, Maj-clic prend toute la plage
+ {const mc=(e.metaKey||e.ctrlKey||e.shiftKey)&&e.target.closest('#main .card[data-id]');if(mc&&!e.target.closest('input,textarea,select')){e.preventDefault();mselClick(mc.dataset.id,e.shiftKey);return}}
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,id=b.dataset.id;
  const pre=UNDO_ACTS.has(a)?undoSnap():null;
@@ -28,7 +30,7 @@ document.addEventListener('click',async e=>{
   case'gotoday':cur=today();render();break;
   case'openday':cur=b.dataset.day;go('today');break;
   case'plan':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();startRitual('plan',cur);break;
-  case'shutdown':if(!$('#modal').classList.contains('hidden')&&!ritual)$('#modal').classList.add('hidden');startRitual('shutdown',cur);break;
+  case'shutdown':if(!$('#modal').classList.contains('hidden')&&!ritual)$('#modal').classList.add('hidden');startRitual('shutdown',cur>today()?today():cur);break;
   case'weekplan':startRitual('weekplan',cur);break;
   case'weekreview':startRitual('weekreview',cur);break;
   case'ritnext':ritNext();break;
@@ -42,7 +44,7 @@ document.addEventListener('click',async e=>{
   case'rollover':rolloverAll(today());toast('Tâches reportées à aujourd’hui');break;
   case'mv':moveTask(id,b.dataset.to);if(ritual)renderRitual();break;
   case'mvall':rolloverAll(b.dataset.to);renderRitual();break;
-  case'mvday':dayTasks(ritual.day).filter(t=>!t.done).forEach(t=>moveTask(t.id,b.dataset.to,true));save();render();renderRitual();break;
+  case'mvday':{const to0=b.dataset.to;dayTasks(ritual.day).filter(t=>!t.done).forEach(t=>moveTask(t.id,to0===addDays(today(),1)?nextFreeDay(t):to0,true));save();render();renderRitual();break}
   case'rmsheet':{const tt=T(id);closeModal();deleteTask(id);render();toast('Supprimée : '+(tt?tt.title:''),'Annuler',()=>undoPop());break}
   case'rm':deleteTask(id);render();if(ritual)renderRitual();break;
   case'dur':{const t=T(id);if(t){setEst(t,+b.dataset.v);renderRitual()}break}
@@ -127,7 +129,7 @@ document.addEventListener('click',async e=>{
    location.reload();break}
   case'hoursreset':{const i=S.days[today()];if(i){delete i.hs;delete i.he}save();closeModal();render();break}
   case'rollmenu':rollMenu(id);break;
-  case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();moveTask(id,addDays(today(),1));toast('Reportée à demain');break}
+  case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();const to=nextFreeDay(t);moveTask(id,to);toast(to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
   case'rolldrop':deleteTask(id);closeModal();render();toast('Tâche supprimée');break;
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
   case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();if(ritual)renderRitual();break}
@@ -135,6 +137,7 @@ document.addEventListener('click',async e=>{
   case'addposcycle':{const o=['bottom','top','auto'],k=o[(o.indexOf(S.settings.addPos||'bottom')+1)%3];S.settings.addPos=k;save();if(ad){adKeep();renderAdd()}else dayMenu();break}
   case'navtog':paneTog('nav');break;
   case'sidetog':paneTog('side');break;
+  case'mselact':mselAct(b.dataset.v);break;
   case'addopen':openAdd(b.dataset.d||cur);break;
   case'adok':adKeep();addSubmit();break;
   case'adprio':adKeep();ad.prio=b.dataset.v;renderAdd();break;
@@ -149,7 +152,7 @@ document.addEventListener('click',async e=>{
   case'mvup':closeModal();swapTask(id,-1);break;
   case'mvdown':closeModal();swapTask(id,1);break;
   case'tobacklog':{const t=T(id);if(t&&t.day){moveTask(id,'backlog');toast('Renvoyée au backlog');if(modalTask===id)openTask(id)}break}
-  case'sheetmv':closeModal();{const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0}moveTask(id,b.dataset.to);toast(b.dataset.to==='backlog'?'Renvoyée au backlog':'Reportée à demain');break;
+  case'sheetmv':{closeModal();const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0;let to=b.dataset.to;if(t&&to===addDays(today(),1))to=nextFreeDay(t);moveTask(id,to);toast(to==='backlog'?'Renvoyée au backlog':to===today()?'Pour aujourd’hui':to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
   case'sum':uiOpen=uiOpen===b.dataset.k?'':b.dataset.k;render();break;
   case'freeze':{const d=cur;S.days[d]=Object.assign(S.days[d]||{},{frozen:!(S.days[d]||{}).frozen});save();if(!$('#modal').classList.contains('hidden'))closeModal();render();toast(S.days[d].frozen?'Journée figée : les créneaux ne bougent plus avec l’heure':'Les créneaux suivent à nouveau l’heure');break}
   case'daymenu':dayMenu();break;
@@ -346,7 +349,7 @@ function runPal(it){
  if(k==='new'){const t=addTask(q,view==='backlog'?null:cur);if(t)toast('Tâche créée'+(t.day?' le '+fmtDay(t.day,{weekday:'long',day:'numeric'}):' au backlog'));return}
  if(k==='dump'){S.dump=(S.dump?S.dump.replace(/\s*$/,'')+'\n':'')+q;save();toast('Ajouté au vide-tête');return}
  if(k==='ask'){sideTab='ai';document.body.classList.add('side-open');return aiAsk(q,false)}
- if(k==='plan')return startRitual('plan',cur);if(k==='shutdown')return startRitual('shutdown',cur);if(k==='weekplan')return startRitual('weekplan',cur);if(k==='weekreview')return startRitual('weekreview',cur);
+ if(k==='plan')return startRitual('plan',cur);if(k==='shutdown')return startRitual('shutdown',cur>today()?today():cur);if(k==='weekplan')return startRitual('weekplan',cur);if(k==='weekreview')return startRitual('weekreview',cur);
  if(k==='focus'){const t=dayTasks(cur).find(t=>!t.done);return t?openFocus(t.id):toast('Aucune tâche à faire')}
  if(k==='freeze'){const d=cur;S.days[d]=Object.assign(S.days[d]||{},{frozen:!(S.days[d]||{}).frozen});save();render();return toast(S.days[d].frozen?'Journée figée':'Journée libérée')}
  if(k==='layout')return toggleLayout();if(k==='tplnew')return editTpl('');
@@ -376,7 +379,7 @@ document.addEventListener('keydown',e=>{
  else if(e.key==='/'){e.preventDefault();openPal()}
  else if(k==='d'){go('dump');setTimeout(()=>{const ta=document.querySelector('[data-dump]');if(ta){ta.focus();ta.selectionStart=ta.value.length}},50)}
  else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');else if(k==='a')go('tree');else if(k==='j')go('projects');else if(k==='r')go('review');
- else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur);
+ else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur>today()?today():cur);
  else if(k==='f'){const t=(kbSel&&T(kbSel)&&!T(kbSel).done)?T(kbSel):dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,(view==='week'||view==='objectives')?7*s:s);render()}
 });
@@ -407,7 +410,7 @@ function keepUnder(b){
 }
 
 // ---------- annuler partout : Ctrl/⌘ Z revient avant la dernière action sur les tâches ----------
-const UNDO_ACTS=new Set(['rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
+const UNDO_ACTS=new Set(['mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
 let undoStack=[];
 const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[]});
 function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}
@@ -438,3 +441,31 @@ function paneTog(which){if(innerWidth<=760){if(which==='side')document.body.clas
 
 // fermer en cliquant à côté seulement si le clic a aussi COMMENCÉ à côté (une sélection de texte qui déborde ne ferme plus la fenêtre)
 let downOnBackdrop=false;document.addEventListener('mousedown',e=>{downOnBackdrop=e.target.id==='modal'},true);
+
+// ---------- multi-sélection : agir sur plusieurs tâches d'un coup ----------
+let msel=new Set(),mselAnchor=null;
+function mselClick(id,range){
+ const ids=[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id);
+ if(range&&mselAnchor&&ids.includes(mselAnchor)){const a=ids.indexOf(mselAnchor),b=ids.indexOf(id);ids.slice(Math.min(a,b),Math.max(a,b)+1).forEach(x=>msel.add(x))}
+ else{if(msel.has(id))msel.delete(id);else msel.add(id);mselAnchor=id}
+ renderMsel()}
+function renderMsel(){
+ [...msel].forEach(id=>{if(!T(id))msel.delete(id)});
+ document.querySelectorAll('#main .card.msel').forEach(c=>c.classList.remove('msel'));
+ msel.forEach(id=>{const c=document.querySelector(`#main .card[data-id="${id}"]`);if(c)c.classList.add('msel')});
+ let bar=$('#mselbar');if(!bar){bar=document.createElement('div');bar.id='mselbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Actions sur la sélection');document.body.appendChild(bar)}
+ if(!msel.size){bar.className='hidden';bar.innerHTML='';return}
+ const B=(v,i,l)=>`<button data-act="mselact" data-v="${v}" title="${l}" aria-label="${l}">${ico(i)}<span>${l}</span></button>`;
+ bar.className='';
+ bar.innerHTML=`<b>${msel.size} sélectionnée${msel.size>1?'s':''}</b>${B('done','check','Cocher')}${B('today','sun','Aujourd’hui')}${B('tomorrow','next','Demain')}${B('backlog','tray','Backlog')}<span class="mselprio">${PRIOS.map(([v,l])=>`<button data-act="mselact" data-v="p:${v}" title="Priorité ${l.toLowerCase()}" aria-label="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>${B('del','trash','Supprimer')}<button class="mselx" data-act="mselact" data-v="clear" title="Tout désélectionner (Échap)" aria-label="Tout désélectionner">×</button>`}
+function mselAct(v){
+ const ids=[...msel].filter(id=>T(id));if(v==='clear'||!ids.length){msel.clear();renderMsel();return}
+ const n=ids.length;let msg='';
+ if(v==='done'){ids.forEach(id=>{const t=T(id);if(!t.done){t.done=true;t.doneAt=Date.now()}});msg=n+' cochée'+(n>1?'s':'')}
+ else if(v==='today'){ids.forEach(id=>moveTask(id,today(),true));msg='Pour aujourd’hui'}
+ else if(v==='tomorrow'){ids.forEach(id=>moveTask(id,nextFreeDay(T(id)),true));msg='Reportées'}
+ else if(v==='backlog'){ids.forEach(id=>{T(id).roll=0;moveTask(id,'backlog',true)});msg='Au backlog'}
+ else if(v.startsWith('p:')){ids.forEach(id=>{T(id).prio=v.slice(2)});msg='Priorité changée'}
+ else if(v==='del'){ids.forEach(id=>deleteTask(id));msg=n+' supprimée'+(n>1?'s':'')}
+ msel.clear();save();render();renderMsel();toast(msg+' · ⌘/Ctrl Z pour annuler')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&msel.size&&$('#modal').classList.contains('hidden')){msel.clear();renderMsel()}});

@@ -110,6 +110,6 @@ function classifyEv(e){
 // segments de boulot d'un jour (heures décimales), déduits de l'agenda
 function jobSegs(d){const base=+parseYmd(d),out=[];
  for(const e of (gEvents[d]||[])){const k=classifyEv(e);if(!k||k==='ignore')continue;
-  if(k==='allday'){out.push({s:S.settings.allDayStart??8,e:S.settings.allDayEnd??18,mode:'busy',t:e.summary||''});continue}
+  if(k==='allday'){out.push({s:S.settings.allDayStart??8,e:S.settings.allDayEnd??18,mode:'busy',t:e.summary||'',allday:true,col:e._col});continue}
   const s=(new Date(e.start.dateTime)-base)/3600e3,en=Math.min(24,(new Date(e.end.dateTime)-base)/3600e3);if(en>s)out.push({s,e:en,mode:k,t:e.summary||''})}
  return out.sort((a,b)=>a.s-b.s)}

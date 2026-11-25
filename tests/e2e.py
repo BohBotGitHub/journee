@@ -1035,6 +1035,42 @@ def _(c):
     assert pg.locator('#side').is_visible() and pg.locator('#side').bounding_box()['width'] > 250
     assert not errs, errs; ctx.close()
 
+@test('v1.6 : coche d’une tâche future, prochain jour libre, clôture du jour, projets du Génie, multi-sélection, journée entière, horizon')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(14, 0))
+    # coche d'une tâche prévue demain : elle passe aujourd'hui, juste avant maintenant
+    pg.evaluate("()=>{S.tasks.push(mk({id:'fut',title:'Prévue demain',day:addDays(today(),1),est:20}));save();render()}")
+    pg.evaluate("()=>toggleDone('fut')"); tick(pg, 200)
+    t = st(pg, "T('fut')"); assert t['done'] and t['day'] == d() and t['block'], t
+    e = st(pg, "(new Date(T('fut').block.end)-Date.now())/60000"); s0 = st(pg, "(Date.now()-new Date(T('fut').block.start))/60000")
+    assert abs(e) < 2 and abs(s0 - 20) < 2, (e, s0)
+    # prochain jour libre : demain plein → après-demain
+    pg.evaluate("()=>{const dm=addDays(today(),1);S.days[dm]=Object.assign(S.days[dm]||{},{hs:9,he:10});S.tasks.push(mk({id:'full',title:'Remplit demain',day:dm,est:60}));S.tasks.push(mk({id:'mv',title:'À reporter',day:today(),est:30}));save();render()}")
+    pg.evaluate("()=>taskSheet('mv')"); tick(pg, 100)
+    pg.click('#sheet [data-act="sheetmv"][data-to="' + d(1) + '"]'); tick(pg, 150)
+    assert st(pg, "T('mv').day") == d(2), st(pg, "T('mv').day")
+    # clôture lancée depuis demain : porte sur aujourd'hui
+    pg.evaluate("()=>{cur=addDays(today(),1);render()}"); tick(pg, 100)
+    pg.keyboard.press('s'); tick(pg, 150)
+    assert st(pg, "ritual.day") == d(); pg.keyboard.press('Escape'); tick(pg, 100)
+    pg.evaluate("()=>{cur=today();render()}"); tick(pg, 100)
+    # le Génie crée un projet
+    pg.evaluate("()=>{const m={prop:{message:'ok',new_projects:[{name:'Fête de Léa',end:addDays(today(),10),tasks:['Inviter','Gâteau']}]}};applyItem(m,'j0')}")
+    pj = st(pg, "S.projects.find(p=>p.name==='Fête de Léa')"); assert pj and st(pg, f"S.tasks.filter(t=>t.proj==='{pj['id']}').length") == 2
+    # multi-sélection
+    ids = pg.evaluate("[...document.querySelectorAll('#main .list > .card[data-id]')].slice(0,2).map(c=>c.dataset.id)")
+    pg.click(f'#main .card[data-id="{ids[0]}"] .ctitle', modifiers=['Control']); pg.click(f'#main .card[data-id="{ids[1]}"] .ctitle', modifiers=['Control']); tick(pg, 100)
+    assert pg.locator('#main .card.msel').count() == 2 and '2 sélectionnées' in pg.inner_text('#mselbar')
+    pg.click('#mselbar [data-v="backlog"]'); tick(pg, 150)
+    assert st(pg, f"T('{ids[0]}').day") is None and st(pg, f"T('{ids[1]}').day") is None and 'hidden' in pg.get_attribute('#mselbar', 'class')
+    pg.keyboard.press('Control+z'); tick(pg, 150)
+    assert st(pg, f"T('{ids[0]}').day") == d()
+    # journée entière : bloc hachuré 8 h–18 h dans l'agenda ; horizon
+    pg.evaluate("()=>{const d=today();gEvents[d]=[{id:'mv1',summary:'Mvision',start:{date:d},end:{date:addDays(d,1)},_cid:'t',_cal:'Travail',transparency:'transparent'}];render()}"); tick(pg, 150)
+    assert pg.locator('.ev.allday:has-text("Mvision")').count() >= 1
+    assert pg.locator('#main .horizon .hsun').count() == 1
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

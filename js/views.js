@@ -31,6 +31,7 @@ function mobileTimeline(d){
  const sch=ts.filter(t=>!t.done&&t.block).map(t=>({k:'t',s:+new Date(t.block.start),e:+new Date(t.block.end),t}));
  const items=[...evs,...sch].sort((a,b)=>a.s-b.s),now=Date.now();let nowDone=false;
  const rows=items.map(it=>{let pre='';if(!nowDone&&d===today()&&it.s>now){nowDone=true;pre='<div class="mnow"><span>'+hm(new Date())+'</span></div>'}
+  if(it.k==='ad'){const x=it.x;return `<div class="ev allday${sh}" style="${pos};${x.col?'--adc:'+esc(x.col):''}" title="Journée entière dans ton agenda : bloc de ${hShort(x.s)} à ${hShort(x.e)} par défaut (Réglages › Agendas de boulot)"><b>${esc(x.t)}</b><small>journée entière · ${hShort(x.s)}–${hShort(x.e)}</small></div>`}
   if(it.k==='ev'){const e=it.e0,f=evFree(e);return pre+`<div class="mrow"><div class="mtime">${hm(new Date(it.s))}</div><div class="mev${f?' free':''}" data-act="evtoggle" data-k="${esc(evKey(e))}"><b>${esc(e.summary||'(sans titre)')}</b><small>${hm(new Date(it.s))}–${hm(new Date(it.e))}${f?' · tu peux travailler':' · occupé'}</small></div></div>`}
   return pre+`<div class="mrow"><div class="mtime">${hm(new Date(it.s))}</div>${card(it.t)}</div>`}).join('');
  const rest=ts.filter(t=>!t.done&&!t.block),done=ts.filter(t=>t.done);
@@ -94,7 +95,8 @@ function viewToday(){
  const h=new Date().getHours(),past=d<today();
  const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
  const pct=ts.length?Math.round(done.length/ts.length*100):0,ring=ts.length?`<span class="dayring${pct===100?' full':''}" title="${done.length}/${ts.length} tâches faites" aria-label="${done.length} sur ${ts.length} tâches faites"><svg viewBox="0 0 36 36"><circle class="rbg" cx="18" cy="18" r="15.9"/><circle class="rfg" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="${pct} 100"/>${pct===100?'<g class="rsun"><circle cx="18" cy="18" r="5"/><path d="M18 8.5v2.5M18 25v2.5M8.5 18h2.5M25 18h2.5M11.3 11.3l1.8 1.8M22.9 22.9l1.8 1.8M24.7 11.3l-1.8 1.8M13.1 22.9l-1.8 1.8"/></g>':`<text x="18" y="21.5">${done.length}</text>`}</svg></span>`:'';
- return `<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
+ const hz=isT?(()=>{const h=dayHours(d),b=+parseYmd(d),p=Math.max(0,Math.min(1,(Date.now()-(b+h.s*3600e3))/((h.e-h.s)*3600e3))),hr=new Date().getHours();return `<div class="horizon" style="--p:${p.toFixed(3)}" title="Ta journée : ${Math.round(p*100)} % du temps écoulé" aria-hidden="true"><i class="hsun${hr>=20||hr<6?' moon':''}"></i></div>`})():'';
+ return `${hz}<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
  <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}
 
@@ -326,7 +328,8 @@ function calGeom(){const st=S.settings.dayStart,en=Math.max(S.settings.dayEnd,st
 function calCol(d){
  const s=S.settings,{st,en,H}=calGeom();
  const timed=timedEvents(d),blocks=S.tasks.filter(t=>t.block&&ymd(new Date(t.block.start))===d);
- const items=[...timed.map(e=>({k:'ev',s:new Date(e.start.dateTime),e:new Date(e.end.dateTime),e0:e})),...blocks.map(t=>({k:'b',s:new Date(t.block.start),e:new Date(t.block.end),t}))].sort((a,b)=>a.s-b.s||b.e-a.e);
+ const base=+parseYmd(d),ads=(typeof jobSegs==='function'?jobSegs(d):[]).filter(x=>x.allday);
+ const items=[...ads.map(x=>({k:'ad',s:new Date(base+x.s*3600e3),e:new Date(base+x.e*3600e3),x})),...timed.map(e=>({k:'ev',s:new Date(e.start.dateTime),e:new Date(e.end.dateTime),e0:e})),...blocks.map(t=>({k:'b',s:new Date(t.block.start),e:new Date(t.block.end),t}))].sort((a,b)=>a.s-b.s||b.e-a.e);
  let cl=[],cend=0;const out=[];
  const flush=()=>{const cols=[];cl.forEach(it=>{let c=cols.findIndex(e=>e<=it.s);if(c<0){c=cols.length;cols.push(0)}cols[c]=it.e;it.col=c});cl.forEach(it=>it.n=cols.length);out.push(...cl);cl=[]};
  items.forEach(it=>{if(cl.length&&it.s>=cend)flush();cl.push(it);cend=Math.max(cend,+it.e)});flush();
@@ -335,6 +338,7 @@ function calCol(d){
  const blocksHtml=out.map(it=>{
   const top=Math.max(0,y(it.s)),h=Math.max(14,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
   const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<40?(h<24?' short tiny':' short'):'';
+  if(it.k==='ad'){const x=it.x;return `<div class="ev allday${sh}" style="${pos};${x.col?'--adc:'+esc(x.col):''}" title="Journée entière dans ton agenda : bloc de ${hShort(x.s)} à ${hShort(x.e)} par défaut (Réglages › Agendas de boulot)"><b>${esc(x.t)}</b><small>journée entière · ${hShort(x.s)}–${hShort(x.e)}</small></div>`}
   if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
   const t=it.t,c=ch(t.channel),act=S.running&&S.running.taskId===t.id;return `<div class="blk${t.done?' done':''}${act?' active':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${t.pinned?'📌 ':''}${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
  }).join('');
