@@ -2,7 +2,7 @@
 /* ---------- interactions ---------- */
 let toastT;
 let toastFn=null;
-function toast(msg,act,fn){const el=$('#toast');el.textContent=msg;toastFn=act&&fn?fn:null;if(toastFn){const b=document.createElement('button');b.className='tact';b.dataset.act='toastact';b.textContent=act;el.appendChild(b)}el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>{el.classList.remove('show');toastFn=null},toastFn?7000:3200)}
+function toast(msg,act,fn){if(!act&&typeof msg==='string'&&/⌘\/Ctrl Z pour annuler/.test(msg)){msg=msg.replace(/\s*·?\s*⌘\/Ctrl Z pour annuler/,'');act='Annuler';fn=()=>undoPop()}const el=$('#toast');el.textContent=msg;toastFn=act&&fn?fn:null;if(toastFn){const b=document.createElement('button');b.className='tact';b.dataset.act='toastact';b.textContent=act;el.appendChild(b)}el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>{el.classList.remove('show');toastFn=null},toastFn?7000:3200)}
 document.addEventListener('click',async e=>{
  const nv=e.target.closest('#nav [data-view]');if(nv){go(nv.dataset.view);return}
  const sd=e.target.closest('[data-side]');if(sd){sideTab=sd.dataset.side;renderSide();return}
@@ -69,7 +69,7 @@ document.addEventListener('click',async e=>{
   case'treego':applyTree();closeModal();render();relocateBlocks();toast('Tâches rangées dans l’arbre');break;
   case'nodemenu':nodeMenu(id);break;
   case'tvsel':treeSel=treeSel===id?null:id;if(isNarrow()&&treeSel){nodeMenu(id)}else render();break;
-  case'tvfocus':treeFocus=id?(treeFocus===id?null:id):null;if(id&&!treeSel)treeSel=id;render();break;
+  case'tvfocus':tvZ={k:1,cx:null,cy:null};treeFocus=id?(treeFocus===id?null:id):null;if(id&&!treeSel)treeSel=id;render();break;
   case'tvmode':treeMode=b.dataset.m;render();break;
   case'tvaddpil':{const n={id:uid(),name:'Nouveau pilier',color:'#888780',lvl:0,parent:null,o:pillars().length};S.channels.push(n);treeColors();save();treeSel=n.id;render();break}
   case'nodedelask':closeModal();nodeDelAsk(id);break;
@@ -137,6 +137,9 @@ document.addEventListener('click',async e=>{
   case'addposcycle':{const o=['bottom','top','auto'],k=o[(o.indexOf(S.settings.addPos||'bottom')+1)%3];S.settings.addPos=k;save();if(ad){adKeep();renderAdd()}else dayMenu();break}
   case'navtog':paneTog('nav');break;
   case'sidetog':paneTog('side');break;
+  case'tvz':{const v=b.dataset.v;if(v==='fit'){tvZ={k:1,cx:null,cy:null};tvApply()}else tvZoomBy(v==='in'?1.3:1/1.3);break}
+  case'tvclose':treeSel=null;render();break;
+  case'blsort':lsSet('journee.blsort',b.dataset.v);render();break;
   case'mselact':mselAct(b.dataset.v);break;
   case'addopen':openAdd(b.dataset.d||cur);break;
   case'adok':adKeep();addSubmit();break;
@@ -251,22 +254,23 @@ document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]'
  // la tuile reste bien visible sous la souris : copie nette (pas l'original estompé) comme image de glissement
  try{const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragimg');{const id=(c.dataset.drag||'').split('|')[1];if(msel.size>1&&msel.has(id)){g.classList.add('dragmulti');g.setAttribute('data-n',msel.size)}}g.style.width=r.width+'px';document.body.appendChild(g);e.dataTransfer.setDragImage(g,Math.min(e.clientX-r.left,r.width-10),Math.min(e.clientY-r.top,r.height-6));setTimeout(()=>g.remove(),0)}catch(err){}
  requestAnimationFrame(()=>{c.classList.add('dragging');const id=drag.split('|')[1];if(msel.size>1&&msel.has(id))msel.forEach(x=>document.querySelectorAll(`#main .card[data-id="${x}"]`).forEach(k=>k.classList.add('dragging')))})});
-document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over,.dropbefore,.dropafter').forEach(x=>x.classList.remove('dragging','over','dropbefore','dropafter'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
+document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over,.dropbefore,.dropafter,.dropsub').forEach(x=>x.classList.remove('dragging','over','dropbefore','dropafter','dropsub'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
 document.addEventListener('dragover',e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
  document.querySelectorAll('.over').forEach(x=>{if(x!==z)x.classList.remove('over')});z.classList.add('over');
  // place d'arrivée : un trait de couleur entre les tuiles
- {const card=e.target.closest('.list .card'),cur=document.querySelector('.dropbefore,.dropafter');if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),cls=e.clientY<r.top+r.height/2?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter');card.classList.add(cls)}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter')}
+ {const card=e.target.closest('.list .card'),cur=document.querySelector('.dropbefore,.dropafter,.dropsub');const sub=card&&drag.startsWith('task|')&&!(msel.size>1&&msel.has(drag.split('|')[1]));if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),cls=sub&&e.clientX>r.left+r.width*.55?'dropsub':e.clientY<r.top+r.height/2?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter','dropsub');card.classList.add(cls)}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter','dropsub')}
  document.querySelectorAll('.ghostblk').forEach(x=>{if(!z.contains(x))x.classList.add('hidden')});const g=z.querySelector('.ghostblk');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
 });
 document.addEventListener('drop',async e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
  const pre=undoSnap();setTimeout(()=>undoCommit(pre,'drop'),0);
- const dz=z.dataset.drop,src=drag.split('|');drag=null;z.classList.remove('over');
+ const dz=z.dataset.drop==='today'?'day:'+today():z.dataset.drop,src=drag.split('|');drag=null;z.classList.remove('over');
  let t;
  if(src[0]==='todo'){const x=(todo.tasks[src[1]]||[]).find(x=>x.id===src[2]);if(!x)return;t=importTodo(src[1],x,dz==='backlog'?null:dz.startsWith('day:')?dz.slice(4):(z.dataset.day||cur))}
  else t=T(src[1]);
  if(!t)return;
+ {const hs=e.target.closest('.card.dropsub');if(hs&&src[0]==='task'&&hs.dataset.id!==t.id){const p=T(hs.dataset.id);hs.classList.remove('dropsub');if(p){if(t.subtasks&&t.subtasks.length){toast('Cette tâche a déjà des sous-tâches : impossible d’en faire une sous-tâche');render();return}p.subtasks=p.subtasks||[];p.subtasks.push({id:uid(),t:t.title,d:!!t.done});deleteTask(t.id);save();render();toast('Devenue sous-tâche de « '+p.title+' » · ⌘/Ctrl Z pour annuler');return}}}
  if(src[0]!=='todo'&&msel.size>1&&msel.has(t.id)){const grp=mselOrdered([...msel]);msel.clear();renderMsel();return dropGroup(grp,z,dz,e)}
  if(dz==='cal'){const dd=z.dataset.day||cur,dt=parseYmd(dd);dt.setMinutes(calMinute(z,e.clientY));t.pinned=true;if(t.day!==dd)t.order=nextOrder(dd);const p=setBlock(t,dt,true);syncOrder(dd);save();render();await p;return}
  if(z.dataset.pz){const to=z.dataset.pz;moveTask(t.id,to);toast(to==='backlog'?'Au backlog':'Repoussée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
@@ -276,7 +280,7 @@ document.addEventListener('drop',async e=>{
   if(t.day!==day)moveTask(t.id,day,true);
   if(src[0]==='blk'&&t.block){if(flowOn()){t.pinned=false;toast('Créneau libéré : la tâche suit l’ordre de la liste')}else{clearBlock(t,true);toast('Retiré de l’agenda')}}
   if(before&&before.dataset.id!==t.id){const b=T(before.dataset.id);if(b&&b.day===day){t.order=b.order+(after?.5:-.5);renorm(day)}}
-  if(!flowOn()&&reflow(day))toast('Agenda réorganisé selon le nouvel ordre');
+  if(!flowOn()&&reflow(day))toast('Agenda réorganisé selon le nouvel ordre');else if(z.dataset.drop==='today'&&view!=='today')toast('Pour aujourd’hui · ⌘/Ctrl Z pour annuler');
   save();render();
  }
 });
@@ -313,6 +317,11 @@ document.addEventListener('mouseover',e=>{
  const el=e.target.closest('.card[data-id],.blk[data-id]');document.querySelectorAll('.hl').forEach(x=>x.classList.remove('hl'));
  if(!el)return;const id=el.dataset.id;document.querySelectorAll(`.card[data-id="${id}"],.blk[data-id="${id}"]`).forEach(x=>{if(x!==el)x.classList.add('hl')});
 });
+let adz=null;
+document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-adrz]');if(!h)return;e.preventDefault();e.stopPropagation();const el=h.closest('.ev.allday'),d=h.dataset.day,sg=(jobSegs(d).find(x=>x.allday))||{s:8,e:18};adz={el,d,w:h.dataset.adrz,y:e.clientY,top:el.offsetTop,h:el.offsetHeight,s:sg.s,e:sg.e};h.setPointerCapture&&h.setPointerCapture(e.pointerId)});
+document.addEventListener('pointermove',e=>{if(!adz)return;const dh=Math.round((e.clientY-adz.y)/PX*4)/4;let s=adz.s,en=adz.e;if(adz.w==='s')s=Math.max(0,Math.min(en-.5,adz.s+dh));else en=Math.min(24,Math.max(s+.5,adz.e+dh));adz.ns=s;adz.ne=en;const top=adz.top+(s-adz.s)*PX,hh=(en-s)*PX;adz.el.style.top=top+'px';adz.el.style.height=hh+'px';const sm=adz.el.querySelector('small');if(sm)sm.textContent='journée entière · '+hShort(s)+'–'+hShort(en)});
+document.addEventListener('pointerup',()=>{if(!adz)return;const a=adz;adz=null;if(a.ns==null){return}const pre=undoSnap();S.days[a.d]=Object.assign(S.days[a.d]||{},{ad:{s:a.ns,e:a.ne}});undoCommit(pre,'adjob');save();render();toast('Journée entière : '+hShort(a.ns)+'–'+hShort(a.ne)+' ce jour-là · ⌘/Ctrl Z pour annuler')});
+document.addEventListener('dblclick',e=>{const b=e.target.closest('.ev.allday[data-adday]');if(!b)return;const d=b.dataset.adday;if(S.days[d]&&S.days[d].ad){const pre=undoSnap();delete S.days[d].ad;undoCommit(pre,'adjob');save();render();toast('Horaires par défaut rétablis')}});
 let rz=null;
 document.addEventListener('pointerdown',e=>{
  const h=e.target.closest('[data-rz]');if(!h)return;e.preventDefault();e.stopPropagation();

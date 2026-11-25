@@ -1093,6 +1093,45 @@ def _(c):
     assert st(pg, "T('m1').day") == d() and st(pg, "T('m2').day") == d()
     assert not errs, errs; ctx.close()
 
+@test('v1.7 : tri du backlog, cible Aujourd’hui, sous-tâche par glisser, journée entière ajustable, Annuler cliquable, arbre zoomable')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    drag = """([s,dsel,opt])=>{const src=document.querySelector(s),dst=document.querySelector(dsel);const dt=new DataTransfer();src.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:dt}));const r=dst.getBoundingClientRect(),x=r.left+r.width*(opt||.5),y=r.top+r.height/2;dst.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt,clientX:x,clientY:y}));dst.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt,clientX:x,clientY:y}));src.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer:dt}))}"""
+    pg.evaluate("()=>{S.tasks.push(mk({id:'b1',title:'Zeta',est:60,day:null,order:1,prio:'low'}),mk({id:'b2',title:'Alpha',est:10,day:null,order:2,prio:'high'}),mk({id:'s1',title:'Parent',day:today(),order:1,est:20}),mk({id:'s2',title:'Enfant',day:today(),order:2,est:10}));save();render()}")
+    # tri du backlog
+    pg.evaluate("()=>go('backlog')"); tick(pg, 150)
+    pg.click('.blsort [data-v="est"]'); tick(pg, 150)
+    ids = pg.evaluate("[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id)")
+    assert ids.index('b2') < ids.index('b1'), ids
+    pg.click('.blsort [data-v="prio"]'); tick(pg, 150)
+    ids = pg.evaluate("[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id)")
+    assert ids[0] == 'b2' and ids.index('b1') == len(ids) - 1, ids
+    # cible Aujourd'hui de la barre de gauche
+    pg.evaluate(drag, ['#main .card[data-id="b1"]', '#nav [data-view="today"]', .5]); tick(pg, 150)
+    assert st(pg, "T('b1').day") == d()
+    assert pg.locator('#toast .tact').count() == 1, pg.inner_text('#toast')
+    pg.click('#toast .tact'); tick(pg, 150)
+    assert st(pg, "T('b1').day") is None
+    # glisser à droite = sous-tâche
+    pg.evaluate("()=>go('today')"); tick(pg, 150)
+    pg.evaluate(drag, ['#main .card[data-id="s2"]', '#main .card[data-id="s1"]', .85]); tick(pg, 150)
+    assert st(pg, "T('s2')") is None and st(pg, "T('s1').subtasks.map(x=>x.t)") == ['Enfant']
+    # journée entière ajustable
+    pg.evaluate("()=>{const d=today();gEvents[d]=[{id:'mv1',summary:'Mvision',start:{date:d},end:{date:addDays(d,1)},_cid:'t',_cal:'Travail'}];sideTab='cal';render()}"); tick(pg, 200)
+    h = pg.locator('#side .ev.allday .adrz.bot'); pg.evaluate("()=>document.querySelector('#side .ev.allday .adrz.bot').scrollIntoView({block:'center'})"); tick(pg, 100)
+    bb = h.bounding_box(); pg.mouse.move(bb['x'] + bb['width'] / 2, bb['y'] + 4); pg.mouse.down(); pg.mouse.move(bb['x'] + bb['width'] / 2, bb['y'] + 4 - 76 * 2, steps=6); pg.mouse.up(); tick(pg, 200)
+    assert st(pg, "S.days[today()].ad.e") == 16, st(pg, "S.days[today()].ad")
+    assert '16 h' in pg.inner_text('#side .ev.allday')
+    pg.dblclick('#side .ev.allday b'); tick(pg, 150)
+    assert st(pg, "!S.days[today()].ad")
+    # arbre zoomable
+    pg.evaluate("()=>{view='tree';treeMode='map';render()}"); tick(pg, 200)
+    if pg.locator('.tvzoom').count():
+        vb0 = pg.get_attribute('.tvsvg', 'viewBox'); pg.click('.tvzoom [data-v="in"]'); vb1 = pg.get_attribute('.tvsvg', 'viewBox')
+        assert vb0 != vb1 and '130 %' in pg.inner_text('.tvzoom')
+        pg.click('.tvzoom [data-v="fit"]'); assert pg.get_attribute('.tvsvg', 'viewBox') == vb0
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

@@ -61,7 +61,7 @@ function mergeState(L,R){
 }
 const dataJson=x=>{const {running,syncedAt,updatedAt,...r}=x;return JSON.stringify(r)};
 const save=()=>{S.updatedAt=Date.now();stamp();lsSet(KEY,JSON.stringify(S));clearTimeout(pushT);pushT=setTimeout(()=>driveSync(),1500);if(typeof queueFlow==='function')queueFlow()};
-const mk=o=>Object.assign({id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null,prio:'',due:null,proj:null},o);
+const mk=o=>Object.assign({created:Date.now(),id:uid(),title:'',notes:'',channel:null,est:0,actual:0,day:null,done:false,doneAt:null,subtasks:[],order:0,objId:null,recurId:null,src:null,block:null,prio:'',due:null,proj:null},o);
 const T=id=>S.tasks.find(t=>t.id===id);
 const ch=id=>S.channels.find(c=>c.id===id);
 const nextOrder=day=>Math.max(0,...S.tasks.filter(t=>t.day===day).map(t=>t.order||0))+1;

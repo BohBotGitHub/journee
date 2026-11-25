@@ -53,11 +53,11 @@ function treeSvg(){
 /* ---------- panneau d'édition du nœud choisi ---------- */
 function tvPanel(){
  const n=node(treeSel);
- if(!n)return `<div class="tvp"><h3>Modifier l’arbre</h3><p class="mute">Clique un point ou un nom pour le modifier. Les boutons du haut déploient un seul arbre en grand.</p><button class="sm" data-act="tvaddpil">+ Pilier</button></div>`;
+ if(!n)return `<div class="tvp tvpmini"><span class="mute">Clique un nom pour le modifier</span><button class="sm" data-act="tvaddpil">+ Pilier</button></div>`;
  const path=pathOf(n.id),act=S.tasks.filter(t=>!t.done&&pathOf(t.channel).some(x=>x.id===n.id)).length,done=allDone().filter(x=>pathOf(x.c).some(p=>p.id===n.id)).length;
  const inh=n.lvl===0?'Agenda par défaut':'Hérite : '+(()=>{const c=nodeCal(n.parent);const g=gCals&&gCals.find(x=>x.id===c);return g?g.name:'agenda par défaut'})();
  const cal=gCals?`<label>Agenda Google<select data-ncal="${esc(n.id)}"><option value="">${esc(inh)}</option>${gCals.filter(c=>c.write).map(c=>`<option value="${esc(c.id)}" ${n.cal===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>`:`<p class="mute" style="font-size:13px">${gTok()?(loadCals().then(()=>{if(view==='tree')render()}),'Chargement des agendas…'):'Connecte Google pour choisir un agenda.'}</p>`;
- return `<div class="tvp"><small class="mute">${LVL[n.lvl]}${path.length>1?' · '+path.slice(0,-1).map(p=>esc(p.name)).join(' › '):''}</small>
+ return `<div class="tvp"><button class="tvpx" data-act="tvclose" title="Fermer" aria-label="Fermer">×</button><small class="mute">${LVL[n.lvl]}${path.length>1?' · '+path.slice(0,-1).map(p=>esc(p.name)).join(' › '):''}</small>
  <div class="tvrow">${n.lvl===0?`<label class="cdot" style="--c:${esc(n.color)}" title="Changer la couleur"><input type="color" data-nc="${esc(n.id)}" value="${esc(n.color)}" aria-label="Couleur de ${esc(n.name)}"></label>`:`<span class="dot" style="--c:${esc(n.color)}"></span>`}<input class="tvname" data-nn="${esc(n.id)}" value="${esc(n.name)}" aria-label="Nom"></div>
  ${n.lvl===2?`<label>Raccourci à la saisie<div class="tvkey"><span>#</span><input data-nk="${esc(n.id)}" value="${esc(n.key||'')}" placeholder="ex. natation" aria-label="Raccourci"></div></label>`:''}
  ${cal}
@@ -66,7 +66,7 @@ function tvPanel(){
   ${n.lvl<2?`<button class="sm" data-act="nodeadd" data-id="${esc(n.id)}">+ ${n.lvl===0?'Domaine':'Catégorie'}</button>`:''}
   ${n.lvl<2&&kids(n.id).length?`<button class="sm" data-act="tvfocus" data-id="${esc(n.id)}">${treeFocus===n.id?'Replier':'Déployer cet arbre'}</button>`:''}
   ${n.lvl?`<button class="sm" data-act="nodemove" data-id="${esc(n.id)}">Déplacer…</button>`:''}
-  <button class="sm ghost" data-act="nodeup" data-id="${esc(n.id)}" aria-label="Monter">↑</button><button class="sm ghost" data-act="nodedown" data-id="${esc(n.id)}" aria-label="Descendre">↓</button>
+  <button class="sm ghost" data-act="nodeup" data-id="${esc(n.id)}" aria-label="Monter" title="Monter"></button><button class="sm ghost" data-act="nodedown" data-id="${esc(n.id)}" aria-label="Descendre" title="Descendre"></button>
   <span class="sp"></span><button class="sm danger" data-act="nodedelask" data-id="${esc(n.id)}">Supprimer…</button>
  </div></div>`;
 }
@@ -74,11 +74,11 @@ function viewTree(){
  if(!hasTree())return `<div class="head"><div><h1>Arbre des catégories</h1></div></div><div class="empty">Tes tâches utilisent encore les anciennes catégories Sunsama.<br><button class="pri" data-act="treeask" style="margin-top:10px">Passer à l’arbre</button></div>`;
  const mode=treeMode||(isNarrow()?'list':'map');
  const tabs=`<div class="seg tvtabs"><button class="sm${!treeFocus?' on':''}" data-act="tvfocus" data-id="">Tout</button>${pillars().map(p=>`<button class="sm${treeFocus&&pillarOf(treeFocus)&&pillarOf(treeFocus).id===p.id?' on':''}" data-act="tvfocus" data-id="${esc(p.id)}" style="--c:${esc(p.color)}"><i class="pdot"></i>${esc(p.name)}</button>`).join('')}</div>`;
- const refine=refineCands().length?`<div class="note tvnote"><span>${refineCands().length} tâches sont à classer ou rangées seulement dans un domaine.</span><button class="sm" data-act="refine" ${aiOn()?'':'disabled title="Ajoute ta clé Claude dans Réglages"'}>Affiner avec Claude</button></div>`:'';
- return `<div class="head"><div><h1>Arbre des catégories</h1><div class="sub">4 piliers → domaines → catégories. La base du futur skill tree.</div></div>
- <div class="acts"><div class="seg"><button class="sm${mode==='map'?' on':''}" data-act="tvmode" data-m="map">Diagramme</button><button class="sm${mode==='list'?' on':''}" data-act="tvmode" data-m="list">Liste</button></div></div></div>
- ${tabs}${refine}
- ${mode==='map'?`<div class="tvwrap"><div class="tvmap">${treeSvg()}<p class="tvleg"><span>(3)</span> = tâches en cours dans la catégorie · cercle pointillé = arbre replié, clique pour le déployer</p></div>${tvPanel()}</div>`:`<div class="tvlist">${tvList()}</div>`}`;
+ const rn=refineCands().length,refine=rn?`<button class="sm tvrefine" data-act="refine" ${aiOn()?`title="${rn} tâche${rn>1?'s':''} à classer ou rangée${rn>1?'s':''} seulement dans un domaine : Claude propose une catégorie"`:'disabled title="Ajoute ta clé Claude dans Réglages"'}>${ico('wand')}<span>${rn} à classer · Affiner</span></button>`:'';
+ const modeSeg=`<div class="seg tvmodes"><button class="sm${mode==='map'?' on':''}" data-act="tvmode" data-m="map">Diagramme</button><button class="sm${mode==='list'?' on':''}" data-act="tvmode" data-m="list">Liste</button></div>`;
+ return `<div class="head tvhead"><div><h1>Arbre</h1></div></div>
+ <div class="tvbar">${tabs}<span class="sp"></span>${refine}${modeSeg}</div>
+ ${mode==='map'?`<div class="tvwrap"><div class="tvmap"><div class="tvzoom" role="group" aria-label="Zoom du diagramme"><button data-act="tvz" data-v="out" title="Dézoomer" aria-label="Dézoomer">−</button><b>100 %</b><button data-act="tvz" data-v="in" title="Zoomer" aria-label="Zoomer">+</button><button data-act="tvz" data-v="fit" title="Tout voir" aria-label="Tout voir">⤢</button></div>${treeSvg()}<p class="tvleg"><span>(3)</span> = tâches en cours · cercle pointillé = arbre replié · molette ou pincement pour zoomer, glisser pour déplacer</p></div>${tvPanel()}</div>`:`<div class="tvlist">${tvList()}</div>`}`;
 }
 function tvList(){
  const ps=treeFocus?[pillarOf(treeFocus)]:pillars();
@@ -154,3 +154,24 @@ function pickTaskCat(id,reopen){
  const t=T(id);if(!t)return;const g=ruleFor(t.title);
  openPicker({title:'Catégorie de « '+t.title+' »',current:t.channel,suggest:[g,t.aiSug&&t.aiSug.channel].filter(Boolean),noneLabel:'Sans catégorie',onPick:to=>{t.channel=to;t.aiCat=false;t.aiSug=null;if(t.block)pushBlock(t);save();if(reopen)openTask(id);else render()}});
 }
+
+// le diagramme occupe toute la place : cadrage serré sur son contenu, puis zoom et déplacement
+let tvZ={k:1,cx:null,cy:null},tvFit=null;
+function tvApply(){const sv=document.querySelector('#main .tvsvg');if(!sv||!tvFit)return;const F=tvFit,k=tvZ.k,w=F.w/k,h=F.h/k,cx=tvZ.cx??F.x+F.w/2,cy=tvZ.cy??F.y+F.h/2;sv.setAttribute('viewBox',`${cx-w/2} ${cy-h/2} ${w} ${h}`);const z=document.querySelector('#main .tvzoom b');if(z)z.textContent=Math.round(k*100)+' %'}
+function fitTree(){const sv=document.querySelector('#main .tvsvg');if(!sv)return;try{sv.setAttribute('viewBox','-580 -400 1160 800');const b=sv.getBBox(),p=18;tvFit={x:b.x-p,y:b.y-p,w:b.width+2*p,h:b.height+2*p};tvApply()}catch(e){}}
+function tvZoomBy(f,px,py){if(!tvFit)return;const sv=document.querySelector('#main .tvsvg');const k0=tvZ.k,k=Math.max(1,Math.min(6,k0*f));if(k===k0)return;
+ const vb=sv.viewBox.baseVal,cx0=vb.x+vb.width/2,cy0=vb.y+vb.height/2;let ax=cx0,ay=cy0;
+ if(px!=null){const r=sv.getBoundingClientRect(),m=sv.getScreenCTM().inverse(),pt=new DOMPoint(px,py).matrixTransform(m);ax=pt.x;ay=pt.y}
+ tvZ.k=k;tvZ.cx=ax+(cx0-ax)*k0/k;tvZ.cy=ay+(cy0-ay)*k0/k;if(k===1){tvZ.cx=tvZ.cy=null}tvApply()}
+(function(){let pan=null,moved=false;const pts=new Map();let pinch=null;
+ document.addEventListener('wheel',e=>{const m=e.target.closest('#main .tvmap');if(!m)return;e.preventDefault();tvZoomBy(e.deltaY<0?1.15:1/1.15,e.clientX,e.clientY)},{passive:false});
+ document.addEventListener('pointerdown',e=>{const m=e.target.closest('#main .tvmap');if(!m||e.target.closest('button,.tvp'))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pts.size===2){const [a,b]=[...pts.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),k:tvZ.k};pan=null;return}
+  const sv=m.querySelector('.tvsvg');if(!sv)return;const vb=sv.viewBox.baseVal;pan={x:e.clientX,y:e.clientY,vx:vb.x+vb.width/2,vy:vb.y+vb.height/2,s:vb.width/sv.getBoundingClientRect().width};moved=false});
+ document.addEventListener('pointermove',e=>{if(pts.has(e.pointerId))pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&pts.size===2){const [a,b]=[...pts.values()],d=Math.hypot(a.x-b.x,a.y-b.y);const f=(pinch.k*d/pinch.d)/tvZ.k;tvZoomBy(f,(a.x+b.x)/2,(a.y+b.y)/2);moved=true;return}
+  if(!pan||tvZ.k<=1)return;const dx=e.clientX-pan.x,dy=e.clientY-pan.y;if(!moved&&Math.hypot(dx,dy)<5)return;moved=true;document.querySelector('#main .tvmap')?.classList.add('panning');tvZ.cx=pan.vx-dx*pan.s;tvZ.cy=pan.vy-dy*pan.s;tvApply()});
+ const end=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null;if(pan){pan=null;document.querySelector('#main .tvmap')?.classList.remove('panning')}};
+ document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);
+ document.addEventListener('click',e=>{if(moved&&e.target.closest('#main .tvmap')){moved=false;e.stopPropagation();e.preventDefault()}},true);
+})();
