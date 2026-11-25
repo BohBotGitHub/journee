@@ -10,7 +10,7 @@
   ['Glisser au doigt','Sur téléphone : poignée ⋮⋮ à gauche de chaque tuile.','today'],
   ['Cuisine et Alimentation','Les deux catégories restent séparées, plus de proposition de fusion.','tree'],
   ['Page À propos','Lien en bas des Réglages ; cette page seule est trouvable sur Google.','settings']];
- const K='journee.demo40.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+ const K='journee.demo52.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const box=document.createElement('div');box.id='demopanel';document.body.appendChild(box);
  const css=document.createElement('style');css.textContent=`body:has(#mselbar:not(.hidden)) #demopanel{bottom:190px}#demopanel{position:fixed;right:12px;bottom:12px;z-index:90;width:min(360px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:2px solid #c2410c;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);font-size:14px}
@@ -53,6 +53,6 @@
   if(d==='tog'){min=!min;draw()}
   if(d==='show')show(b.dataset.k);
   if(d==='ok'||d==='ko'){const i=b.dataset.i;st[i]=st[i]===d?undefined:d;save();draw()}
-  if(d==='reset'){['journee.v1','journee.demo','journee.demo40.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
+  if(d==='reset'){['journee.v1','journee.demo','journee.demo52.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
  draw();
 })();
