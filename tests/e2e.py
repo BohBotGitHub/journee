@@ -1238,6 +1238,20 @@ def _(c):
     assert pg.locator('#modal:not(.hidden)').count() == 1
     assert not errs, errs; ctx.close()
 
+@test('v1.7 : déposer dans un interstice range quand même (seule ou à plusieurs), accent Or par défaut')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    assert pg.evaluate("document.documentElement.dataset.accent") == 'or'
+    pg.evaluate("()=>{S.tasks.filter(t=>t.day===today()).forEach(t=>t.day=null);for(let i=1;i<=5;i++)S.tasks.push(mk({id:'g'+i,title:'G'+i,day:today(),est:10,order:i}));save();render()}"); tick(pg, 150)
+    order = lambda: pg.evaluate("[...document.querySelectorAll('#main .list > .card[data-id]')].map(c=>c.dataset.id)")
+    gap = """([src,a])=>{const s=document.querySelector('#main .card[data-id="'+src+'"]'),c=document.querySelector('#main .card[data-id="'+a+'"]'),z=c.closest('[data-drop]'),r=c.getBoundingClientRect(),y=r.bottom+3,x=r.left+40;const dt=new DataTransfer();s.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:dt}));z.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt,clientX:x,clientY:y}));z.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt,clientX:x,clientY:y}));s.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer:dt}))}"""
+    pg.evaluate(gap, ['g1', 'g3']); tick(pg, 200)
+    o = order(); assert o.index('g1') == o.index('g3') + 1, o
+    pg.click('#main .card[data-id="g4"] .ctitle', modifiers=['Control']); pg.click('#main .card[data-id="g5"] .ctitle', modifiers=['Control'])
+    pg.evaluate(gap, ['g4', 'g2']); tick(pg, 200)
+    o = order(); i = o.index('g2'); assert o[i + 1:i + 3] == ['g4', 'g5'], o
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

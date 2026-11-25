@@ -266,7 +266,7 @@ document.addEventListener('dragover',e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
  document.querySelectorAll('.over').forEach(x=>{if(x!==z)x.classList.remove('over')});z.classList.add('over');
  // place d'arrivée : un trait de couleur entre les tuiles
- {const card=e.target.closest('.list .card'),cur=document.querySelector('.dropbefore,.dropafter,.dropsub');const sub=card&&drag.startsWith('task|')&&!(msel.size>1&&msel.has(drag.split('|')[1]));if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),cls=sub&&e.clientX>r.left+r.width*.55?'dropsub':e.clientY<r.top+r.height/2?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter','dropsub');card.classList.add(cls)}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter','dropsub')}
+ {const card=e.target.closest('.list .card'),cur=document.querySelector('.dropbefore,.dropafter,.dropsub');const sub=card&&drag.startsWith('task|')&&!(msel.size>1&&msel.has(drag.split('|')[1]));if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),cls=sub&&e.clientX>r.left+r.width*.55?'dropsub':e.clientY<r.top+r.height/2?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter','dropsub');card.classList.add(cls)}else if(!card&&(z.dataset.drop||'').startsWith('day:')){const n=nearCard(z,e.clientY);if(n){if(cur&&(cur!==n.c||!cur.classList.contains(n.cls)))cur.classList.remove('dropbefore','dropafter','dropsub');n.c.classList.add(n.cls)}}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter','dropsub')}
  document.querySelectorAll('.ghostblk').forEach(x=>{if(!z.contains(x))x.classList.add('hidden')});const g=z.querySelector('.ghostblk');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
 });
 document.addEventListener('drop',async e=>{
@@ -283,7 +283,7 @@ document.addEventListener('drop',async e=>{
  if(z.dataset.pz){const to=z.dataset.pz;moveTask(t.id,to);toast(to==='backlog'?'Au backlog':'Repoussée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
  if(dz==='backlog'){if(t.day!==null){moveTask(t.id,'backlog');toast('Renvoyée au backlog')}else render();return}
  if(dz.startsWith('day:')){
-  const day=dz.slice(4),hit=e.target.closest('.card'),after=hit&&hit.classList.contains('dropafter'),before=hit;document.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));
+  const day=dz.slice(4),hit=e.target.closest('.card')||z.querySelector('.card.dropbefore,.card.dropafter')||((z.dataset.drop||'').startsWith('day:')&&(nearCard(z,e.clientY)||{}).c)||null,after=hit&&(hit.classList.contains('dropafter')||(!e.target.closest('.card')&&!hit.classList.contains('dropbefore')&&nearCard(z,e.clientY)&&nearCard(z,e.clientY).cls==='dropafter')),before=hit;document.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));
   if(t.day!==day)moveTask(t.id,day,true);
   if(src[0]==='blk'&&t.block){if(flowOn()){t.pinned=false;toast('Créneau libéré : la tâche suit l’ordre de la liste')}else{clearBlock(t,true);toast('Retiré de l’agenda')}}
   if(before&&before.dataset.id!==t.id){const b=T(before.dataset.id);if(b&&b.day===day){t.order=b.order+(after?.5:-.5);renorm(day)}}
@@ -292,6 +292,8 @@ document.addEventListener('drop',async e=>{
  }
 });
 
+// carte la plus proche du pointeur dans une liste (dépôt dans un interstice ou sous la dernière)
+function nearCard(z,y){const cs=[...z.querySelectorAll('.card[data-id]')].filter(c=>!c.classList.contains('dragging')&&c.offsetParent&&!c.closest('.donegrp'));if(!cs.length)return null;for(const c of cs){const r=c.getBoundingClientRect();if(y<r.top+r.height/2)return{c,cls:'dropbefore'}}return{c:cs[cs.length-1],cls:'dropafter'}}
 // glisser plusieurs tâches sélectionnées d'un coup
 async function dropGroup(grp,z,dz,e){
  const n=grp.length,ts=grp.map(T);
@@ -299,7 +301,7 @@ async function dropGroup(grp,z,dz,e){
   ts.forEach(t=>{t.pinned=true;if(t.day!==dd){moveTask(t.id,dd,true);t.order=nextOrder(dd)}setBlock(t,new Date(at),true);at+=((t.est||30)*60000)});syncOrder(dd);save();render();toast(n+' tâches placées à la suite');return}
  const to=z.dataset.pz||(dz==='backlog'?'backlog':dz.startsWith('day:')?dz.slice(4):null);if(!to)return;
  if(z.dataset.pz||dz==='backlog'){ts.forEach(t=>{if(to==='backlog')t.roll=0;moveTask(t.id,to,true)});save();render();toast(to==='backlog'?n+' tâches au backlog':n+' tâches repoussées au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
- const day=to,hit=e.target.closest('.card'),after=hit&&hit.classList.contains('dropafter');document.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));
+ const day=to,nc=nearCard(z,e.clientY),hit=e.target.closest('.card')||z.querySelector('.card.dropbefore,.card.dropafter')||(nc&&nc.c)||null,after=hit&&(hit.classList.contains('dropafter')||(!hit.classList.contains('dropbefore')&&nc&&nc.c===hit&&nc.cls==='dropafter'));document.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));
  ts.forEach(t=>{if(t.day!==day)moveTask(t.id,day,true)});
  const b=hit&&!grp.includes(hit.dataset.id)&&T(hit.dataset.id);
  if(b&&b.day===day){const base=b.order+(after?.5:-.5);ts.forEach((t,i)=>t.order=base+(i-n/2)*0.001);renorm(day)}
