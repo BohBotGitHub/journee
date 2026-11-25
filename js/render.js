@@ -9,7 +9,7 @@ function render(){applyLook();
  m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='projects'?viewProjects():view==='settings'?viewSettings():view==='tree'?viewTree():viewToday();
  m.scrollTop=st;
  {const sv=m.querySelector('.tvsvg');if(sv){try{const bb=sv.getBBox(),p=14;sv.setAttribute('viewBox',`${bb.x-p} ${bb.y-p} ${bb.width+2*p} ${bb.height+2*p}`)}catch(e){}}}
- renderSide();renderRun();renderSyncBar();iconize($('#main'));if(typeof kbShow==='function'&&kbSel)kbShow();if(typeof renderMsel==='function'&&msel.size)renderMsel();if(view==='tree'&&typeof fitTree==='function')fitTree();
+ renderSide();renderRun();renderSyncBar();iconize($('#main'));if(typeof kbShow==='function'&&kbSel)kbShow();if(typeof renderMsel==='function'&&msel.size)renderMsel();if(view==='tree'&&typeof fitTree==='function')fitTree();if(view==='backlog'&&blFilter)blApply();
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
  if(layout==='cal'&&(view==='today'||view==='week')){const bd=bigDays();ensureRange(bd[0],bd[bd.length-1])}else if(view==='week'){const w=monday(cur);ensureRange(w,addDays(w,6))}else{ensureRange(cur,addDays(cur,6))}
  {const bc=document.querySelector('.bigcal');if(bc){if(!scrolledBig||bst===null){scrolledBig=true;const n=new Date();bc.scrollTop=Math.max(0,(Math.max(S.settings.dayStart,n.getHours()-1)-S.settings.dayStart)*PX)}else bc.scrollTop=bst}}

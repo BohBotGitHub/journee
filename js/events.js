@@ -8,6 +8,8 @@ document.addEventListener('click',async e=>{
  const sd=e.target.closest('[data-side]');if(sd){sideTab=sd.dataset.side;renderSide();return}
  if(e.target.id==='modal'){if(!ritual&&downOnBackdrop)closeModal();return}
  // multi-sélection : ⌘/Ctrl-clic ajoute ou retire une tâche, Maj-clic prend toute la plage
+ if(lpFired){lpFired=false;e.preventDefault();e.stopPropagation();return}
+ {const tc=msel.size&&lpMode&&e.target.closest('#main .card[data-id]');if(tc&&!e.target.closest('.chk,input,textarea,select')){e.preventDefault();mselClick(tc.dataset.id,false);if(!msel.size)lpMode=false;return}}
  {const mc=(e.metaKey||e.ctrlKey||e.shiftKey)&&e.target.closest('#main .card[data-id]');if(mc&&!e.target.closest('input,textarea,select')){e.preventDefault();mselClick(mc.dataset.id,e.shiftKey);return}}
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,id=b.dataset.id;
@@ -299,7 +301,7 @@ async function dropGroup(grp,z,dz,e){
  if(!flowOn())reflow(day);save();render();toast(n+' tâches déplacées · ⌘/Ctrl Z pour annuler');
 }
 /* ---------- interactions fluides liste ↔ agenda ---------- */
-const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['J','Projets & Routines'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['J','Projets & Routines'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Maj ↑ ↓','Étendre la sélection'],['⌘/Ctrl A','Sélectionner toute la liste'],['Alt ↑ ↓','Monter ou descendre la tâche choisie'],['Suppr','Supprimer la sélection'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
 let tipI=0;
 function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
@@ -389,6 +391,16 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('click',e=>{const it=e.target.closest('[data-pal]');if(it&&pal){runPal(pal.items[+it.dataset.pal]);return}if(pal&&e.target.id==='pal')closePal()});
 
 /* ---------- clavier ---------- */
+// sélection et rangement au clavier : Maj+↑↓ étend la sélection, ⌘/Ctrl+A tout sélectionner, Alt+↑↓ déplace la tâche, Suppr efface la sélection
+document.addEventListener('keydown',e=>{
+ if(e.target.matches('input,textarea,select,[contenteditable]')||!$('#modal').classList.contains('hidden')||focusOn)return;
+ if(!['today','week','backlog','projects'].includes(view))return;
+ const cs=kbCards(),ids=cs.map(c=>c.dataset.id);if(!ids.length)return;
+ if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();ids.forEach(id=>{const t=T(id);if(t&&!t.done)msel.add(id)});renderMsel();return}
+ if(e.shiftKey&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();const i=ids.indexOf(kbSel),j=i<0?0:Math.max(0,Math.min(ids.length-1,i+(e.key==='ArrowDown'?1:-1)));if(i>=0)msel.add(ids[i]);msel.add(ids[j]);kbSel=ids[j];mselAnchor=mselAnchor||ids[i<0?j:i];renderMsel();kbShow();return}
+ if(e.altKey&&(e.key==='ArrowDown'||e.key==='ArrowUp')&&kbSel){e.preventDefault();const t=T(kbSel);if(!t)return;const sib=ids.map(T).filter(x=>x&&x.day===t.day&&!x.done),i=sib.indexOf(t),j=i+(e.key==='ArrowDown'?1:-1);if(i<0||j<0||j>=sib.length)return;const pre=undoSnap();const o=sib[j].order;sib[j].order=t.order;t.order=o;if(t.day){renorm(t.day);if(!flowOn())reflow(t.day)}undoCommit(pre,'kbmove');save();render();return}
+ if((e.key==='Delete'||e.key==='Backspace')&&msel.size&&!e.metaKey){e.preventDefault();const pre=undoSnap();mselAct('del');undoCommit(pre,'mselact');return}
+});
 document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){if(!$('#modal').classList.contains('hidden'))closeModal();else if(focusOn){focusMin=focusOn;focusOn=null;renderFocus();render()}else document.body.classList.remove('side-open');return}
@@ -437,13 +449,14 @@ const UNDO_ACTS=new Set(['mselact','rmsheet','toggle','ritdone','rm','mv','sheet
 let undoStack=[];
 const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[]});
 function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}
-const UNDO_LBL={toggle:'coche',ritdone:'coche',rm:'suppression',rolldrop:'suppression',mv:'déplacement',sheetmv:'déplacement',drop:'déplacement',rolltomorrow:'report',tobacklog:'backlog',setprio:'priorité',setwhere:'lieu',dur:'durée',setjob:'type de journée',focusdone:'tâche terminée',rollover:'report'};
+const UNDO_LBL={kbmove:'déplacement',adjob:'journée entière',mselact:'sélection',toggle:'coche',ritdone:'coche',rm:'suppression',rolldrop:'suppression',mv:'déplacement',sheetmv:'déplacement',drop:'déplacement',rolltomorrow:'report',tobacklog:'backlog',setprio:'priorité',setwhere:'lieu',dur:'durée',setjob:'type de journée',focusdone:'tâche terminée',rollover:'report'};
 function undoPop(){const u=undoStack.pop();if(!u){toast('Rien à annuler');return}const o=JSON.parse(u.s);S.tasks=o.tasks;S.days=o.days;S.projects=o.projects;save();render();if(ritual)renderRitual();toast('Annulé ('+(UNDO_LBL[u.a]||'dernière action')+')')}
 // ---------- clavier sur la liste : ↑↓ pour choisir, X ou Espace pour cocher, Entrée pour ouvrir, F pour le focus ----------
 let kbSel=null;
 function kbCards(){return [...document.querySelectorAll('#main .list > .card[data-id], #main .donegrp[open] .card[data-id]')]}
 function kbShow(){document.querySelectorAll('#main .card.kbsel').forEach(c=>c.classList.remove('kbsel'));if(!kbSel)return;const c=document.querySelector(`#main .card[data-id="${kbSel}"]`);if(c){c.classList.add('kbsel');c.scrollIntoView({block:'nearest'})}else kbSel=null}
 function kbList(e){if(!['today','week','backlog','projects'].includes(view))return false;const cs=kbCards();if(!cs.length)return false;const ids=cs.map(c=>c.dataset.id),i=ids.indexOf(kbSel);
+ if((e.key==='ArrowDown'||e.key==='ArrowUp')&&e.shiftKey)return true;
  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const s=e.key==='ArrowDown'?1:-1;kbSel=ids[i<0?(s>0?0:ids.length-1):Math.max(0,Math.min(ids.length-1,i+s))];kbShow();return true}
  if(!kbSel||i<0)return false;
  if(e.key==='x'||e.key==='X'||(e.code==='Space'&&!focusMin&&!S.running)){e.preventDefault();const b=cs[i].querySelector('.chk');if(b)b.click();setTimeout(()=>{const n=kbCards().map(c=>c.dataset.id);if(!n.includes(kbSel))kbSel=n[Math.min(i,n.length-1)]||null;kbShow()},30);return true}
@@ -451,6 +464,7 @@ function kbList(e){if(!['today','week','backlog','projects'].includes(view))retu
  if(e.key==='Escape'){kbSel=null;kbShow();return true}
  return false}
 document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('[data-donegrp]'))uiDoneOpen=e.target.open},true);
+document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('[data-blf]')){blFilter=e.target.value;blApply()}});
 // aperçu de ce que la saisie rapide a compris, sous le champ d'ajout
 document.addEventListener('input',e=>{const i=e.target;if(!i.matches||!i.matches('form[data-form="add"] input'))return;const f=i.form;let p=f.querySelector('.qprev');if(!p){p=document.createElement('div');p.className='qprev';f.appendChild(p)}p.innerHTML=quickPreview(i.value)});
 
@@ -466,7 +480,14 @@ function paneTog(which){if(innerWidth<=760){if(which==='side')document.body.clas
 let downOnBackdrop=false;document.addEventListener('mousedown',e=>{downOnBackdrop=e.target.id==='modal'},true);
 
 // ---------- multi-sélection : agir sur plusieurs tâches d'un coup ----------
-let msel=new Set(),mselAnchor=null;
+let msel=new Set(),mselAnchor=null,lpMode=false,lpFired=false;
+// téléphone : appui long sur une tâche = sélection ; ensuite un simple toucher ajoute ou retire
+(function(){let tm=null,st=null;
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;const c=e.target.closest('#main .card[data-id]');if(!c||e.target.closest('.chk,button,input,textarea,select'))return;st={x:e.clientX,y:e.clientY};clearTimeout(tm);tm=setTimeout(()=>{tm=null;lpMode=true;lpFired=true;setTimeout(()=>{lpFired=false},900);msel.add(c.dataset.id);mselAnchor=c.dataset.id;renderMsel();try{navigator.vibrate&&navigator.vibrate(15)}catch(err){}},480)},{passive:true});
+ document.addEventListener('pointermove',e=>{if(tm&&st&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>8){clearTimeout(tm);tm=null}},{passive:true});
+ ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(tm);tm=null},{passive:true}));
+ document.addEventListener('contextmenu',e=>{if(lpFired&&e.target.closest('#main .card[data-id]')){e.preventDefault();e.stopPropagation()}},true);
+})();
 function mselClick(id,range){
  const ids=[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id);
  if(range&&mselAnchor&&ids.includes(mselAnchor)){const a=ids.indexOf(mselAnchor),b=ids.indexOf(id);ids.slice(Math.min(a,b),Math.max(a,b)+1).forEach(x=>msel.add(x))}
@@ -480,7 +501,7 @@ function renderMsel(){
  if(!msel.size){bar.className='hidden';bar.innerHTML='';return}
  const B=(v,i,l)=>`<button data-act="mselact" data-v="${v}" title="${l}" aria-label="${l}">${ico(i)}<span>${l}</span></button>`;
  bar.className='';
- bar.innerHTML=`<b>${msel.size} sélectionnée${msel.size>1?'s':''}</b>${B('done','check','Cocher')}${B('today','sunrise','Aujourd’hui')}${B('tomorrow','next','Demain')}${B('backlog','tray','Backlog')}${B('top','addtop','En haut')}${B('bottom','addbottom','En bas')}<span class="mselprio">${PRIOS.map(([v,l])=>`<button data-act="mselact" data-v="p:${v}" title="Priorité ${l.toLowerCase()}" aria-label="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>${B('del','trash','Supprimer')}<button class="mselx" data-act="mselact" data-v="clear" title="Tout désélectionner (Échap)" aria-label="Tout désélectionner">×</button>`}
+ const tot=[...msel].map(T).filter(Boolean).reduce((x,t)=>x+(t.done?0:(t.est||0)),0);bar.innerHTML=`<b>${msel.size} sélectionnée${msel.size>1?'s':''}${tot?` <small>· ${fmtMin(tot)}</small>`:''}</b>${B('done','check','Cocher')}${B('today','sunrise','Aujourd’hui')}${B('tomorrow','next','Demain')}${B('backlog','tray','Backlog')}${B('top','addtop','En haut')}${B('bottom','addbottom','En bas')}<span class="mselprio">${PRIOS.map(([v,l])=>`<button data-act="mselact" data-v="p:${v}" title="Priorité ${l.toLowerCase()}" aria-label="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>${B('del','trash','Supprimer')}<button class="mselx" data-act="mselact" data-v="clear" title="Tout désélectionner (Échap)" aria-label="Tout désélectionner">×</button>`}
 function mselOrdered(ids){const pos=[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id);return ids.filter(id=>T(id)).sort((a,b)=>{const x=pos.indexOf(a),y=pos.indexOf(b);return (x<0?1e9:x)-(y<0?1e9:y)||(T(a).order||0)-(T(b).order||0)})}
 function mselMove(ids,top){
  const days=new Set(ids.map(id=>T(id).day));
@@ -490,7 +511,7 @@ function mselMove(ids,top){
   if(day!=null){renorm(day);if(!flowOn()&&reflow(day)){}}});
 }
 function mselAct(v){
- const ids=[...msel].filter(id=>T(id));if(v==='clear'||!ids.length){msel.clear();renderMsel();return}
+ const ids=[...msel].filter(id=>T(id));if(v==='clear'||!ids.length){msel.clear();lpMode=false;renderMsel();return}
  const n=ids.length;let msg='';
  if(v==='done'){ids.forEach(id=>{const t=T(id);if(!t.done){t.done=true;t.doneAt=Date.now()}});msg=n+' cochée'+(n>1?'s':'')}
  else if(v==='today'){ids.forEach(id=>moveTask(id,today(),true));msg='Pour aujourd’hui'}

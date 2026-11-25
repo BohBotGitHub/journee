@@ -1132,6 +1132,44 @@ def _(c):
         pg.click('.tvzoom [data-v="fit"]'); assert pg.get_attribute('.tvsvg', 'viewBox') == vb0
     assert not errs, errs; ctx.close()
 
+@test('v1.7 : sélection au clavier, Alt+flèches, Suppr, appui long, filtre du backlog, total de la sélection')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    pg.evaluate("()=>{for(let i=1;i<=4;i++)S.tasks.push(mk({id:'k'+i,title:'Clavier '+i,day:today(),est:15,order:i}));for(let i=1;i<=8;i++)S.tasks.push(mk({id:'f'+i,title:(i===3?'Garage ':'Truc ')+i,day:null,order:i}));save();render()}"); tick(pg, 150)
+    order = lambda: pg.evaluate("[...document.querySelectorAll('#main .list > .card[data-id]')].map(c=>c.dataset.id)")
+    pg.evaluate("()=>{kbSel='k1';kbShow()}")
+    pg.keyboard.press('Shift+ArrowDown'); pg.keyboard.press('Shift+ArrowDown'); tick(pg, 100)
+    assert 'k1' in st(pg, "[...msel]") and st(pg, "msel.size") == 3, st(pg, "[...msel]")
+    assert '3 sélectionnées ·' in pg.inner_text('#mselbar'), pg.inner_text('#mselbar')
+    pg.keyboard.press('Escape'); tick(pg, 50)
+    pg.evaluate("()=>{const k=T('k1');k.order=-5;renorm(today());render();kbSel='k1';kbShow()}"); tick(pg, 100); assert order().index('k1') == 0, order()
+    pg.keyboard.press('Alt+ArrowDown'); tick(pg, 150)
+    o0 = None
+    o = order(); assert o.index('k1') == 1, o
+    pg.keyboard.press('Control+z'); tick(pg, 150)
+    o = order(); assert o.index('k1') == 0, o
+    pg.keyboard.press('Control+a'); tick(pg, 100)
+    assert st(pg, "msel.size") >= 4
+    pg.keyboard.press('Escape'); tick(pg, 50)
+    pg.click('#main .card[data-id="k4"] .ctitle', modifiers=['Control']); pg.keyboard.press('Delete'); tick(pg, 150)
+    assert st(pg, "T('k4')") is None
+    pg.keyboard.press('Control+z'); tick(pg, 150)
+    assert st(pg, "T('k4').title") == 'Clavier 4'
+    # appui long (toucher)
+    pg.evaluate("()=>{const c=document.querySelector('#main .card[data-id=\"k2\"] .ctitle'),r=c.getBoundingClientRect();c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerType:'touch',clientX:r.left+5,clientY:r.top+5}))}")
+    tick(pg, 650)
+    pg.evaluate("()=>document.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerType:'touch'}))")
+    assert st(pg, "[...msel]") == ['k2'] and st(pg, "lpMode")
+    pg.wait_for_timeout(950); pg.click('#main .card[data-id="k3"] .ctitle'); tick(pg, 100)
+    assert set(st(pg, "[...msel]")) == {'k2', 'k3'} and pg.locator('#modal:not(.hidden)').count() == 0
+    pg.click('#mselbar .mselx'); tick(pg, 100); assert not st(pg, "lpMode")
+    # filtre du backlog
+    pg.evaluate("()=>go('backlog')"); tick(pg, 150)
+    pg.fill('[data-blf]', 'garage'); tick(pg, 100)
+    vis = pg.evaluate("[...document.querySelectorAll('#main .card[data-id^=\"f\"]')].filter(c=>c.offsetParent).map(c=>c.dataset.id)")
+    assert vis == ['f3'], vis
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

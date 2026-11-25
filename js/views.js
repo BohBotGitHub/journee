@@ -204,6 +204,8 @@ function tplHtml(){
 }
 
 /* ---------- vue Backlog ---------- */
+let blFilter='';
+function blApply(){const q=blFilter.trim().toLowerCase();document.querySelectorAll('#main .card[data-id]').forEach(c=>{const t=T(c.dataset.id);c.style.display=!q||(t&&(t.title+' '+(t.notes||'')).toLowerCase().includes(q))?'':'none'});document.querySelectorAll('#main .group').forEach(g=>{g.style.display=[...g.querySelectorAll('.card[data-id]')].some(c=>c.style.display!=='none')?'':'none'})}
 function viewBacklog(){
  const ts=S.tasks.filter(t=>!t.day&&!t.done).sort((a,b)=>a.order-b.order);
  const gkey=t=>{const p=pathOf(t.channel);return p.length?(p[1]||p[0]).id:null};const groups=hasTree()?[...S.channels.filter(c=>c.lvl===1).sort((a,b)=>(pillarOf(a.id).o-pillarOf(b.id).o)||(a.o-b.o)).map(c=>({c,items:ts.filter(t=>gkey(t)===c.id)})),...pillars().map(c=>({c,items:ts.filter(t=>gkey(t)===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length):[...S.channels.map(c=>({c,items:ts.filter(t=>t.channel===c.id)})),{c:null,items:ts.filter(t=>!ch(t.channel))}].filter(g=>g.items.length);
@@ -213,7 +215,7 @@ function viewBacklog(){
  const sortbar=`<div class="blsort" role="radiogroup" aria-label="Trier le backlog"><span>Trier</span>${SORTS.map(([v,l,i])=>`<button role="radio" aria-checked="${so===v}" class="${so===v?'on':''}" data-act="blsort" data-v="${v}">${l}</button>`).join('')}</div>`;
  return `<div class="head"><div><h1>Backlog</h1><div class="sub">${ts.length} tâche${ts.length>1?'s':''} en attente d’un jour</div></div></div>
  ${addForm(null,'Ajouter au backlog… (ex. « Réserver le garage 1h #admin »)')}
- ${ts.length>1?sortbar:''}
+ ${ts.length>1?`<div class="bltools">${ts.length>6?`<label class="blfilter">${ico('search')}<input data-blf placeholder="Filtrer le backlog…" aria-label="Filtrer le backlog" value="${esc(blFilter)}"></label>`:''}${sortbar}</div>`:''}
  <div class="list" data-drop="backlog" style="gap:0">${sorted?`<div class="list" data-drop="backlog">${sorted.map(bk).join('')}</div>`:groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.lvl===1?pillarOf(g.c.id).name+' › '+g.c.name:g.c.name)}</span>`:'Sans catégorie'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
 }
 
