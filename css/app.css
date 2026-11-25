@@ -535,7 +535,7 @@ form.add:focus-within .addhint{display:block}
 #nav button.navrefresh:hover{color:var(--ink);background:var(--panel)}
 #nav button.navrefresh .sl{display:none}
 .overalert{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:#fff4e6;color:#8a3b00;font-size:14px}
-@media (prefers-color-scheme:dark){.overalert{background:#3a2416;color:#ffc59a}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .overalert{background:#3a2416;color:#ffc59a}}:root[data-theme=dark] .overalert{background:#3a2416;color:#ffc59a}
 .pzones{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 12px;position:sticky;top:0;z-index:2;background:var(--panel);padding:4px 0}
 .pzone{border:1.5px dashed var(--line);border-radius:10px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px;transition:background .12s,border-color .12s}
 .pzone b{font-size:14px}.pzone small{font-size:12px;color:var(--mute)}
@@ -945,3 +945,13 @@ body.treemap .tvwrap>.tvp{box-shadow:var(--e3)}
 .uarow{grid-template-columns:auto auto auto auto 1fr}.uarow [data-ua=label]{grid-column:1/-1}.uarow .uadays{grid-column:auto}.uarow input[type=time]{width:132px}.uarow [data-act=uadel]{justify-self:end}
 @media (max-width:1100px){.uarow{grid-template-columns:auto auto auto 1fr}.uarow .uadays{grid-column:1/-1}}
 @media (max-width:520px){.uarow input[type=time]{width:104px;padding-left:8px;padding-right:6px}.uarow{gap:6px}}
+
+/* v1.7 sous-tâches dépliables sur la carte */
+.subtog{display:inline-flex;align-items:center;gap:4px;min-height:0;padding:1px 8px 1px 5px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:12px;font-weight:500;color:var(--mute)}
+.subtog i{font-style:normal;display:inline-block;transition:transform .15s;font-size:10px}.subtog.on i{transform:rotate(90deg)}
+.subtog:hover,.subtog.on{color:var(--ink);border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.csubs{display:flex;flex-direction:column;gap:2px;margin:8px 0 2px;padding-left:2px;border-left:2px solid color-mix(in srgb,var(--acc) 30%,var(--line))}
+.csub{display:flex;align-items:center;gap:8px;padding:3px 8px;font-size:13.5px;border-radius:8px}
+.csub:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.csub .chk{width:17px;height:17px;min-height:17px;font-size:10px}
+.csub.d span{color:var(--mute);text-decoration:line-through}

@@ -1198,6 +1198,28 @@ def _(c):
     pg.click('#toast .tact'); tick(pg, 150); assert st(pg, "S.unavail.length") == 1
     assert not errs, errs; ctx.close()
 
+@test('v1.7 : sous-tâches dépliables, thème clair forcé sur appareil sombre, pas de section Projets dans les réglages')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0), scheme='dark')
+    pg.evaluate("()=>{S.tasks.push(mk({id:'sp',title:'Avec sous-tâches',day:today(),order:-1,subtasks:[{id:'x1',t:'Première',d:false},{id:'x2',t:'Deuxième',d:false}]}));save();render()}"); tick(pg, 150)
+    tg = '#main .card[data-id="sp"] .subtog'
+    assert '0/2 sous-tâches' in pg.inner_text(tg) and pg.locator('#main .card[data-id="sp"] .csub').count() == 0
+    pg.click(tg); tick(pg, 100)
+    assert pg.locator('#main .card[data-id="sp"] .csub').count() == 2 and pg.locator('#modal:not(.hidden)').count() == 0
+    pg.click('#main .card[data-id="sp"] .csub [data-s="x1"]'); tick(pg, 100)
+    assert st(pg, "T('sp').subtasks[0].d") and '1/2' in pg.inner_text(tg)
+    pg.keyboard.press('Control+z'); tick(pg, 100); assert not st(pg, "T('sp').subtasks[0].d")
+    pg.click(tg); tick(pg, 100); assert pg.locator('#main .card[data-id="sp"] .csub').count() == 0
+    # thème clair sur appareil sombre
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    assert 'Projets' not in pg.evaluate("[...document.querySelectorAll('#main section h2')].map(h=>h.textContent).join('|')")
+    pg.select_option('[data-set="mode"]', 'light'); tick(pg, 200)
+    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(243, 243, 242)', bg
+    assert pg.evaluate("document.documentElement.style.colorScheme") == 'light'
+    pg.select_option('[data-set="mode"]', 'auto'); tick(pg, 200)
+    assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(16, 16, 18)'
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

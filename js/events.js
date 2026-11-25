@@ -143,6 +143,7 @@ document.addEventListener('click',async e=>{
   case'uaadd':{const pre=undoSnap();S.unavail=S.unavail||[];S.unavail.push({id:uid(),label:'',days:['1','2','3','4','5'],s:'12:00',e:'13:00'});undoCommit(pre,'ua');save();render();setTimeout(()=>{const i=[...document.querySelectorAll('.uarow [data-ua="label"]')].pop();if(i)i.focus()},50);break}
   case'uaday':{const u=(S.unavail||[]).find(x=>x.id===id);if(u){const v=b.dataset.v;u.days=u.days.includes(v)?u.days.filter(x=>x!==v):[...u.days,v];save();render()}break}
   case'uadel':{const pre=undoSnap();S.unavail=(S.unavail||[]).filter(x=>x.id!==id);undoCommit(pre,'ua');save();render();toast('Créneau supprimé · ⌘/Ctrl Z pour annuler');break}
+  case'subopen':{if(subOpen.has(id))subOpen.delete(id);else subOpen.add(id);lsSet('journee.subopen',JSON.stringify([...subOpen].filter(x=>T(x))));render();break}
   case'tvclose':treeSel=null;render();break;
   case'blsort':lsSet('journee.blsort',b.dataset.v);render();break;
   case'mselact':mselAct(b.dataset.v);break;
