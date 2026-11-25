@@ -1220,6 +1220,24 @@ def _(c):
     assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(16, 16, 18)'
     assert not errs, errs; ctx.close()
 
+@test('v1.7 : croix du menu clic droit, appui long à la souris')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    pg.evaluate("()=>{S.tasks.push(mk({id:'q1',title:'Un',day:today(),order:-2}),mk({id:'q2',title:'Deux',day:today(),order:-1}));save();render()}"); tick(pg, 150)
+    pg.click('#main .card[data-id="q1"] .ctitle', button='right'); tick(pg, 150)
+    assert pg.locator('#modal:not(.hidden) .sheetx').count() == 1
+    pg.click('#modal .sheetx'); tick(pg, 150); assert pg.locator('#modal:not(.hidden)').count() == 0
+    bb = pg.locator('#main .card[data-id="q1"] .ctitle').bounding_box()
+    pg.mouse.move(bb['x'] + 8, bb['y'] + 5); pg.mouse.down(); pg.wait_for_timeout(650); pg.mouse.up(); tick(pg, 150)
+    assert st(pg, "[...msel]") == ['q1'] and pg.locator('#modal:not(.hidden)').count() == 0
+    pg.wait_for_timeout(950); pg.click('#main .card[data-id="q2"] .ctitle'); tick(pg, 100)
+    assert set(st(pg, "[...msel]")) == {'q1', 'q2'}
+    pg.keyboard.press('Escape'); tick(pg, 50)
+    # un simple clic ouvre toujours la tâche
+    pg.click('#main .card[data-id="q2"] .ctitle'); tick(pg, 150)
+    assert pg.locator('#modal:not(.hidden)').count() == 1
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

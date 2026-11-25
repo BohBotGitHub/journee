@@ -488,8 +488,9 @@ let downOnBackdrop=false;document.addEventListener('mousedown',e=>{downOnBackdro
 let msel=new Set(),mselAnchor=null,lpMode=false,lpFired=false;
 // téléphone : appui long sur une tâche = sélection ; ensuite un simple toucher ajoute ou retire
 (function(){let tm=null,st=null;
- document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;const c=e.target.closest('#main .card[data-id]');if(!c||e.target.closest('.chk,button,input,textarea,select'))return;st={x:e.clientX,y:e.clientY};clearTimeout(tm);tm=setTimeout(()=>{tm=null;lpMode=true;lpFired=true;setTimeout(()=>{lpFired=false},900);msel.add(c.dataset.id);mselAnchor=c.dataset.id;renderMsel();try{navigator.vibrate&&navigator.vibrate(15)}catch(err){}},480)},{passive:true});
- document.addEventListener('pointermove',e=>{if(tm&&st&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>8){clearTimeout(tm);tm=null}},{passive:true});
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&(e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey))return;const c=e.target.closest('#main .card[data-id]');if(!c||e.target.closest('.chk,button,input,textarea,select'))return;st={x:e.clientX,y:e.clientY};clearTimeout(tm);tm=setTimeout(()=>{tm=null;lpMode=true;lpFired=true;setTimeout(()=>{lpFired=false},900);msel.add(c.dataset.id);mselAnchor=c.dataset.id;renderMsel();try{navigator.vibrate&&navigator.vibrate(15)}catch(err){}},480)},{passive:true});
+ document.addEventListener('pointermove',e=>{if(tm&&st&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>6){clearTimeout(tm);tm=null}},{passive:true});
+ document.addEventListener('dragstart',()=>{clearTimeout(tm);tm=null},true);
  ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(tm);tm=null},{passive:true}));
  document.addEventListener('contextmenu',e=>{if(lpFired&&e.target.closest('#main .card[data-id]')){e.preventDefault();e.stopPropagation()}},true);
 })();
