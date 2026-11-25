@@ -1,7 +1,8 @@
 // Diem — Microsoft To Do
 /* ---------- Microsoft To Do (OAuth PKCE + Microsoft Graph) ---------- */
 const MS='https://login.microsoftonline.com/common/oauth2/v2.0';
-const MS_SCOPE='openid offline_access User.Read Tasks.ReadWrite';
+const MS_BASE='openid offline_access User.Read Tasks.ReadWrite';
+const msScope=()=>MS_BASE+(lsGet('journee.m.mail')?' Mail.Read':'');
 const msOn=()=>!!lsGet('journee.m');
 const b64url=b=>btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 async function msLogin(){
@@ -9,14 +10,14 @@ async function msLogin(){
  if(!window.crypto||!crypto.subtle){toast('Il faut ouvrir l’appli en https (ou sur localhost) pour se connecter');return}
  const v=b64url(crypto.getRandomValues(new Uint8Array(32)));lsSet('journee.m.v',v);
  const c=b64url(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v))));
- location.href=MS+'/authorize?'+new URLSearchParams({client_id:S.settings.msClientId.trim(),response_type:'code',redirect_uri:REDIRECT,scope:MS_SCOPE,code_challenge:c,code_challenge_method:'S256',state:'m',response_mode:'query',prompt:'select_account'});
+ location.href=MS+'/authorize?'+new URLSearchParams({client_id:S.settings.msClientId.trim(),response_type:'code',redirect_uri:REDIRECT,scope:msScope(),code_challenge:c,code_challenge_method:'S256',state:'m',response_mode:'query',prompt:'select_account'});
 }
 function msLogout(){lsDel('journee.m');todo.lists=null;todo.tasks={};render()}
 async function msToken(body){
  const old=JSON.parse(lsGet('journee.m')||'null');
- const r=await fetch(MS+'/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:S.settings.msClientId.trim(),scope:MS_SCOPE,...body})});
+ const r=await fetch(MS+'/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:S.settings.msClientId.trim(),scope:msScope(),...body})});
  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error_description||j.error||('erreur '+r.status));
- lsSet('journee.m',JSON.stringify({t:j.access_token,r:j.refresh_token||(old&&old.r),exp:Date.now()+(j.expires_in||3600)*1000}));
+ lsSet('journee.m',JSON.stringify({t:j.access_token,r:j.refresh_token||(old&&old.r),exp:Date.now()+(j.expires_in||3600)*1000,scope:j.scope||(old&&old.scope)||''}));
  return j.access_token;
 }
 async function msAccess(){

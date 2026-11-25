@@ -1,5 +1,6 @@
 // Diem — icônes : chaque action se reconnaît d'un coup d'œil, le texte vient en appui
 const IC={
+ mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
  tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
  addtop:'<path d="M5 4h14M12 20V9M7 13l5-5 5 5"/>',

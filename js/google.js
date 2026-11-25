@@ -10,7 +10,7 @@ const gWas=()=>!!lsGet('journee.g.on');
 function gLogin(silent){
  if(!S.settings.googleClientId){toast('Ajoute d’abord ton identifiant client Google dans Réglages');go('settings');return}
  const hint=lsGet('journee.g.email');
- const p=new URLSearchParams({client_id:S.settings.googleClientId.trim(),redirect_uri:REDIRECT,response_type:'token',scope:'email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata',include_granted_scopes:'true',state:(silent?'gs':'g')+'|'+view+'|'+cur,prompt:silent?'none':'consent'});
+ const p=new URLSearchParams({client_id:S.settings.googleClientId.trim(),redirect_uri:REDIRECT,response_type:'token',scope:'email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata'+(lsGet('journee.g.mail')?' https://www.googleapis.com/auth/gmail.readonly':''),include_granted_scopes:'true',state:(silent?'gs':'g')+'|'+view+'|'+cur,prompt:silent?'none':'consent'});
  if(hint)p.set('login_hint',hint);
  if(silent)lsSet('journee.g.last',String(Date.now()));
  location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p;

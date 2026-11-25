@@ -75,6 +75,10 @@ document.addEventListener('click',async e=>{
   case'tvmode':treeMode=b.dataset.m;render();break;
   case'tvaddpil':{const n={id:uid(),name:'Nouveau pilier',color:'#888780',lvl:0,parent:null,o:pillars().length};S.channels.push(n);treeColors();save();treeSel=n.id;render();break}
   case'nodedelask':closeModal();nodeDelAsk(id);break;
+  case'mailsort':mailSort();break;
+  case'mailallow':mailAllow(b.dataset.k);break;
+  case'mailstop':mailStop(b.dataset.k);break;
+  case'dupgo':dupDecide(id,b.dataset.k);break;
   case'nodedelgo':if(nodeDelGo)nodeDelGo();break;
   case'nodemove':{const n=node(id);if(!n)break;closeModal();openPicker({title:'Déplacer « '+n.name+' » vers…',levels:[n.lvl-1],current:n.parent,exclude:new Set([n.parent]),noneLabel:false,onPick:to=>{if(to){nodeMove(id,to);toast('« '+n.name+' » déplacé dans '+node(to).name)}render()}});break}
   case'pkpick':pickChoose(b.dataset.id);break;

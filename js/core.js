@@ -34,7 +34,7 @@ if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null,snap=null;
 /* ---------- horodatage par élément (base de la synchro par fusion) ---------- */
-const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage'];
+const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage','merged'];
 function scalJson(k){return JSON.stringify(S[k]===undefined?null:S[k])}
 function stamp(){
  const now=Date.now(),prev=snap,next={};S.deleted=S.deleted||{};S.su=S.su||{};

@@ -1301,6 +1301,65 @@ def _(c):
     tick(pg, 200); assert st(pg, "T('h2').day") is None, st(pg, "T('h2').day")
     assert not errs, errs; ctx.close()
 
+@test('v1.8 : doublon Cuisine / Alimentation saine proposé, fusion, annulation, « garder les deux »')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    pg.evaluate("()=>{S.tasks.push(mk({id:'k1',title:'Batch cooking',channel:'c-cuisine',day:null}),mk({id:'k2',title:'Légumes',channel:'c-alimentation',day:null}));S.recurring=S.recurring||[];save();go('tree');render()}"); tick(pg, 300)
+    assert pg.locator('#main .dupcard').count() == 1
+    pg.click('#main .dupcard [data-k="a"]'); tick(pg, 200)
+    assert st(pg, "!!node('c-cuisine')") is False and st(pg, "node('c-alimentation').name") == 'Alimentation & cuisine'
+    assert st(pg, "T('k1').channel") == 'c-alimentation' and pg.locator('#main .dupcard').count() == 0
+    assert st(pg, "ruleFor('Faire une recette de gâteau')") == 'c-alimentation'
+    assert st(pg, "findNode('#cuisine').id") == 'c-alimentation'
+    pg.click('#toast .tact'); tick(pg, 200)
+    assert st(pg, "!!node('c-cuisine')") and st(pg, "T('k1').channel") == 'c-cuisine' and st(pg, "node('c-alimentation').name") == 'Alimentation saine'
+    assert pg.locator('#main .dupcard').count() == 1
+    pg.click('#main .dupcard [data-k="both"]'); tick(pg, 200)
+    assert pg.locator('#main .dupcard').count() == 0 and st(pg, "!!node('c-cuisine')")
+    assert not errs, errs; ctx.close()
+
+@test('v1.8 : Trier mes mails (faux Gmail, bouton masqué sans accès, tâches proposées par le Génie)')
+def _(c):
+    seen = {}
+    def gmail(route):
+        u = route.request.url
+        if '/messages?' in u:
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'messages': [{'id': 'm1'}, {'id': 'm2'}]}))
+        mid = u.split('/messages/')[1].split('?')[0]
+        data = {'m1': ('Point Relais <noreply@relais.example>', 'Votre colis vous attend jusqu’au 30/11'), 'm2': ('Alice Exemple <alice@example.com>', 'Tu viens samedi ?')}[mid]
+        route.fulfill(status=200, content_type='application/json', body=json.dumps({'id': mid, 'snippet': 'Texte fictif', 'payload': {'headers': [{'name': 'From', 'value': data[0]}, {'name': 'Subject', 'value': data[1]}, {'name': 'Date', 'value': 'Wed, 25 Nov 2026 08:00:00 +0100'}]}}))
+    def claude(route):
+        seen['body'] = route.request.post_data; return claude_route(route)
+    # sans accès Gmail : pas de bouton
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0), storage=TOKEN + "localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:false}}))")
+    pg.evaluate("()=>{sideTab='ai';renderSide()}"); tick(pg, 100)
+    assert pg.locator('#side [data-act="mailsort"]').count() == 0
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    assert pg.locator('[data-act="mailallow"][data-k="g"]').count() == 1
+    ctx.close()
+    # avec accès Gmail
+    tok = TOKEN.replace("drive.appdata'", "drive.appdata https://www.googleapis.com/auth/gmail.readonly'")
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0), storage=tok + "localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:false}}))")
+    pg.route('https://gmail.googleapis.com/**', gmail); pg.unroute('https://api.anthropic.com/**'); pg.route('https://api.anthropic.com/**', claude)
+    pg.evaluate("()=>{sideTab='ai';renderSide()}"); tick(pg, 100)
+    assert pg.locator('#side [data-act="mailsort"]').count() == 1
+    n0 = st(pg, "S.tasks.length")
+    pg.click('#side [data-act="mailsort"]'); pg.wait_for_timeout(600); tick(pg, 200)
+    assert 'Votre colis vous attend' in seen.get('body', '') and 'Tu viens samedi' in seen['body']
+    assert 'colis' not in json.dumps(st(pg, "S.chat.map(m=>m.text)")).lower(), 'contenu des mails enregistré'
+    pg.click('#side [data-act="aiapply"][data-k="n0"]'); tick(pg, 200)
+    assert st(pg, "S.tasks.length") == n0 + 1 and st(pg, "S.tasks.at(-1).title") == 'Tâche proposée'
+    # tâche automatique au-delà du seuil
+    pg.unroute('https://gmail.googleapis.com/**')
+    pg.route('https://gmail.googleapis.com/**', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps({'id': 'INBOX', 'messagesUnread': 42})))
+    pg.evaluate("()=>{S.settings.mailThresh=30;mailWatch()}"); pg.wait_for_timeout(300); tick(pg, 100)
+    assert st(pg, "S.tasks.filter(t=>t.auto==='mail'&&t.day===today()).length") == 1
+    pg.evaluate("()=>mailWatch()"); pg.wait_for_timeout(300)
+    assert st(pg, "S.tasks.filter(t=>t.auto==='mail').length") == 1, 'tâche en double'
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    assert pg.locator('[data-act="mailstop"][data-k="g"]').count() == 1
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

@@ -87,6 +87,7 @@ function viewTree(){
  const modeSeg=`<div class="seg tvmodes"><button class="sm${mode==='map'?' on':''}" data-act="tvmode" data-m="map">Diagramme</button><button class="sm${mode==='list'?' on':''}" data-act="tvmode" data-m="list">Liste</button></div>`;
  return `<div class="head tvhead"><div><h1>Arbre</h1></div></div>
  <div class="tvbar">${tabs}<span class="sp"></span>${refine}${modeSeg}</div>
+ ${dupBanner()}
  ${mode==='map'?`<div class="tvwrap"><div class="tvmap"><div class="tvzoom" role="group" aria-label="Zoom du diagramme"><button data-act="tvz" data-v="out" title="Dézoomer" aria-label="Dézoomer">−</button><b>100 %</b><button data-act="tvz" data-v="in" title="Zoomer" aria-label="Zoomer">+</button><button data-act="tvz" data-v="fit" title="Tout voir" aria-label="Tout voir">⤢</button></div>${treeSvg()}<p class="tvleg"><span>(3)</span> = tâches en cours · cercle pointillé = arbre replié · molette ou pincement pour zoomer, glisser pour déplacer</p></div>${tvPanel()}</div>`:`<div class="tvlist">${tvList()}</div>`}`;
 }
 function tvList(){

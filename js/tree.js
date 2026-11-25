@@ -39,7 +39,7 @@ function treeColors(){for(const p of pillars()){const ds=kids(p.id);ds.forEach((
 function findNode(q){
  q=norm(String(q||'')).replace(/^#/,'').trim();if(!q)return null;
  const ns=S.channels,key=c=>norm(c.key||''),nm=c=>norm(c.name).replace(/[^a-z0-9]/g,''),qq=q.replace(/[^a-z0-9]/g,'');
- const full=ns.find(c=>norm(c.name)===q||nm(c)===qq)||ns.find(c=>key(c)===qq);if(full)return full;
+ const full=ns.find(c=>norm(c.name)===q||nm(c)===qq)||ns.find(c=>key(c)===qq)||ns.find(c=>(c.aka||[]).some(a=>norm(a)===qq));if(full)return full;
  const byL=l=>ns.filter(c=>(c.lvl===undefined?2:c.lvl)===l);
  for(const l of [2,1,0]){const h=byL(l).find(c=>nm(c).startsWith(qq)||key(c).startsWith(qq)||norm(c.name).split(/[^a-z0-9]+/).some(w=>w.length>2&&w.startsWith(qq)));if(h)return h}
  return null;
@@ -82,7 +82,32 @@ const CAT_RULES=[
  [/budget|bankin|\bcomptes?\b|epargne|abonnement|plum|economie|facture|banque|virement|remboursement/,'c-budget'],
  [/planifi|organis|revue|planning|\btodo|to-do|agenda|sunsama|mydaybot|journee|\bappli|wishlist|claude|github|\bcode\b|\bdev\b|developpement|inbox/,'c-organisation'],
  [/\bsport|footing|courir|course a pied|\brun\b|velo|marche rapide|salle/,'d-corps']];
-const ruleFor=title=>{const t=norm(title||'');for(const [re,id] of CAT_RULES)if(re.test(t))return id;return null};
+const ruleFor=title=>{const t=norm(title||'');for(const [re,id] of CAT_RULES)if(re.test(t))return mergedTo(id);return null};
+// catégories fusionnées : l'ancienne adresse renvoie vers celle qui reste
+function mergedTo(id){const m=(typeof S!=='undefined'&&S.merged)||{};let g=0;while(id&&m[id]&&g++<5)id=m[id];return id}
+/* ---------- doublons connus de l'arbre par défaut : on propose la fusion, rien n'est fait sans accord ---------- */
+const DUPS=[{id:'cuisine',a:'c-alimentation',b:'c-cuisine',na:'Alimentation & cuisine',nb:'Cuisine & alimentation'}];
+function dupCands(){S.fixes=S.fixes||{};return DUPS.filter(d=>!S.fixes['dup-'+d.id]&&node(d.a)&&node(d.b))}
+const nodeUse=id=>S.tasks.filter(t=>t.channel===id).length+(S.archive||[]).filter(a=>a.c===id).length;
+function mergeNodes(from,to,name){
+ const f=node(from),t=node(to);if(!f||!t||from===to)return false;
+ const pre=JSON.stringify({channels:S.channels,tasks:S.tasks,archive:S.archive||[],recurring:S.recurring||[],templates:S.templates||[],merged:S.merged||{},fixes:S.fixes||{}});
+ const mv=x=>x===from?to:x;
+ S.tasks.forEach(x=>{x.channel=mv(x.channel)});(S.archive||[]).forEach(a=>{a.c=mv(a.c)});(S.recurring||[]).forEach(r=>{r.channel=mv(r.channel)});(S.templates||[]).forEach(tp=>(tp.items||[]).forEach(i=>{i.channel=mv(i.channel)}));
+ S.channels.filter(c=>c.parent===from).forEach(c=>{c.parent=to});
+ if(!t.cal&&f.cal)t.cal=f.cal;if(name)t.name=name;t.aka=[...new Set([...(t.aka||[]),f.key,...(f.aka||[])].filter(Boolean))];
+ S.channels=S.channels.filter(c=>c.id!==from);S.merged=Object.assign({},S.merged||{},{[from]:to});
+ treeColors();save();return pre;
+}
+function mergeUndo(pre){const o=JSON.parse(pre);Object.assign(S,o);treeColors();save();render()}
+function dupDecide(id,keep){const d=DUPS.find(x=>x.id===id);if(!d)return;S.fixes=S.fixes||{};
+ if(keep==='both'){S.fixes['dup-'+id]='both';save();render();toast('Les deux catégories sont gardées');return}
+ const [to,from,name]=keep==='a'?[d.a,d.b,d.na]:[d.b,d.a,d.nb];const n=nodeUse(from);
+ const pre=mergeNodes(from,to,name);if(!pre)return;S.fixes['dup-'+id]=keep;save();render();
+ toast(`Fusionnées dans ${nodeLabel(to)}${n?' · '+n+' tâche'+(n>1?'s':'')+' déplacée'+(n>1?'s':''):''}`,'Annuler',()=>mergeUndo(pre))}
+function dupBanner(){const ds=dupCands();if(!ds.length)return '';return ds.map(d=>{const na=nodeUse(d.a),nb=nodeUse(d.b),pa=domainOf(d.a),pb=domainOf(d.b),use=na+nb?`${na} et ${nb} tâche${na+nb>1?'s':''} (historique compris).`:'Aucune tâche dedans pour l’instant.';
+ return `<div class="dupcard" data-dup="${d.id}"><div><b>Doublon : ${esc(nodeLabel(d.a))} et ${esc(nodeLabel(d.b))}</b><span class="mute">${use} Les deux se recoupent : on n’en garde qu’une ?</span></div>
+ <div class="row dupacts"><button class="sm pri" data-act="dupgo" data-id="${d.id}" data-k="a">Tout dans ${esc(pa?pa.name:'')} › ${esc(d.na)}</button><button class="sm" data-act="dupgo" data-id="${d.id}" data-k="b">Tout dans ${esc(pb?pb.name:'')} › ${esc(d.nb)}</button><button class="sm ghost" data-act="dupgo" data-id="${d.id}" data-k="both">Garder les deux</button></div></div>`}).join('')}
 // anciens catégories Sunsama → nœud ; « fourre-tout » = on lit d'abord le titre
 const OLD={'menage':'c-menage','courses':'c-courses','cusine':'c-cuisine','cuisine':'c-cuisine','bricolage':'c-bricolage','la villette':'c-villette','villette':'c-villette','stardust':'c-stardust','formation':'c-formation',
  'administratif':'c-admin','admin':'c-admin','economies':'c-budget','finances':'c-budget','organisation':'c-organisation','evenements':'c-evenements','social':'c-amis','vj bhbt':'c-vj','vj':'c-vj','art':'c-art',

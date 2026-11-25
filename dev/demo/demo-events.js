@@ -22,4 +22,14 @@
  // dans la démo, le cadre de Claude bloque le rechargement : « Actualiser » rafraîchit l'affichage
  document.addEventListener('click',e=>{const b=e.target.closest('.navrefresh');if(!b)return;e.stopImmediatePropagation();e.preventDefault();b.classList.add('spin');setTimeout(()=>{b.classList.remove('spin');render();toast('Démo actualisée (dans l’appli en ligne, la page se recharge)')},600)},true);
  window.addEventListener('load',()=>setTimeout(f,300));
+ // démo « Trier mes mails » : faux mails, faux Génie (rien ne part nulle part)
+ window.addEventListener('load',()=>{
+  if(!S.settings.aiKey){S.settings.aiKey='demo';save()}
+  gmailOk=()=>true;unreadCount=async()=>4;
+  unreadMails=async()=>({errs:[],all:[{src:'Gmail',from:'Point Relais Démo',subject:'Votre colis vous attend jusqu’au '+fmtDay(addDays(today(),4),{day:'numeric',month:'long'}),date:'',snippet:''},{src:'Gmail',from:'Lucie (fictive)',subject:'Tu viens samedi ?',date:'',snippet:''},{src:'Outlook',from:'Fournisseur Démo',subject:'Facture n° 0042 à régler avant le 5',date:'',snippet:''},{src:'Gmail',from:'Newsletter Démo',subject:'Les promos de la semaine',date:'',snippet:''}]});
+  callClaude=async(msgs)=>{const txt=JSON.stringify(msgs);await new Promise(r=>setTimeout(r,700));
+   if(txt.includes('<mails>'))return{text:'4 mails lus, 3 demandent une action (la newsletter est ignorée).',prop:{message:'',new_tasks:[{title:'Retirer le colis au point relais',est:15,day:addDays(today(),1),channel:'Gestion › Courses & démarches',reason:'Point Relais Démo · « Votre colis vous attend »'},{title:'Répondre à Lucie pour samedi',est:5,day:today(),channel:'Liens › Amis',reason:'Lucie · « Tu viens samedi ? »'},{title:'Payer la facture 0042',est:10,day:'backlog',channel:'Gestion › Budget & épargne',reason:'Fournisseur Démo · « Facture à régler avant le 5 »'}]}};
+   return{text:'Démo : le Génie n’est pas branché ici. Essaie « Trier mes mails ».',prop:null}};
+ });
+
 })();
