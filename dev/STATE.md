@@ -23,6 +23,7 @@ Avant :
 Précédent : v1.7 en ligne le 25/11 à 15 h 45.
 
 ## File d'attente (validée par le propriétaire le 25/11 à 20 h 24 — suivre cet ordre)
+**Changement du 25/11 22 h 59 : le propriétaire veut travailler le visuel (section 3. Design) AVANT les Habitudes. Ordre : finir les décisions du 25/11 22 h 55, puis Design, puis Habitudes (après son feu vert). Il donne ses remarques au fur et à mesure : les noter, ne pas les appliquer sans son accord.**
 Source de vérité : section « File d'attente » du plan (doc Claude). Une nouvelle remarque se range à sa place, sans passer devant.
 
 ### 1. Bugs et fonctions gênantes
