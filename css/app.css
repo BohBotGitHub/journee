@@ -1066,3 +1066,10 @@ button.pri:hover{filter:brightness(1.06)}
 /* bas de la barre : Actualiser puis Réglages, toujours en bas, aussi en rail replié */
 #nav .navset,#nav .navrefresh{margin-top:0}
 @media (min-width:761px){body.hidenav #nav .navrefresh{margin-top:auto}}
+/* le bouton liste ⇄ agenda (et celui du volet quand l'agenda est caché) ne recouvre plus rien dans l'en-tête */
+@media (min-width:761px){
+ #main .head:has(.layoutbtn) .acts{margin-right:0!important}
+ #main .head:has(.layoutbtn){padding-right:56px}
+ body.hideside #main .head:has(.layoutbtn){padding-right:104px}
+}
+@media (min-width:761px){body.hideside #main .head{padding-right:52px}}
