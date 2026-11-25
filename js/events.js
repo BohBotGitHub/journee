@@ -430,7 +430,7 @@ document.addEventListener('input',e=>{const i=e.target;if(!i.matches||!i.matches
 // fenêtre d'ajout : garder le titre tapé, Entrée pour ajouter, aperçu en direct
 function adKeep(){const i=document.querySelector('[data-adtitle]');if(ad&&i)ad.title=i.value}
 document.addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('[data-adtitle]')&&e.key==='Enter'){e.preventDefault();adKeep();addSubmit()}},true);
-document.addEventListener('input',e=>{if(!e.target.matches||!e.target.matches('[data-adtitle]'))return;adKeep();const p=e.target.parentElement.querySelector('.qprev');if(p)p.innerHTML=quickPreview(e.target.value)});
+let adT=null;document.addEventListener('input',e=>{if(!e.target.matches||!e.target.matches('[data-adtitle]'))return;adKeep();const p=e.target.parentElement.querySelector('.qprev');if(p)p.innerHTML=quickPreview(e.target.value);clearTimeout(adT);adT=setTimeout(()=>{if(ad&&document.activeElement&&document.activeElement.matches('[data-adtitle]'))renderAdd()},350)});
 // ---------- volets : un bouton en haut à gauche (menu) et un en haut à droite (agenda) ----------
 function paneTog(which){if(which==='side'&&innerWidth<=1100){document.body.classList.toggle('side-open');return}
  const c=which==='nav'?'hidenav':'hideside',on=!document.body.classList.contains(c);document.body.classList.toggle(c,on);lsSet('journee.'+c,on?'1':'');scrolledBig=false;render()}
