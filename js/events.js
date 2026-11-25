@@ -140,6 +140,9 @@ document.addEventListener('click',async e=>{
   case'navtog':paneTog('nav');break;
   case'sidetog':paneTog('side');break;
   case'tvz':{const v=b.dataset.v;if(v==='fit'){tvZ={k:1,cx:null,cy:null};tvApply()}else tvZoomBy(v==='in'?1.3:1/1.3);break}
+  case'uaadd':{const pre=undoSnap();S.unavail=S.unavail||[];S.unavail.push({id:uid(),label:'',days:['1','2','3','4','5'],s:'12:00',e:'13:00'});undoCommit(pre,'ua');save();render();setTimeout(()=>{const i=[...document.querySelectorAll('.uarow [data-ua="label"]')].pop();if(i)i.focus()},50);break}
+  case'uaday':{const u=(S.unavail||[]).find(x=>x.id===id);if(u){const v=b.dataset.v;u.days=u.days.includes(v)?u.days.filter(x=>x!==v):[...u.days,v];save();render()}break}
+  case'uadel':{const pre=undoSnap();S.unavail=(S.unavail||[]).filter(x=>x.id!==id);undoCommit(pre,'ua');save();render();toast('Créneau supprimé · ⌘/Ctrl Z pour annuler');break}
   case'tvclose':treeSel=null;render();break;
   case'blsort':lsSet('journee.blsort',b.dataset.v);render();break;
   case'mselact':mselAct(b.dataset.v);break;
@@ -206,6 +209,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',async e=>{
  const el=e.target,f=el.dataset.f;
+ if(el.hasAttribute('data-ua')){const r=el.closest('[data-uaid]'),u=r&&(S.unavail||[]).find(x=>x.id===r.dataset.uaid);if(u){u[el.dataset.ua]=el.value;save();if(el.dataset.ua!=='label')render()}return}
  if(el.hasAttribute('data-adest')){adKeep();ad.est=+el.value||0;renderAdd();return}
  if(el.hasAttribute('data-adday')){adKeep();ad.day=el.value||null;renderAdd();return}
  if(el.dataset.durset){const t=T(el.dataset.durset);if(t){setEst(t,+el.value||0);if(ritual)renderRitual();render()}return}
@@ -447,10 +451,10 @@ function keepUnder(b){
 // ---------- annuler partout : Ctrl/⌘ Z revient avant la dernière action sur les tâches ----------
 const UNDO_ACTS=new Set(['mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
 let undoStack=[];
-const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[]});
+const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[],unavail:S.unavail||[]});
 function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}
-const UNDO_LBL={kbmove:'déplacement',adjob:'journée entière',mselact:'sélection',toggle:'coche',ritdone:'coche',rm:'suppression',rolldrop:'suppression',mv:'déplacement',sheetmv:'déplacement',drop:'déplacement',rolltomorrow:'report',tobacklog:'backlog',setprio:'priorité',setwhere:'lieu',dur:'durée',setjob:'type de journée',focusdone:'tâche terminée',rollover:'report'};
-function undoPop(){const u=undoStack.pop();if(!u){toast('Rien à annuler');return}const o=JSON.parse(u.s);S.tasks=o.tasks;S.days=o.days;S.projects=o.projects;save();render();if(ritual)renderRitual();toast('Annulé ('+(UNDO_LBL[u.a]||'dernière action')+')')}
+const UNDO_LBL={ua:'indisponibilité',kbmove:'déplacement',adjob:'journée entière',mselact:'sélection',toggle:'coche',ritdone:'coche',rm:'suppression',rolldrop:'suppression',mv:'déplacement',sheetmv:'déplacement',drop:'déplacement',rolltomorrow:'report',tobacklog:'backlog',setprio:'priorité',setwhere:'lieu',dur:'durée',setjob:'type de journée',focusdone:'tâche terminée',rollover:'report'};
+function undoPop(){const u=undoStack.pop();if(!u){toast('Rien à annuler');return}const o=JSON.parse(u.s);S.tasks=o.tasks;S.days=o.days;S.projects=o.projects;if(o.unavail)S.unavail=o.unavail;save();render();if(ritual)renderRitual();toast('Annulé ('+(UNDO_LBL[u.a]||'dernière action')+')')}
 // ---------- clavier sur la liste : ↑↓ pour choisir, X ou Espace pour cocher, Entrée pour ouvrir, F pour le focus ----------
 let kbSel=null;
 function kbCards(){return [...document.querySelectorAll('#main .list > .card[data-id], #main .donegrp[open] .card[data-id]')]}

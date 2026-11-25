@@ -915,3 +915,23 @@ body.treemap .tvwrap>.tvp{box-shadow:var(--e3)}
 
 /* barre d’horizon : un peu plus présente */
 .horizon{height:4px!important;border-radius:4px}
+
+/* v1.7 indisponibilités récurrentes */
+.ualist{display:flex;flex-direction:column;gap:8px;margin:8px 0 10px}
+.uarow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px;border-radius:var(--r1);background:var(--panel2)}
+.uarow [data-ua=label]{flex:1 1 160px;min-height:34px}.uarow input[type=time]{width:auto;min-height:34px}
+.uadays{display:flex;gap:3px}.uadays button{width:30px;height:30px;min-height:0;padding:0;border-radius:50%;font-size:12.5px;font-weight:600;background:var(--panel);color:var(--mute)}
+.uadays button.on{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+.ev.ua{background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--mute) 16%,var(--panel)) 0 6px,color-mix(in srgb,var(--mute) 7%,var(--panel)) 6px 12px);box-shadow:inset 3px 0 0 var(--mute);color:var(--ink)}
+.mev.ua{background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--mute) 16%,var(--panel)) 0 6px,color-mix(in srgb,var(--mute) 7%,var(--panel)) 6px 12px)}
+
+/* v1.7 arbre « étoile » */
+.tvstar .tvorb{fill:none;stroke:var(--mute);stroke-opacity:var(--o);stroke-width:1;stroke-dasharray:2 7}
+.tvstar .tvhalo{opacity:.16}
+.tvstar .tvn:hover .tvhalo{opacity:.3}
+.tvstar .tvcore circle:first-child{animation:tvpulse 4.5s ease-in-out infinite}
+@keyframes tvpulse{50%{opacity:.6}}
+.tvstar.anim .tvpaths path{stroke-dasharray:1;stroke-dashoffset:0;animation:tvdraw .9s cubic-bezier(.3,.7,.3,1) both}
+@keyframes tvdraw{from{stroke-dashoffset:1}}
+.tvstar .tvpaths path{stroke-dasharray:none}
+@media (prefers-reduced-motion:reduce){.tvstar.anim .tvpaths path,.tvstar .tvcore circle:first-child{animation:none}}

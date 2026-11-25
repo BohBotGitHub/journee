@@ -1170,6 +1170,34 @@ def _(c):
     assert vis == ['f3'], vis
     assert not errs, errs; ctx.close()
 
+@test('v1.7 : indisponibilités récurrentes (réglages, agenda, planification, annuler)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    pg.click('[data-act="uaadd"]'); tick(pg, 150)
+    pg.fill('.uarow [data-ua="label"]', 'Cours de piano'); pg.dispatch_event('.uarow [data-ua="label"]', 'change')
+    pg.fill('.uarow [data-ua="s"]', '10:00'); pg.dispatch_event('.uarow [data-ua="s"]', 'change'); tick(pg, 100)
+    pg.fill('.uarow [data-ua="e"]', '12:00'); pg.dispatch_event('.uarow [data-ua="e"]', 'change'); tick(pg, 100)
+    wd = st(pg, "String(new Date().getDay())")
+    days = st(pg, "S.unavail[0].days")
+    if wd not in days:
+        pg.click(f'.uarow .uadays [data-v="{wd}"]'); tick(pg, 100)
+    u = st(pg, "S.unavail[0]"); assert u['label'] == 'Cours de piano' and u['s'] == '10:00' and u['e'] == '12:00' and wd in u['days'], u
+    # agenda + planification
+    pg.evaluate("()=>{S.tasks.filter(t=>t.day===today()).forEach(t=>t.day=null);S.tasks.push(mk({id:'u1',title:'Avant',day:today(),est:60,order:1}),mk({id:'u2',title:'Après',day:today(),est:60,order:2}));save();go('today');sideTab='cal';render()}"); tick(pg, 300)
+    assert pg.locator('#side .ev.ua:has-text("Cours de piano")').count() == 1
+    b2 = st(pg, "T('u2').block"); assert b2, 'u2 sans créneau'
+    s2 = st(pg, "new Date(T('u2').block.start).getHours()")
+    assert s2 >= 12 or st(pg, "new Date(T('u2').block.end).getHours()") <= 10, (st(pg, "T('u1').block"), b2)
+    # pas de chevauchement avec 10 h-12 h pour aucune tâche
+    ov = st(pg, "S.tasks.filter(t=>t.block&&t.day===today()).filter(t=>{const a=new Date(t.block.start).getHours()+new Date(t.block.start).getMinutes()/60,b=new Date(t.block.end).getHours()+new Date(t.block.end).getMinutes()/60;return a<12&&b>10}).map(t=>t.title)")
+    assert ov == [], ov
+    # suppression annulable
+    pg.evaluate("()=>go('settings')"); tick(pg, 150)
+    pg.click('[data-act="uadel"]'); tick(pg, 150); assert st(pg, "S.unavail.length") == 0
+    pg.click('#toast .tact'); tick(pg, 150); assert st(pg, "S.unavail.length") == 1
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

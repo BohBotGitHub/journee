@@ -1,5 +1,5 @@
 // Diem — vue « Arbre » (diagramme radial éditable), sélecteur de catégorie, suppression avec transfert
-let treeFocus=null,treeSel=null,treeMode=null;
+let treeFocus=null,treeSel=null,treeMode=null,tvPrevView=null;
 const isNarrow=()=>window.innerWidth<760;
 /* ---------- disposition radiale ---------- */
 function treeLayout(){
@@ -34,9 +34,9 @@ function treeSvg(){
  let paths='',dots='',labels='';const placed=[];
  for(const it of items){
   const par=it.n.parent?byId.get(it.n.parent):null,col=esc(it.n.color||'#888');
-  paths+=`<path d="${link(par?par.a:it.a,par?par.r:0,it.a,it.r)}" stroke="${col}" stroke-width="${[0,3,2,1.4][it.depth]}" fill="none"/>`;
+  paths+=`<path d="${link(par?par.a:it.a,par?par.r:0,it.a,it.r)}" stroke="${col}" stroke-width="${[0,3.2,2.1,1.4][it.depth]}" stroke-opacity="${[1,.95,.8,.6][it.depth]}" stroke-linecap="round" fill="none" pathLength="1"/>`;
   const [x,y]=P2(it.a,it.r),sel=treeSel===it.n.id;
-  dots+=`<g class="tvn${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}"><circle cx="${x}" cy="${y}" r="${sel?11:[0,8,6,5][it.depth]+4}" fill="transparent"/><circle cx="${x}" cy="${y}" r="${[0,7,5.5,4.5][it.depth]}" fill="${col}"${sel?' stroke="var(--ink)" stroke-width="2.5"':''}/>${it.leaf&&it.depth<3&&kids(it.n.id).length?`<circle cx="${x}" cy="${y}" r="${[0,12,10][it.depth]}" fill="none" stroke="${col}" stroke-dasharray="3 3"/>`:''}</g>`;
+  dots+=`<g class="tvn${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}"><circle cx="${x}" cy="${y}" r="${sel?11:[0,8,6,5][it.depth]+4}" fill="transparent"/>${it.depth<3?`<circle class="tvhalo" cx="${x}" cy="${y}" r="${[0,15,11][it.depth]}" fill="${col}"/>`:''}<circle cx="${x}" cy="${y}" r="${it.depth===3?Math.min(8,4.5+Math.sqrt(cnt[it.n.id]||0)*1.4):[0,7.5,5.5][it.depth]}" fill="${col}"${sel?' stroke="var(--ink)" stroke-width="2.5"':' stroke="var(--panel)" stroke-width="1.5"'}/>${it.leaf&&it.depth<3&&kids(it.n.id).length?`<circle cx="${x}" cy="${y}" r="${[0,12,10][it.depth]}" fill="none" stroke="${col}" stroke-dasharray="3 3"/>`:''}</g>`;
   const name=esc(it.n.name)+(cnt[it.n.id]&&it.depth===3?` <tspan class="tvc">(${cnt[it.n.id]})</tspan>`:'');
   if(it.leaf){
    // libellés toujours horizontaux, ancrés du côté où ils partent
@@ -48,7 +48,16 @@ function treeSvg(){
    labels+=`<text class="tvl d${it.depth} halo${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx.toFixed(1)}" y="${(ly+dy).toFixed(1)}" text-anchor="${anc}" style="--c:${col}">${name}${it.depth<3&&kids(it.n.id).length?' +':''}</text>`}
   else{const [lx,ly]=P2(it.a,it.r);labels+=`<text class="tvl d${it.depth} halo${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx}" y="${ly-(it.depth===1?14:11)}" text-anchor="middle" style="--c:${col}">${esc(it.n.name)}</text>`}
  }
- return `<svg class="tvsvg" viewBox="-580 -400 1160 800" role="img" aria-label="Arbre des catégories"><circle r="8" fill="var(--mute)"/>${paths}${dots}${labels}</svg>`;
+ // décor « étoile » : orbites, secteur coloré par pilier, cœur lumineux
+ const R=[0,92,190,280];let deco=R.slice(1).map((r,i)=>`<circle class="tvorb" r="${r}" style="--o:${.5-i*.12}"/>`).join('');
+ const arc=(a0,a1,r0,r1)=>{const [x0,y0]=P2(a0,r1),[x1,y1]=P2(a1,r1),[x2,y2]=P2(a1,r0),[x3,y3]=P2(a0,r0),lg=a1-a0>Math.PI?1:0;return `M${x0},${y0}A${r1},${r1} 0 ${lg} 1 ${x1},${y1}L${x2},${y2}A${r0},${r0} 0 ${lg} 0 ${x3},${y3}Z`};
+ let defs='';
+ for(const it of items.filter(x=>x.depth===1)){const col=esc(it.n.color||'#888'),gid='tvg'+esc(it.n.id).replace(/[^a-z0-9]/gi,'');const sp=it.span||[it.a,it.a],pad=.13;
+  defs+=`<radialGradient id="${gid}" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="330"><stop offset="0" stop-color="${col}" stop-opacity=".02"/><stop offset=".55" stop-color="${col}" stop-opacity=".09"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient>`;
+  deco+=`<path class="tvsec" d="${arc(sp[0]-pad,sp[1]+pad,24,330)}" fill="url(#${gid})"/>`}
+ const core=`<g class="tvcore"><circle r="26" fill="url(#tvcoreg)"/><path d="M0,-15 L3.2,-3.2 L15,0 L3.2,3.2 L0,15 L-3.2,3.2 L-15,0 L-3.2,-3.2Z" fill="var(--acc)"/><circle r="3.2" fill="var(--panel)"/></g>`;
+ defs+=`<radialGradient id="tvcoreg"><stop offset="0" stop-color="var(--acc)" stop-opacity=".45"/><stop offset="1" stop-color="var(--acc)" stop-opacity="0"/></radialGradient>`;
+ return `<svg class="tvsvg tvstar${tvPrevView!=='tree'?' anim':''}" viewBox="-580 -400 1160 800" role="img" aria-label="Arbre des catégories"><defs>${defs}</defs>${deco}<g class="tvpaths">${paths}</g>${core}${dots}${labels}</svg>`;
 }
 /* ---------- panneau d'édition du nœud choisi ---------- */
 function tvPanel(){
