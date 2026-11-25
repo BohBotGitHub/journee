@@ -126,7 +126,7 @@ function addTask(text,day){
  if(!q.channel&&hasTree())q.channel=ruleFor(q.title);
  const le=q.est?0:learnedEst(q.title);
  const t=mk({title:q.title,est:q.est||le,channel:q.channel,day,order:nextOrder(day),due:q.due||null,proj:q.proj||null,prio:q.prio||'',where:q.where||''});if(le)t.estLearn=1;
- S.tasks.push(t);save();render();aiWatch(t);emit('task:add',{task:t});return t;
+ S.tasks.push(t);placeNew(t);save();render();aiWatch(t);emit('task:add',{task:t});return t;
 }
 async function toggleDone(id){
  const t=T(id);if(!t)return;
@@ -245,3 +245,15 @@ function quickPreview(txt){const q=parseQuick(txt||'');if(!q.title)return '';con
  if(q.prio)out.push(q.prio==='high'?'priorité haute':'priorité basse');if(q.where)out.push({home:'chez moi',out:'dehors',any:'n’importe où'}[q.where]);
  if(q.channel)out.push(nodeLabel(q.channel));if(q.proj){const p=proj(q.proj);if(p)out.push('+'+p.name)}
  return out.length?out.map(x=>`<span>${esc(x)}</span>`).join(''):''}
+
+// durées proposées : de 5 en 5 min jusqu'à 1 h, puis de 15 en 15 min jusqu'à 8 h
+const DUR_OPTS=[...Array.from({length:12},(_,i)=>5*(i+1)),...Array.from({length:28},(_,i)=>75+15*i)];
+const durOpts=v=>{const a=DUR_OPTS.slice();if(v&&!a.includes(v)){a.push(v);a.sort((x,y)=>x-y)}return a};
+const durSelect=(t,cls)=>`<select class="dursel ${cls||''}" data-durset="${t.id}" aria-label="Durée estimée"><option value="0" ${t.est?'':'selected'}>${t.est?'—':'Durée…'}</option>${durOpts(t.est).map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${fmtMin(v)}</option>`).join('')}</select>`;
+
+// où va une nouvelle tâche : en haut, en bas, ou à la place choisie par le Génie (priorité et échéance)
+function placeNew(t){const pos=S.settings.addPos||'bottom';if(!t.day||pos==='bottom')return;
+ if(pos==='top'){const o=dayTasks(t.day).filter(x=>x!==t&&!x.done).map(x=>x.order||0);t.order=(o.length?Math.min(...o):1)-1;renorm(t.day);return}
+ // Génie : priorité haute ou échéance du jour d'abord, basse à la fin, sinon après les urgentes
+ const was=t.prio;if(t.due&&t.due<=t.day&&was!=='low')t.prio='high';placeByPrio(t);t.prio=was}
+const ADDPOS=[['top','Ajouter en haut','addtop'],['bottom','Ajouter en bas','addbottom'],['auto','Le Génie place la tâche','genie']];

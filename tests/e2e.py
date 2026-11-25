@@ -222,7 +222,7 @@ def _(c):
 @test('Durée rapide et étirement d’un créneau')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
-    pg.click('#main .est >> nth=0'); pg.click('#pop button >> nth=5'); tick(pg)
+    pg.click('#main .est >> nth=0'); pg.click('#pop button[data-v="60"]'); tick(pg)
     assert st(pg, 'dayTasks(today())[0].est') == 60
     blk = pg.locator('.blk').first; bb = blk.bounding_box()
     x, y = bb['x'] + bb['width'] / 2, bb['y'] + bb['height'] - 3
@@ -535,13 +535,14 @@ def _(c):
     pg.evaluate(f"()=>{{const S=window.journee.state;S.tasks[0].channel='{nid}';window.journee.save()}}")
     pg.click(f'.tnode[data-node="{nid}"] [data-act="nodemenu"]'); pg.click('#modal [data-act="nodedelask"]'); pg.wait_for_selector('#pickov')
     assert pg.locator('#pickov [data-act="pkok"][disabled]').count() == 1
-    pg.click('#pickov .pkc:text-is("Magic")'); pg.click('#pickov [data-act="pkok"]'); pg.wait_for_timeout(150)
+    pg.click('#pickov .pkt:has-text("Grandir")'); pg.click('#pickov .pkt:has-text("Jeu")')
+    pg.click('#pickov .pkt:has-text("Magic")'); pg.click('#pickov [data-act="pkok"]'); pg.wait_for_timeout(150)
     assert st(pg, "S.tasks[0].channel") == 'c-magic' and not st(pg, f"S.channels.some(c=>c.id==='{nid}')")
     # déplacer une catégorie vers un autre domaine
     pg.click('.tvtabs [data-id=""]'); pg.wait_for_timeout(100)
     pg.evaluate("()=>{document.querySelectorAll('details.tdom').forEach(d=>d.open=true)}")
     pg.click('.tnode[data-node="c-lego"] [data-act="nodemenu"]'); pg.click('#modal [data-act="nodemove"]'); pg.wait_for_selector('#pickov')
-    pg.click('#pickov .pkdh:has-text("Création")'); pg.wait_for_timeout(150)
+    pg.click('#pickov .pkt:has-text("Création")'); pg.wait_for_timeout(150)
     assert st(pg, "S.channels.find(c=>c.id==='c-lego').parent") == 'd-creation'
     assert not errs, errs; ctx.close()
 
@@ -554,6 +555,15 @@ def _(c):
     assert st(pg, 'S.tasks.at(-1).channel') == 'c-routines', 'tonte = pilosité, pas jardin'
     pg.click('#main .card:has-text("Tonte barbe") .chip.pc'); pg.wait_for_selector('#pickov')
     assert pg.locator('#pickov .pksug .pkc').count() >= 1
+    # en 3 clics : on part du domaine actuel, on remonte aux piliers, puis pilier → domaine → catégorie
+    pg.click('#pickov [data-act="pkup"][data-i="0"]'); pg.wait_for_timeout(80)
+    assert pg.locator('#pickov .pkt').count() == 4
+    pg.click('#pickov .pkt:has-text("Grandir")'); pg.wait_for_timeout(80)
+    pg.click('#pickov .pkt:has-text("Jeu")'); pg.wait_for_timeout(80)
+    pg.click('#pickov .pkt:has-text("Magic")'); pg.wait_for_timeout(150)
+    assert st(pg, 'S.tasks.at(-1).channel') == 'c-magic' and pg.locator('#pickov').count() == 0
+    pg.click('#main .card:has-text("Tonte barbe") .chip.pc'); pg.wait_for_selector('#pickov')
+    assert pg.locator('#pickov .pkt:has-text("Magic")').count() == 1, 's’ouvre sur le domaine actuel'
     pg.fill('#pickov .pkq', 'nata'); pg.wait_for_timeout(100)
     assert pg.locator('#pickov .pkgrid .pkc').count() == 1
     pg.keyboard.press('Enter'); pg.wait_for_timeout(150)
@@ -928,6 +938,33 @@ def _(c):
     w = pg.locator('#side').bounding_box()['width']; assert w > 470, w
     pg.dblclick('#side .sidegrip'); tick(pg, 100)
     assert abs(pg.locator('#side').bounding_box()['width'] - 360) < 3
+    assert not errs, errs; ctx.close()
+
+@test('v1.5 : durée en menu (5 min puis 15 min), ajout en haut / bas / Génie')
+def _(c):
+    ctx, pg, errs = new_page(c['b'])
+    opts = st(pg, "DUR_OPTS"); assert opts[:3] == [5, 10, 15] and 60 in opts and 75 in opts and 65 not in opts and 70 not in opts, opts[:16]
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
+    pg.click(f'#main .card[data-id="{tid}"] [data-act="estmenu"]'); tick(pg, 100)
+    assert pg.locator('#pop.durpop .durit').count() == len(opts) or pg.locator('#pop.durpop .durit').count() == len(opts) + 1
+    pg.click('#pop.durpop .durit[data-v="35"]'); tick(pg, 100)
+    assert st(pg, f"T('{tid}').est") == 35
+    pg.evaluate(f"()=>openTask('{tid}')"); tick(pg, 100)
+    assert pg.locator('#sheet select[data-f="est"] option[value="105"]').count() == 1
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    # position d'ajout
+    pg.click('#main [data-act="addpos"][data-v="top"]'); tick(pg, 100)
+    add(pg, 'En haut 10m')
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done)[0].title") == 'En haut'
+    pg.click('#main [data-act="addpos"][data-v="bottom"]'); tick(pg, 100)
+    add(pg, 'En bas 10m')
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done).at(-1).title") == 'En bas'
+    pg.click('#main [data-act="addpos"][data-v="auto"]'); tick(pg, 100)
+    add(pg, 'Urgente ! 10m')
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done)[0].title") == 'Urgente'
+    add(pg, 'Pas pressée !bas 10m')
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done).at(-1).title") == 'Pas pressée'
+    assert st(pg, "S.settings.addPos") == 'auto'
     assert not errs, errs; ctx.close()
 
 def main():

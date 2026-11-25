@@ -74,6 +74,8 @@ document.addEventListener('click',async e=>{
   case'nodemove':{const n=node(id);if(!n)break;closeModal();openPicker({title:'Déplacer « '+n.name+' » vers…',levels:[n.lvl-1],current:n.parent,exclude:new Set([n.parent]),noneLabel:false,onPick:to=>{if(to){nodeMove(id,to);toast('« '+n.name+' » déplacé dans '+node(to).name)}render()}});break}
   case'pkpick':pickChoose(b.dataset.id);break;
   case'pkclose':closePicker();break;
+  case'pkgo':{if(pick){pick.path=pathOf(b.dataset.id).map(n=>n.id);renderPicker()}break}
+  case'pkup':{if(pick){pick.path=(pick.path||[]).slice(0,+b.dataset.i);renderPicker()}break}
   case'pkok':{if(pick&&pick.sel!==undefined){const f=pick.onPick,v=pick.sel;f(v)}break}
   case'pickcat':e.stopPropagation&&e.stopPropagation();pickTaskCat(id,false);break;
   case'pickcatm':pickTaskCat(id,true);break;
@@ -129,6 +131,7 @@ document.addEventListener('click',async e=>{
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
   case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();if(ritual)renderRitual();break}
   case'setwhere':{const t=T(id);if(t){t.where=b.dataset.v||'';save();render();openTask(id)}break}
+  case'addpos':{S.settings.addPos=b.dataset.v;save();render();toast(ADDPOS.find(x=>x[0]===b.dataset.v)[1]+' : réglage gardé');const i=document.querySelector('#main form[data-form="add"] input');if(i)i.focus();break}
   case'accent':{S.settings.accent=b.dataset.v;save();render();break}
   case'ritdone':{await toggleDone(id);if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
   case'keep':{const t=T(id);if(t){t.roll=0;save()}if(ritual)renderRitual();break}
@@ -187,6 +190,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',async e=>{
  const el=e.target,f=el.dataset.f;
+ if(el.dataset.durset){const t=T(el.dataset.durset);if(t){setEst(t,+el.value||0);if(ritual)renderRitual();render()}return}
  if(el.dataset.jobcal){S.settings.jobCals=Object.assign({},S.settings.jobCals||{},{[el.dataset.jobcal]:el.value});save();render();return}
  if(el.dataset.jh){const dd=el.dataset.d,[a,b2]=String(el.value||'').split(':').map(Number);if(!isNaN(a)){S.days[dd]=Object.assign(S.days[dd]||{},{[el.dataset.jh==='s'?'js':'je']:a+(b2||0)/60});save();render();if(ritual)renderRitual()}return}
  if(el.hasAttribute('data-fedit')){const t=T(el.dataset.fedit);const m=String(el.value).trim().match(/^(?:(\d+)\s*[h:]\s*)?(\d+)?\s*(?:min)?$/i);if(t&&m&&(m[1]||m[2])){const sec=((+m[1]||0)*60+(+m[2]||0))*60;if(S.running&&S.running.taskId===t.id)S.running.start=Date.now();t.actual=sec;save()}focusEdit=null;renderFocus();render();return}
@@ -230,11 +234,16 @@ document.addEventListener('change',async e=>{
 
 /* ---------- glisser-déposer ---------- */
 function calMinute(z,y){const r=z.getBoundingClientRect();let m=S.settings.dayStart*60+(y-r.top)/PX*60;m=Math.round(m/15)*15;return Math.max(S.settings.dayStart*60,Math.min(S.settings.dayEnd*60-15,m))}
-document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]');if(!c)return;drag=c.dataset.drag;try{e.dataTransfer.setData('text/plain',drag);e.dataTransfer.effectAllowed='move'}catch(err){}c.classList.add('dragging')});
-document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over').forEach(x=>x.classList.remove('dragging','over'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
+document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]');if(!c)return;drag=c.dataset.drag;try{e.dataTransfer.setData('text/plain',drag);e.dataTransfer.effectAllowed='move'}catch(err){}
+ // la tuile reste bien visible sous la souris : copie nette (pas l'original estompé) comme image de glissement
+ try{const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragimg');g.style.width=r.width+'px';document.body.appendChild(g);e.dataTransfer.setDragImage(g,Math.min(e.clientX-r.left,r.width-10),Math.min(e.clientY-r.top,r.height-6));setTimeout(()=>g.remove(),0)}catch(err){}
+ requestAnimationFrame(()=>c.classList.add('dragging'))});
+document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over,.dropbefore,.dropafter').forEach(x=>x.classList.remove('dragging','over','dropbefore','dropafter'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
 document.addEventListener('dragover',e=>{
  const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
  document.querySelectorAll('.over').forEach(x=>{if(x!==z)x.classList.remove('over')});z.classList.add('over');
+ // place d'arrivée : un trait de couleur entre les tuiles
+ {const card=e.target.closest('.list .card'),cur=document.querySelector('.dropbefore,.dropafter');if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),cls=e.clientY<r.top+r.height/2?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter');card.classList.add(cls)}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter')}
  document.querySelectorAll('.ghostblk').forEach(x=>{if(!z.contains(x))x.classList.add('hidden')});const g=z.querySelector('.ghostblk');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
 });
 document.addEventListener('drop',async e=>{
@@ -249,10 +258,10 @@ document.addEventListener('drop',async e=>{
  if(z.dataset.pz){const to=z.dataset.pz;moveTask(t.id,to);toast(to==='backlog'?'Au backlog':'Repoussée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
  if(dz==='backlog'){if(t.day!==null){moveTask(t.id,'backlog');toast('Renvoyée au backlog')}else render();return}
  if(dz.startsWith('day:')){
-  const day=dz.slice(4),before=e.target.closest('.card');
+  const day=dz.slice(4),hit=e.target.closest('.card'),after=hit&&hit.classList.contains('dropafter'),before=hit;document.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));
   if(t.day!==day)moveTask(t.id,day,true);
   if(src[0]==='blk'&&t.block){if(flowOn()){t.pinned=false;toast('Créneau libéré : la tâche suit l’ordre de la liste')}else{clearBlock(t,true);toast('Retiré de l’agenda')}}
-  if(before&&before.dataset.id!==t.id){const b=T(before.dataset.id);if(b&&b.day===day){t.order=b.order-.5;renorm(day)}}
+  if(before&&before.dataset.id!==t.id){const b=T(before.dataset.id);if(b&&b.day===day){t.order=b.order+(after?.5:-.5);renorm(day)}}
   if(!flowOn()&&reflow(day))toast('Agenda réorganisé selon le nouvel ordre');
   save();render();
  }
@@ -268,8 +277,9 @@ function toggleLayout(){layout=layout==='cal'?'tasks':'cal';lsSet('journee.layou
 function closePop(){const p=$('#pop');if(p)p.remove()}
 function estMenu(t,el){
  closePop();const r=el.getBoundingClientRect(),p=document.createElement('div');p.id='pop';
- p.innerHTML=[10,15,20,30,45,60,75,90,120,180].map(v=>`<button class="sm${t.est===v?' pri':''}" data-act="setest" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('');
- document.body.appendChild(p);const w=236;p.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';p.style.top=Math.min(innerHeight-p.offsetHeight-8,r.bottom+6)+'px';
+ p.className='durpop';p.setAttribute('role','listbox');p.setAttribute('aria-label','Durée estimée');
+ p.innerHTML=durOpts(t.est).map(v=>`<button class="durit${t.est===v?' on':''}" role="option" aria-selected="${t.est===v}" data-act="setest" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('');
+ document.body.appendChild(p);const w=130;const on=p.querySelector('.on')||p.querySelector('[data-v="30"]');if(on)p.scrollTop=on.offsetTop-p.clientHeight/2+on.offsetHeight/2;p.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';p.style.top=Math.min(innerHeight-p.offsetHeight-8,r.bottom+6)+'px';
 }
 document.addEventListener('click',e=>{if(!e.target.closest('#pop')&&!e.target.closest('[data-act="estmenu"]'))closePop()},true);
 document.addEventListener('mouseover',e=>{

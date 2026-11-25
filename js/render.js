@@ -50,7 +50,7 @@ function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':'
 function openTask(id){
  const t=T(id);if(!t)return;if(modalAI&&modalAI.tid!==id)modalAI=null;modalTask=id;ritual=null;
  const objs=weekObjs(monday(t.day||today())),r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
- const ests=[0,10,15,20,30,45,60,75,90,120,150,180,240];if(!ests.includes(t.est))ests.push(t.est),ests.sort((a,b)=>a-b);
+ const ests=[0,...durOpts(t.est)];
  showModal(`<div class="mhead"><input class="mtitle" data-f="title" value="${esc(t.title)}" aria-label="Titre"><button class="x" data-act="close" aria-label="Fermer">×</button></div>
  <div class="grid2">
  <label>Catégorie<button type="button" class="catbtn" data-act="pickcatm" data-id="${t.id}" style="--c:${esc(ch(t.channel)?ch(t.channel).color:'var(--line)')}">${ch(t.channel)?`<span class="chip">${esc(nodeLabel(t.channel))}</span>`:'<span class="mute">Choisir une catégorie…</span>'}<span class="mute">Changer</span></button></label><label>Projet<select data-f="proj"><option value="">Aucun</option>${(S.projects||[]).filter(p=>!p.done||p.id===t.proj).map(p=>`<option value="${esc(p.id)}" ${p.id===t.proj?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
@@ -115,7 +115,7 @@ function aiBox(){
 const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Boulot','Projets','Aperçu'],weekreview:['Chiffres','Réflexion']};
 function startRitual(type,day){modalTask=null;const sv=savedRit();ritual=sv&&sv.type===type&&sv.day===(day||cur)?Object.assign(sv,{step:0}):{type,step:0,day:day||cur,picked:{},ai:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}
 function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<button type="button" class="rtab ${k===i?'on':k<i?'past':''}" data-act="ritgo" data-i="${k}" ${k===i?'aria-current="step"':''}>${esc(s)}</button>`).join('')}<span class="sp" style="background:none"></span></div><div class="ritbody">${body}${aiBox()}</div><div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':''}<button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
-const durBtns=t=>`<div class="durs">${[15,30,45,60,90,120].map(v=>`<button class="sm${t.est===v?' on':''}" data-act="dur" data-id="${t.id}" data-v="${v}">${fmtMin(v)}</button>`).join('')}</div>`;
+const durBtns=t=>`<div class="durs">${durSelect(t)}</div>`;
 // zones où glisser une tâche pour la repousser (rituel du matin)
 function pushZones(d){
  const z=[[addDays(d,1),'Demain'],[addDays(d,3),'Dans 3 jours'],[addDays(monday(d),7),'Semaine prochaine'],['backlog','Backlog']];

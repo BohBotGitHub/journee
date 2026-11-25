@@ -106,7 +106,9 @@ let nodeDelGo=null;
 /* ---------- sélecteur de catégorie (tâche, déplacement, suppression) ---------- */
 let pick=null;
 function recentCats(){const seen=[];for(const t of [...S.tasks].sort((a,b)=>(b.u||0)-(a.u||0))){if(t.channel&&node(t.channel)&&node(t.channel).lvl===2&&!seen.includes(t.channel))seen.push(t.channel);if(seen.length>=6)break}return seen}
-function openPicker(o){pick=Object.assign({q:'',exclude:new Set(),suggest:[],levels:[1,2]},o);renderPicker();setTimeout(()=>{const i=document.querySelector('#pickov .pkq');if(i&&!isNarrow())i.focus()},30)}
+function openPicker(o){pick=Object.assign({q:'',exclude:new Set(),suggest:[],levels:[1,2]},o);
+ // ouvre directement au bon étage : le domaine de la catégorie actuelle, sinon les piliers
+ if(!pick.path){const cp=pick.current&&node(pick.current)?pathOf(pick.current).map(n=>n.id):[];pick.path=cp.slice(0,Math.min(Math.max(...pick.levels),Math.max(0,cp.length-1)))}renderPicker();setTimeout(()=>{const i=document.querySelector('#pickov .pkq');if(i&&!isNarrow())i.focus()},30)}
 function closePicker(){pick=null;const ov=document.getElementById('pickov');if(ov)ov.remove()}
 function pickMatches(n){if(!pick.q)return true;const q=norm(pick.q);return pathOf(n.id).some(p=>norm(p.name).includes(q))||norm(n.key||'').startsWith(q)}
 function renderPicker(){
@@ -124,7 +126,7 @@ function renderPicker(){
  ${pick.lead?`<p class="mute pklead">${esc(pick.lead)}</p>`:''}
  <input class="pkq" placeholder="Rechercher (ex. nata, villette, ménage)…" value="${esc(pick.q)}" aria-label="Rechercher une catégorie" autocomplete="off">
  ${sug.length&&!pick.q?`<div class="pksug"><small class="mute">Suggestions</small>${sug.map(id=>chip(id,esc(nodeLabel(id)))).join('')}</div>`:''}
- <div class="pkgrid">${cols||'<p class="mute">Aucune catégorie ne correspond.</p>'}</div>
+ ${pick.q?`<div class="pkgrid">${cols||'<p class="mute">Aucune catégorie ne correspond.</p>'}</div>`:pickSteps(ok)}
  <div class="pkfoot">${pick.noneLabel!==false?`<button class="sm ghost${pick.sel===null?' on':''}" data-act="pkpick" data-id="">${esc(pick.noneLabel||'Sans catégorie')}</button>`:''}<span class="sp"></span>${pick.confirm?`<button class="pri" data-act="pkok" ${sel?'':'disabled'}>${esc(sel?pick.confirm(pick.sel):'Choisis une destination')}</button>`:''}</div></div>`;
 }
 function pickChoose(id){
@@ -134,6 +136,17 @@ function pickChoose(id){
 }
 document.addEventListener('input',e=>{if(e.target.classList&&e.target.classList.contains('pkq')&&pick){pick.q=e.target.value;const pos=e.target.selectionStart;renderPicker();const i=document.querySelector('#pickov .pkq');if(i){i.focus();i.setSelectionRange(pos,pos)}}});
 document.addEventListener('keydown',e=>{if(!pick)return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closePicker()}else if(e.key==='Enter'&&e.target.classList.contains('pkq')){e.preventDefault();const b=document.querySelector('#pickov .pkgrid .pkc')||document.querySelector('#pickov .pkgrid [data-act="pkpick"]');if(b)pickChoose(b.dataset.id)}},true);
+// choix en 3 clics : pilier → domaine → catégorie, en grandes tuiles
+function pickSteps(ok){
+ const path=(pick.path||[]).filter(id=>node(id)),stage=path.length,cnt=id=>S.tasks.filter(t=>!t.done&&t.channel&&pathOf(t.channel).some(n=>n.id===id)).length;
+ const tile=(n,act,sub)=>`<button class="pkt${pick.current===n.id?' cur':''}${pick.sel===n.id?' on':''}" data-act="${act}" data-id="${esc(n.id)}" style="--c:${esc(n.color)}"><b>${esc(n.name)}</b><small>${sub}</small></button>`;
+ const crumbs=`<div class="pkcrumbs"><button class="sm ghost${stage===0?' on':''}" data-act="pkup" data-i="0">Piliers</button>${path.map((id,i)=>`<span aria-hidden="true">›</span><button class="sm ghost${i===stage-1?' on':''}" data-act="pkup" data-i="${i+1}" style="--c:${esc(node(id).color)}">${esc(node(id).name)}</button>`).join('')}</div>`;
+ let tiles='';
+ if(stage===0)tiles=pillars().filter(p=>!pick.exclude.has(p.id)).map(p=>tile(p,'pkgo',kids(p.id).length+' domaines · '+cnt(p.id)+' tâches')).join('');
+ else{const parent=node(path[stage-1]),ks=kids(parent.id).filter(n=>!pick.exclude.has(n.id));
+  const all=ok(parent)?`<button class="pkt all" data-act="pkpick" data-id="${esc(parent.id)}" style="--c:${esc(parent.color)}"><b>Tout ${stage===1?'le pilier':'le domaine'}</b><small>${esc(parent.name)}</small></button>`:'';
+  tiles=ks.map(n=>{const deeper=kids(n.id).some(k=>ok(k)&&!pick.exclude.has(k.id));return deeper?tile(n,'pkgo',kids(n.id).length+' catégories · '+cnt(n.id)+' tâches'):ok(n)?tile(n,'pkpick',cnt(n.id)+' tâches'):''}).join('')+all}
+ return `${crumbs}<div class="pktiles">${tiles||'<p class="mute">Rien à choisir ici.</p>'}</div>`}
 // catégorie d'une tâche
 function pickTaskCat(id,reopen){
  const t=T(id);if(!t)return;const g=ruleFor(t.title);
