@@ -97,7 +97,7 @@ function viewToday(){
  const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
  const pct=ts.length?Math.round(done.length/ts.length*100):0,ring=ts.length?`<span class="dayring${pct===100?' full':''}" title="${done.length}/${ts.length} tâches faites" aria-label="${done.length} sur ${ts.length} tâches faites"><svg viewBox="0 0 36 36"><circle class="rbg" cx="18" cy="18" r="15.9"/><circle class="rfg" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="${pct} 100"/>${pct===100?'<g class="rsun"><circle cx="18" cy="18" r="5"/><path d="M18 8.5v2.5M18 25v2.5M8.5 18h2.5M25 18h2.5M11.3 11.3l1.8 1.8M22.9 22.9l1.8 1.8M24.7 11.3l-1.8 1.8M13.1 22.9l-1.8 1.8"/></g>':`<text x="18" y="21.5">${done.length}</text>`}</svg></span>`:'';
  const hz=isT?(()=>{const h=dayHours(d),b=+parseYmd(d),p=Math.max(0,Math.min(1,(Date.now()-(b+h.s*3600e3))/((h.e-h.s)*3600e3))),hr=new Date().getHours();return `<div class="horizon" style="--p:${p.toFixed(3)}" title="Ta journée : ${Math.round(p*100)} % du temps écoulé" aria-hidden="true"><i class="hsun${hr>=20||hr<6?' moon':''}"></i></div>`})():'';
- return `${hz}<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
+ return `${hz}<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub kicker">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
  <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}
 
@@ -135,7 +135,7 @@ function dayMenu(){
 function viewWeek(){
  const w=monday(cur),days=[...Array(7)].map((_,i)=>addDays(w,i));
  const tot=days.reduce((a,d)=>a+dayTasks(d).reduce((x,t)=>x+(t.est||0),0),0);
- return `<div class="head"><div><h1>Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</h1><div class="sub">${fmtMin(tot)} de tâches prévues</div></div>
+ return `<div class="head"><div><h1>Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</h1><div class="sub kicker">${fmtMin(tot)} de tâches prévues</div></div>
  <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
  <div class="acts"><button data-act="weekplan">Planifier la semaine</button>${layoutBtn()}</div></div>
  ${objChips(w)}
@@ -213,7 +213,7 @@ function viewBacklog(){
  const SORTS=[['cat','Catégorie','tag'],['due','Échéance','clock'],['prio','Priorité','star'],['est','Durée','clock'],['new','Récentes','plus'],['old','Anciennes','left']];
  const sorted=so==='cat'?null:[...ts].sort(so==='due'?(a,b)=>(a.due||'9999')<(b.due||'9999')?-1:(a.due||'9999')>(b.due||'9999')?1:a.order-b.order:so==='prio'?(a,b)=>(PR[a.prio||'']-PR[b.prio||''])||a.order-b.order:so==='est'?(a,b)=>((a.est||999)-(b.est||999))||a.order-b.order:so==='new'?(a,b)=>(b.created||0)-(a.created||0)||b.order-a.order:(a,b)=>(a.created||0)-(b.created||0)||a.order-b.order);
  const sortbar=`<div class="blsort" role="radiogroup" aria-label="Trier le backlog"><span>Trier</span>${SORTS.map(([v,l,i])=>`<button role="radio" aria-checked="${so===v}" class="${so===v?'on':''}" data-act="blsort" data-v="${v}">${l}</button>`).join('')}</div>`;
- return `<div class="head"><div><h1>Backlog</h1><div class="sub">${ts.length} tâche${ts.length>1?'s':''} en attente d’un jour</div></div></div>
+ return `<div class="head"><div><h1>Backlog</h1><div class="sub kicker">${ts.length} tâche${ts.length>1?'s':''} en attente d’un jour</div></div></div>
  ${addForm(null,'Ajouter au backlog… (ex. « Réserver le garage 1h #admin »)')}
  ${ts.length>1?`<div class="bltools">${ts.length>6?`<label class="blfilter">${ico('search')}<input data-blf placeholder="Filtrer le backlog…" aria-label="Filtrer le backlog" value="${esc(blFilter)}"></label>`:''}${sortbar}</div>`:''}
  <div class="list" data-drop="backlog" style="gap:0">${sorted?`<div class="list" data-drop="backlog">${sorted.map(bk).join('')}</div>`:groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.lvl===1?pillarOf(g.c.id).name+' › '+g.c.name:g.c.name)}</span>`:'Sans catégorie'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
@@ -239,7 +239,7 @@ function statsHtml(w){
 }
 function viewObjectives(){
  const w=monday(cur),os=weekObjs(w),wk=S.weeks[w]||{};
- return `<div class="head"><div><h1>Ta semaine</h1><div class="sub">Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</div></div>
+ return `<div class="head"><div><h1>Ta semaine</h1><div class="sub kicker">Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</div></div>
  <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
  <div class="acts"><button class="${wk.planned?'':'pri'}" data-act="weekplan">Planifier la semaine</button><button data-act="weekreview">Revue de la semaine</button></div></div>
  <h2 style="font-size:18px;margin:8px 0 6px">Projets en cours</h2>${projListHtml(w)}
