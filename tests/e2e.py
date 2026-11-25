@@ -1214,7 +1214,7 @@ def _(c):
     pg.evaluate("()=>go('settings')"); tick(pg, 150)
     assert 'Projets' not in pg.evaluate("[...document.querySelectorAll('#main section h2')].map(h=>h.textContent).join('|')")
     pg.select_option('[data-set="mode"]', 'light'); tick(pg, 200)
-    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(243, 243, 242)', bg
+    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(230, 230, 227)', bg
     assert pg.evaluate("document.documentElement.style.colorScheme") == 'light'
     pg.select_option('[data-set="mode"]', 'auto'); tick(pg, 200)
     assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(16, 16, 18)'

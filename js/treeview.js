@@ -45,8 +45,8 @@ function treeSvg(){
    let lr=base,lx,ly,dy,box;for(let g=0;g<8;g++){[lx,ly]=P2(it.a,lr);dy=anc==='middle'?(Math.cos(it.a)>0?-4:14):5;const x0=anc==='start'?lx:anc==='end'?lx-w:lx-w/2,y0=ly+dy-h*0.8;box=[x0,y0,x0+w,y0+h];if(!placed.some(b=>box[0]<b[2]&&box[2]>b[0]&&box[1]<b[3]&&box[3]>b[1]))break;lr+=14}
    placed.push(box);const stag=lr-base;
    if(stag)paths+=`<path d="M${P2(it.a,it.r+5).join(',')}L${P2(it.a,lr-6).join(',')}" stroke="${col}" stroke-width="1" opacity=".45"/>`;
-   labels+=`<text class="tvl d${it.depth} halo${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx.toFixed(1)}" y="${(ly+dy).toFixed(1)}" text-anchor="${anc}" style="--c:${col}">${name}${it.depth<3&&kids(it.n.id).length?' +':''}</text>`}
-  else{const [lx,ly]=P2(it.a,it.r);labels+=`<text class="tvl d${it.depth} halo${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx}" y="${ly-(it.depth===1?14:11)}" text-anchor="middle" style="--c:${col}">${esc(it.n.name)}</text>`}
+   labels+=`<text class="tvl d${it.depth} ${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx.toFixed(1)}" y="${(ly+dy).toFixed(1)}" text-anchor="${anc}" style="--c:${col}">${name}${it.depth<3&&kids(it.n.id).length?' +':''}</text>`}
+  else{const [lx,ly]=P2(it.a,it.r);labels+=`<text class="tvl d${it.depth} ${sel?' sel':''}" data-act="tvsel" data-id="${esc(it.n.id)}" x="${lx}" y="${ly-(it.depth===1?14:11)}" text-anchor="middle" style="--c:${col}">${esc(it.n.name)}</text>`}
  }
  // décor « étoile » : orbites, secteur coloré par pilier, cœur lumineux
  const R=[0,92,190,280];let deco=R.slice(1).map((r,i)=>`<circle class="tvorb" r="${r}" style="--o:${.5-i*.12}"/>`).join('');
@@ -54,8 +54,8 @@ function treeSvg(){
  let defs='';
  for(const it of items.filter(x=>x.depth===1)){const col=esc(it.n.color||'#888'),gid='tvg'+esc(it.n.id).replace(/[^a-z0-9]/gi,'');const sp=it.span||[it.a,it.a],pad=.13;
   defs+=`<radialGradient id="${gid}" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="330"><stop offset="0" stop-color="${col}" stop-opacity=".02"/><stop offset=".55" stop-color="${col}" stop-opacity=".09"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient>`;
-  deco+=`<path class="tvsec" d="${arc(sp[0]-pad,sp[1]+pad,24,330)}" fill="url(#${gid})"/>`}
- const core=`<g class="tvcore"><circle r="26" fill="url(#tvcoreg)"/><path d="M0,-15 L3.2,-3.2 L15,0 L3.2,3.2 L0,15 L-3.2,3.2 L-15,0 L-3.2,-3.2Z" fill="var(--acc)"/><circle r="3.2" fill="var(--panel)"/></g>`;
+}
+ const core=`<g class="tvcore"><path d="M0,-15 L3.2,-3.2 L15,0 L3.2,3.2 L0,15 L-3.2,3.2 L-15,0 L-3.2,-3.2Z" fill="var(--acc)"/><circle r="3.2" fill="var(--panel)"/></g>`;
  defs+=`<radialGradient id="tvcoreg"><stop offset="0" stop-color="var(--acc)" stop-opacity=".45"/><stop offset="1" stop-color="var(--acc)" stop-opacity="0"/></radialGradient>`;
  return `<svg class="tvsvg tvstar${tvPrevView!=='tree'?' anim':''}" viewBox="-580 -400 1160 800" role="img" aria-label="Arbre des catégories"><defs>${defs}</defs>${deco}<g class="tvpaths">${paths}</g>${core}${dots}${labels}</svg>`;
 }
