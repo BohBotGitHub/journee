@@ -30,7 +30,8 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator
 // volets : ton choix (bouton) l'emporte ; sinon ils se cachent tout seuls quand la fenêtre est trop étroite
 function applyPanes(){const b=document.body;if(innerWidth<=760){b.classList.remove('hidenav','hideside');return}
  const sw=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidew'))||300,MIN=520,ps=lsGet('journee.pside'),pn=lsGet('journee.pnav');
- const showS=ps==='show'||(ps!=='hide'&&innerWidth-196-sw>=MIN),showN=pn==='show'||(pn!=='hide'&&innerWidth-(showS?sw:0)-196>=MIN);
+ // quand la place manque, le menu de gauche se replie d'abord en rail d'icônes (64 px), l'agenda de droite ensuite
+ const autoS=innerWidth-64-sw>=MIN,showS=ps==='show'||(ps!=='hide'&&autoS),showN=pn==='show'||(pn!=='hide'&&innerWidth-(showS?sw:0)-196>=MIN);
  b.classList.toggle('hideside',!showS);b.classList.toggle('hidenav',!showN)}
 applyPanes();
 let paneW=innerWidth;addEventListener('resize',()=>{if(Math.abs(innerWidth-paneW)>40){lsDel("journee.pside");lsDel("journee.pnav");paneW=innerWidth}applyPanes()});

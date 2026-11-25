@@ -1073,3 +1073,9 @@ button.pri:hover{filter:brightness(1.06)}
  body.hideside #main .head:has(.layoutbtn){padding-right:104px}
 }
 @media (min-width:761px){body.hideside #main .head{padding-right:52px}}
+/* bouton liste ⇄ agenda : à sa place parmi les boutons de l'en-tête (plus de position flottante sous la ligne) */
+@media (min-width:761px){
+ #main .head .layoutbtn,body.hideside #main .head .layoutbtn{position:static;right:auto;top:auto;height:auto;min-height:40px}
+ #main .head:has(.layoutbtn){padding-right:0}
+ body.hideside #main .head:has(.layoutbtn),body.hideside #main .head{padding-right:52px}
+}

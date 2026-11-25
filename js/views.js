@@ -366,7 +366,7 @@ const alldayHtml=d=>{const a=(gEvents[d]||[]).filter(e=>e.start.date);return a.l
 function gStateHtml(d){return gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:'')):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`}
 function viewCal(){
  const d=cur;
- return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span>${layoutBtn()}${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
+ return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span>${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
  ${gStateHtml(d)}${alldayHtml(d)}
  <div class="tl">${calCol(d)}</div>
  <div class="sinfo" style="padding-top:0"><span>${flowOn()?'Agenda vivant : les tâches suivent l’ordre de la liste. Glisse une tâche ici pour fixer son heure.':'Glisse une tâche sur l’agenda pour lui réserver un créneau.'}</span>${flowOn()?'':'<button class="sm" data-act="autobox">Placer les tâches</button>'}</div>`;
