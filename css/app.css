@@ -672,8 +672,8 @@ code{white-space:nowrap}
 .qprev{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.qprev:empty{display:none}
 .qprev span{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--acc2);color:var(--ink)}
 /* volet de droite redimensionnable */
-@media (min-width:721px){#side{position:relative}}
-@media (max-width:720px){.sidegrip{display:none}}
+@media (min-width:1101px){#side{position:relative}}
+@media (max-width:1100px){.sidegrip{display:none}}
 .sidegrip{position:absolute;left:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:5}
 .sidegrip:hover,.sizing .sidegrip{background:color-mix(in srgb,var(--acc) 35%,transparent)}
 body.sizing{cursor:col-resize;user-select:none}

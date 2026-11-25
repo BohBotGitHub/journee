@@ -432,12 +432,15 @@ def _(c):
 
 @test('Mise en page : aucune vue ne déborde (ordinateur, téléphone, sombre)')
 def _(c):
-    for w, h, scheme in [(1440, 900, 'light'), (1100, 800, 'dark'), (390, 844, 'light'), (360, 740, 'dark')]:
+    for w, h, scheme in [(1440, 900, 'light'), (1100, 800, 'dark'), (1000, 760, 'light'), (390, 844, 'light'), (360, 740, 'dark')]:
         ctx, pg, errs = new_page(c['b'], w, h, scheme=scheme)
         for v in ['today', 'week', 'dump', 'backlog', 'review', 'stats', 'settings']:
             pg.evaluate(f"()=>{{location.hash='{v}'}}"); pg.goto(BASE + '#' + v); pg.wait_for_timeout(350)
             ow = pg.evaluate("()=>{const m=document.querySelector('#main');return [document.documentElement.scrollWidth-innerWidth,[...m.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>innerWidth+2&&!e.closest('.week,.bigcal,.scroll,.wkbars,.summary')}).slice(0,3).map(e=>e.className||e.tagName)]}")
             assert ow[0] <= 0 and not ow[1], f'{v} {w}px déborde : {ow}'
+            if v == 'today' and w > 760:
+                sd = pg.evaluate("(()=>{const r=document.getElementById('side').getBoundingClientRect();return [r.top, r.left, innerWidth]})()")
+                assert sd[0] <= 1 and (sd[1] >= sd[2] - 2 or w > 1100), f'agenda mal placé à {w}px : {sd}'
         assert not errs, errs; ctx.close()
 
 @test('Synchro par fusion : modifications sur deux appareils, aucune perte, suppressions respectées')
