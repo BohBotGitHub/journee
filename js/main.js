@@ -1,3 +1,5 @@
+// tests automatisés : pas d'animation des volets (les mesures se font tout de suite)
+if(navigator.webdriver)document.documentElement.classList.add('notrans');
 // Diem — démarrage
 /* ---------- démarrage ---------- */
 const treePending=ensureTree();

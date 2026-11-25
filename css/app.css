@@ -1079,3 +1079,54 @@ button.pri:hover{filter:brightness(1.06)}
  #main .head:has(.layoutbtn){padding-right:0}
  body.hideside #main .head:has(.layoutbtn),body.hideside #main .head{padding-right:52px}
 }
+/* ============ bascule fluide des volets : rien ne saute, tout glisse ============ */
+@media (min-width:761px){
+ #app{transition:grid-template-columns .32s cubic-bezier(.32,.72,0,1)}
+ /* le rail garde exactement la géométrie du menu ouvert : mêmes marges, mêmes hauteurs ; seuls les libellés s'effacent */
+ body.hidenav #nav{padding:18px 12px;align-items:stretch;overflow:hidden}
+ body.hidenav #nav .brand,body.hidenav #nav .navver,body.hidenav #nav #runchip{display:flex;visibility:hidden}
+ body.hidenav #nav .navver{display:block}
+ body.hidenav #nav button[data-view],body.hidenav #nav .navrefresh,body.hidenav #nav .navsearch{justify-content:flex-start;width:auto;padding:revert-layer;gap:10px}
+ body.hidenav #nav .navsearch span,body.hidenav #nav button[data-view] .ll,body.hidenav #nav .navrefresh span{display:inline;opacity:0}
+ #nav .navsearch span,#nav button[data-view] .ll,#nav .navrefresh span,#nav .brand{transition:opacity .2s}
+ body.hidenav #nav .navrefresh{margin-top:0}
+ #nav{min-width:0}#nav>*{white-space:nowrap}
+ /* le contenu central garde ses marges : il glisse avec la colonne au lieu de sauter */
+ body.hidenav #main{padding-left:revert-layer}
+ /* volet de droite : il s'efface en glissant */
+ #side{transition:opacity .25s}
+ body.hideside #side{display:block;visibility:hidden;opacity:0;overflow:hidden}
+}
+@media (prefers-reduced-motion:reduce){#app,#side{transition:none}}
+@media (min-width:761px){
+ body.hidenav #nav button[data-view],body.hidenav #nav .navrefresh,body.hidenav #nav .navsearch{padding-left:12px;padding-right:0;overflow:hidden}
+ #nav button[data-view] .ll,#nav .navrefresh span{white-space:normal;width:118px;flex:none;text-align:left}
+ #nav>*{white-space:normal}
+ body.hidenav #nav .navver{display:revert-layer}
+}
+@media (min-width:761px){body.hidenav #nav button[data-view] .ll,body.hidenav #nav .navrefresh span{display:inline-block}}
+/* 26/11 : gris « Zen doux » façon Sunsama (choix du propriétaire) */
+:root{--bg:light-dark(#EDEDEA,#171716);--panel:light-dark(#FCFCFB,#212120);--panel2:light-dark(#E4E4E0,#282827);
+--line:light-dark(#DADAD5,#323230);--ink:light-dark(#1C1C1B,#EDEDEB);--mute:light-dark(#6E6E69,#9C9C97)}
+#nav{background:var(--panel2)}
+/* rail : mêmes marges que le menu ouvert, au pixel près */
+@media (min-width:761px){
+ body.hidenav #nav button[data-view],body.hidenav #nav .navset{padding:7px 0 7px 12px}
+ body.hidenav #nav .navrefresh{padding:8px 0 8px 12px}
+}
+@media (min-width:761px){body.hidenav #nav .navver{display:flex}}
+@media (min-width:761px){body.hidenav #main{padding-left:clamp(16px,3vw,40px)}}
+/* surprise : une respiration au début du focus */
+.breathe{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;animation:brfade 8.6s ease forwards}
+.breathe i{position:absolute;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--acc) 32%,transparent) 0,color-mix(in srgb,var(--acc) 10%,transparent) 60%,transparent 72%);animation:brcircle 8s ease-in-out forwards}
+.breathe span{position:relative;font-family:var(--fh);font-size:20px;font-weight:500;letter-spacing:.02em;color:var(--ink);opacity:0}
+.breathe .in{position:absolute;animation:brin 8s ease forwards}.breathe .out{position:absolute;animation:brout 8s ease forwards}
+@keyframes brcircle{0%{transform:scale(.6)}50%{transform:scale(2.4)}100%{transform:scale(.8)}}
+@keyframes brin{0%{opacity:0}10%,40%{opacity:.85}50%,100%{opacity:0}}
+@keyframes brout{0%,50%{opacity:0}60%,90%{opacity:.85}100%{opacity:0}}
+@keyframes brfade{0%,92%{opacity:1}100%{opacity:0}}
+.breathe{position:fixed;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.breathe i{width:150px;height:150px}
+.breathe span{font-size:22px}
+.notrans #app,.notrans #side{transition:none!important}
+.notrans #nav *{transition:none!important}
