@@ -145,8 +145,9 @@ function pickSteps(ok){
  let tiles='';
  if(stage===0)tiles=pillars().filter(p=>!pick.exclude.has(p.id)).map(p=>tile(p,'pkgo',plural(kids(p.id).length,'domaine')+' · '+plural(cnt(p.id),'tâche'))).join('');
  else{const parent=node(path[stage-1]),ks=kids(parent.id).filter(n=>!pick.exclude.has(n.id));
-  const all=ok(parent)?`<button class="pkt all" data-act="pkpick" data-id="${esc(parent.id)}" style="--c:${esc(parent.color)}"><b>Tout ${stage===1?'le pilier':'le domaine'}</b><small>${esc(parent.name)}</small></button>`:'';
-  tiles=ks.map(n=>{const deeper=kids(n.id).some(k=>ok(k)&&!pick.exclude.has(k.id));return deeper?tile(n,'pkgo',plural(kids(n.id).length,'catégorie')+' · '+plural(cnt(n.id),'tâche')):ok(n)?tile(n,'pkpick',plural(cnt(n.id),'tâche')):''}).join('')+all}
+  // « tout le domaine » en premier, bien marqué, avec son nom
+  const all=ok(parent)?`<button class="pkt all${pick.current===parent.id?' cur':''}" data-act="pkpick" data-id="${esc(parent.id)}" style="--c:${esc(parent.color)}"><b>${esc(parent.name)}</b><small>${stage===1?'Tout le pilier':'Tout le domaine'} · ${plural(cnt(parent.id),'tâche')}</small></button>`:'';
+  tiles=all+ks.map(n=>{const deeper=kids(n.id).some(k=>ok(k)&&!pick.exclude.has(k.id));return deeper?tile(n,'pkgo',plural(kids(n.id).length,'catégorie')+' · '+plural(cnt(n.id),'tâche')):ok(n)?tile(n,'pkpick',plural(cnt(n.id),'tâche')):''}).join('')}
  return `${crumbs}<div class="pktiles">${tiles||'<p class="mute">Rien à choisir ici.</p>'}</div>`}
 // catégorie d'une tâche
 function pickTaskCat(id,reopen){
