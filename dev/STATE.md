@@ -44,6 +44,7 @@ Source de vérité : section « File d'attente » du plan (doc Claude). Une nouv
 7. Jalon : audit de la concurrence puis bêta-test complet ; résultats ajoutés au plan.
 
 ### 3. Design
+0. **Refonte esthétique (choix du 25/11 23 h 05)** — principe : appli zen, moins chargée, pleine conscience. Ambiance A1 Sunsama calme ; police Inter Tight (titres) + Inter (texte) ; fonds gris chaud papier (clair #F6F4EF / blanc, sombre #1E1C19 / #2A2824), accent inchangé ; son « Cristal » (sinus 1568 Hz + 2349 Hz, ~0,9 s) pour tâche cochée et début / fin de focus, coupable dans les Réglages. Moins de bordures, plus d'air, moins de puces et de texte secondaire visible. Ne pas coder avant le feu vert du propriétaire.
 1. Boutons pour fermer les volets placés comme dans Claude (bouton de repli dans l'en-tête du volet, à côté du logo à gauche ; en haut à droite pour le volet droit).
 2. Logo plus gros.
 3. Identité du Génie (inspiration derniers Zelda, « Génie » à la place de « Claude » partout).
