@@ -968,3 +968,12 @@ body.touchdrag{user-select:none;-webkit-user-select:none}
 .dupcard{display:flex;flex-direction:column;gap:10px;margin:10px 0 12px;padding:12px 14px;border-radius:var(--r2,12px);background:var(--panel);border:1px solid var(--acc);box-shadow:var(--e1,none)}
 .dupcard b{display:block;margin-bottom:2px}.dupcard .mute{font-size:13px}.dupacts{flex-wrap:wrap;gap:8px}
 .aibar button{display:inline-flex;align-items:center;gap:5px}.aibar .ic{width:15px;height:15px;flex:none}
+
+/* rendez-vous Google → tâche */
+.ev2t{background:none;border:0;padding:2px;margin:0;color:inherit;opacity:.55;cursor:pointer;line-height:0;border-radius:6px}
+.ev2t:hover,.ev2t:focus-visible{opacity:1;background:color-mix(in srgb,currentColor 12%,transparent)}
+.ev2t .ic{width:14px;height:14px}
+.ev .ev2t,.mev .ev2t{float:right}
+.evrow .ev2t{margin-left:4px}
+.evt-rdv .ic{width:12px;height:12px}
+@media (pointer:coarse){.mev .ev2t,.ev .ev2t{padding:9px;margin:-7px -7px -7px 0}.ev2t .ic{width:16px;height:16px}}

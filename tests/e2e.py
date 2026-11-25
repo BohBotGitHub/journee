@@ -1360,6 +1360,39 @@ def _(c):
     assert pg.locator('[data-act="mailstop"][data-k="g"]').count() == 1
     assert not errs, errs; ctx.close()
 
+@test('Rendez-vous Google ajouté comme tâche, à heure fixe')
+def _(c):
+    g = Google()
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0), google=g, storage=TOKEN)
+    pg.evaluate("()=>{sideTab='cal';render()}"); tick(pg, 300)
+    eid = st(pg, "Object.values(gEvents).flat().find(e=>e.summary==='Réunion équipe').id")
+    sel = f'[data-act="ev2task"][data-eid="{eid}"]'
+    assert pg.locator(sel).count() >= 1, 'bouton absent'
+    calls0 = len(g.calls)
+    pg.locator(sel).first.click(); tick(pg, 300)
+    t = st(pg, "S.tasks.find(t=>t.evId)")
+    assert t and t['title'] == 'Réunion équipe' and t['est'] == 60 and t['pinned'], t
+    assert t['block']['start'][11:13] != '' and t['day'] == st(pg, "today()")
+    # le rendez-vous laisse la place à la tâche (pas affiché deux fois), et Google n'est pas modifié
+    assert pg.locator(sel).count() == 0, 'rendez-vous encore affiché'
+    assert not [x for x in g.calls[calls0:] if x[0] in ('POST', 'PATCH', 'DELETE') and '/calendar/' in x[1]], g.calls[calls0:]
+    # les autres tâches ne passent pas dessus, et la tâche ne bouge pas
+    s0 = t['block']['start']
+    for i in range(4): add(pg, f'Tâche {i} 45m')
+    pg.evaluate("()=>{const {today}=window.journee.fn;autoBox(today());cascade(today());pushOverlaps(today())}"); tick(pg, 200)
+    assert st(pg, "S.tasks.find(t=>t.evId).block.start") == s0, 'la tâche-rendez-vous a bougé'
+    over = st(pg, """(()=>{const r=S.tasks.find(t=>t.evId).block,a=+new Date(r.start),b=+new Date(r.end);return S.tasks.filter(t=>!t.evId&&t.block&&!t.done).filter(t=>+new Date(t.block.start)<b&&+new Date(t.block.end)>a).map(t=>t.title)})()""")
+    assert not over, over
+    # annuler : le rendez-vous revient
+    pg.evaluate("()=>undoPop()"); tick(pg, 200)
+    pg.evaluate("()=>{undoPop();undoPop();undoPop();undoPop()}"); tick(pg, 200)
+    assert st(pg, "S.tasks.filter(t=>t.evId).length") == 0
+    assert pg.locator(sel).count() >= 1
+    # un rendez-vous passé non coché est compté comme fait (il ne revient pas le lendemain)
+    pg.evaluate(f"()=>{{const t=evToTask('{eid}');t.day=window.journee.fn.addDays(t.day,-1);rollOver()}}")
+    assert st(pg, "S.tasks.find(t=>t.evId).done") is True
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

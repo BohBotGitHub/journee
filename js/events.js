@@ -174,6 +174,7 @@ document.addEventListener('click',async e=>{
   case'ritai':aiRitual();break;
   case'ritapply':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){applyItem(a,b.dataset.k);saveRit();renderRitual()}break}
   case'ritapplyall':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){propItems(a.prop).forEach(it=>applyItem(a,it.k));saveRit();renderRitual();toast('Suggestions appliquées')}break}
+  case'ev2task':{const pre=undoSnap(),t=evToTask(b.dataset.eid);if(t){undoCommit(pre,'ev2task');toast('« '+t.title+' » ajouté comme tâche, à son heure · ⌘/Ctrl Z pour annuler')}else toast('Rendez-vous introuvable : actualise l’agenda');break}
   case'evtoggle':{if(e.target.closest('a'))break;const k=b.dataset.k;S.evMode=S.evMode||{};const ev=Object.values(gEvents).flat().find(x=>evKey(x)===k);const cur0=ev?evFree(ev):false;S.evMode[k]=cur0?'busy':'free';save();render();toast(cur0?'Marqué occupé':'Tu peux travailler pendant ce rendez-vous');break}
   case'aisplit':{const t=T(id);if(t)aiSplit(t);break}
   case'modalapply':{if(modalAI){applyItem(modalAI,b.dataset.k);openTask(modalTask)}break}

@@ -6,8 +6,9 @@
   const ev=(d,id,t,a,b,cid,cal)=>({id,summary:t,start:{dateTime:at(d,a)},end:{dateTime:at(d,b)},_cid:cid,_cal:cal,_col:'#7f9cc0'});
   const T=(d,id,t,a,b)=>ev(d,id,t,a,b,'demo-travail','Travail'),V=(d,id,t,a,b)=>ev(d,id,t,a,b,'demo-villette','Villette');
   const d1=addDays(t0,1),d2=addDays(t0,2),d3=addDays(t0,3);
-  gEvents[t0]=[T(t0,'x1','Salon Démo / Montage',8,11),T(t0,'x2','Salon Démo / Exploitation',11,17)];
-  gEvents[d1]=[T(d1,'x3','Autre / Indisponible sur la phase du jour',9,18)];
+  const P=(d,id,t,a,b)=>Object.assign(ev(d,id,t,a,b,'demo-perso','Perso'),{_col:'#2f9e6a',htmlLink:'https://calendar.google.com/'});
+  gEvents[t0]=[T(t0,'x1','Salon Démo / Montage',8,11),T(t0,'x2','Salon Démo / Exploitation',11,17),P(t0,'p1','Appel avec Léa (fictif)',20,20.5)];
+  gEvents[d1]=[T(d1,'x3','Autre / Indisponible sur la phase du jour',9,18),P(d1,'p2','Dentiste (fictif)',18.5,19.25)];
   gEvents[d2]=[V(d2,'x4','Son/AV équipe A - Spectacle de démo',13.5,19.5)];
   gEvents[d3]=[{id:'x5',summary:'Mvision',start:{date:d3},end:{date:addDays(d3,1)},_cid:'demo-travail',_cal:'Travail',transparency:'transparent'}];
   // la tâche reportée 4 fois reste aujourd'hui (priorité haute) pour être visible dans la clôture

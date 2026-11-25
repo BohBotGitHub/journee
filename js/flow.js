@@ -21,7 +21,8 @@ function cascade(d){
  if(d!==today()||S.settings.liveShift===false)return 0;
  const now=Date.now(),r=runningTask(),busy=busyAt(d);
  let cursor=ceil5(now);if(r&&r.block&&r.day===d)cursor=Math.max(cursor,+new Date(r.block.end));
- const ts=dayTasks(d).filter(t=>!t.done&&t.block&&t!==r).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start));
+ dayTasks(d).filter(t=>t.evId&&t.block&&!t.done).forEach(t=>busy.push([+new Date(t.block.start),+new Date(t.block.end)]));
+ const ts=dayTasks(d).filter(t=>!t.done&&t.block&&t!==r&&!t.evId).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start));
  let n=0;
  for(const t of ts){
   const st=+new Date(t.block.start),en=+new Date(t.block.end);
@@ -40,6 +41,7 @@ function rollOver(){
  const t0=today();let n=0;
  for(const t of pastUndone()){
   if(t.recurId){deleteTask(t.id);n++;continue}
+  if(t.evId&&t.block){t.done=true;t.doneAt=+new Date(t.block.end);continue} // rendez-vous passé : compté comme fait, il ne revient pas
   if(t.block)clearBlock(t,true);
   t.roll=(t.roll||0)+1;t.pinned=false;t.day=t0;t.order=nextOrder(t0);n++;
  }
@@ -69,7 +71,7 @@ function planFlow(d){
  // agenda vivant : chaque tâche du jour a un créneau, dans l'ordre de la liste, à partir de maintenant ; les créneaux épinglés et les rendez-vous occupés sont contournés
  const t0=today();if(d<t0)return 0;
  const now=Date.now(),r=runningTask(),frozen=(S.days[d]||{}).frozen;
- if(!frozen)for(const t of dayTasks(d))if(t.pinned&&!t.done&&t.block&&+new Date(t.block.end)<=now&&t!==r)t.pinned=false;
+ if(!frozen)for(const t of dayTasks(d))if(t.pinned&&!t.done&&t.block&&!t.evId&&+new Date(t.block.end)<=now&&t!==r)t.pinned=false;
  let n=0,plan=simFlow(d);
  // la journée déborde : ce qui finirait après l'heure de fin glisse au lendemain, sans message.
  // D'abord les drapeaux bas, puis les tâches normales ; jamais une priorité haute ni une échéance qui tombe ce jour-là.
@@ -135,7 +137,7 @@ function finishBlock(t){
  if(oldEnd<=now||st>now)return;
  const ne=Math.max(st+M5,ceil5(now));setRange(t,new Date(st),new Date(ne),true);
  let from=oldEnd,to=ne;
- for(const x of dayTasks(t.day).filter(x=>!x.done&&x.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start))){
+ for(const x of dayTasks(t.day).filter(x=>!x.done&&x.block&&!x.evId).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start))){
   const xs=+new Date(x.block.start),xe=+new Date(x.block.end);
   if(Math.abs(xs-from)<=60000){setRange(x,new Date(to),new Date(to+(xe-xs)),true);from=xe;to=to+(xe-xs)}
  }
@@ -182,17 +184,17 @@ function setEst(t,v){
 }
 function pushOverlaps(d,from){
  // décale vers plus tard uniquement les créneaux qui se chevauchent, sans toucher aux autres
- const ts=dayTasks(d).filter(t=>!t.done&&t.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start));let n=0;
+ const ts=dayTasks(d).filter(t=>!t.done&&t.block&&!t.evId).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start));let n=0;
  for(let i=1;i<ts.length;i++){const prevEnd=new Date(ts[i-1].block.end);if(new Date(ts[i].block.start)<prevEnd){setBlock(ts[i],prevEnd,true);n++}}
  if(n)toast(n+' créneau'+(n>1?'x':'')+' décalé'+(n>1?'s':'')+' pour éviter un chevauchement');return n;
 }
 function reflow(d){
  // suit l'ordre de la liste : les tâches déjà placées dans l'agenda sont réenchaînées dans cet ordre
- const ts=dayTasks(d).filter(t=>!t.done&&t.block);if(ts.length<2)return 0;
+ const ts=dayTasks(d).filter(t=>!t.done&&t.block&&!t.evId);if(ts.length<2)return 0;
  const base=parseYmd(d),mins=x=>{const a=new Date(x);return a.getHours()*60+a.getMinutes()};
  let st=Math.min(...ts.map(t=>mins(t.block.start)));
  const busy=timedEvents(d).filter(e=>!evFree(e)).map(e=>[mins(e.start.dateTime),mins(e.end.dateTime)]);
- S.tasks.filter(t=>t.done&&t.block&&ymd(new Date(t.block.start))===d).forEach(t=>busy.push([mins(t.block.start),mins(t.block.end)]));
+ S.tasks.filter(t=>(t.done||t.evId)&&t.block&&ymd(new Date(t.block.start))===d).forEach(t=>busy.push([mins(t.block.start),mins(t.block.end)]));
  let n=0;
  for(const t of ts){const dur=t.est||30;for(let g=0;g<200;g++){const hit=busy.find(([a,b])=>st<b&&st+dur>a);if(!hit)break;st=Math.ceil(hit[1]/5)*5}
   const dt=new Date(base);dt.setMinutes(st);if(dt.toISOString()!==new Date(t.block.start).toISOString()){setBlock(t,dt,true);n++}st+=dur}
