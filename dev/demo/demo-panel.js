@@ -8,6 +8,8 @@
   ['Journée entière ajustable','Agenda de droite, 3 jours plus loin : tire le haut ou le bas du bloc Mvision ; double-clic pour revenir à 8 h–18 h.','mvision'],
   ['Clavier et sélection','Maj + ↑↓ étend la sélection, ⌘/Ctrl A tout sélectionner, Alt + ↑↓ monte ou descend la tâche choisie, Suppr efface la sélection. La barre affiche la durée totale.','today'],
   ['Appui long (souris et téléphone)','Reste appuyé une demi-seconde sur une tâche sans bouger : elle est sélectionnée ; ensuite un simple clic ou toucher ajoute ou retire. × ou Échap pour sortir.','today'],
+  ['Ranger en déposant n’importe où','Glisse une tâche (ou une sélection) entre deux tâches ou sous la dernière : elle se range à l’endroit du trait de couleur.','today'],
+  ['Or par défaut','La couleur d’accent de départ est maintenant Or mat (Réglages › Couleur d’accent).','settings'],
   ['Croix du clic droit','Clic droit sur une tâche : une × en haut à droite ferme le menu.','today'],
   ['Annuler d’un clic','Les messages « annulable » ont maintenant un bouton Annuler (utile sur téléphone).','today'],
   ['Sous-tâches dépliables (nouveau)','Sur « Préparer la séance de JDR », clique « 1/3 sous-tâches » : elles se déplient sous la tâche et se cochent directement.','today'],
@@ -15,7 +17,7 @@
   ['Indisponibilités récurrentes (nouveau)','Réglages › Indisponibilités récurrentes : nom, jours, horaires. Diem ne place rien dessus et les montre hachurées dans l’agenda (la démo a un déjeuner en semaine et un cours de piano le mercredi).','settings'],
   ['Arbre étoile','Orbites, une couleur douce par pilier, un cœur lumineux, des domaines aux teintes bien distinctes, et les catégories grossissent avec le nombre de tâches en cours.','tree'],
   ['Déposer sur Aujourd’hui','Glisse une tâche du backlog sur « Aujourd’hui » dans la barre de gauche.','backlog']];
- const K='journee.demo27.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+ const K='journee.demo28.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const box=document.createElement('div');box.id='demopanel';document.body.appendChild(box);
  const css=document.createElement('style');css.textContent=`body:has(#mselbar:not(.hidden)) #demopanel{bottom:190px}#demopanel{position:fixed;right:12px;bottom:12px;z-index:90;width:min(360px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:2px solid #c2410c;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);font-size:14px}
@@ -56,6 +58,6 @@
   if(d==='tog'){min=!min;draw()}
   if(d==='show')show(b.dataset.k);
   if(d==='ok'||d==='ko'){const i=b.dataset.i;st[i]=st[i]===d?undefined:d;save();draw()}
-  if(d==='reset'){['journee.v1','journee.demo','journee.demo27.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
+  if(d==='reset'){['journee.v1','journee.demo','journee.demo28.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
  draw();
 })();
