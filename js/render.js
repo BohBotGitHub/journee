@@ -34,7 +34,7 @@ function renderRun(){
  $('#runchip').innerHTML=t?`<div class="runbox" data-act="openfocus" data-id="${t.id}"><span>En cours</span><b>${esc(t.title)}</b><span class="t" data-live="run">${clock(actualSec(t))}</span></div>`:'';
 }
 function go(v){
- if(v==='side'){document.body.classList.toggle('side-open');return}
+ if(v==='side'){if(innerWidth<=760&&!document.body.classList.contains('side-open')){moreMenu();return}document.body.classList.toggle('side-open');return}
  view=v;try{history.replaceState(null,'','#'+v)}catch(e){}
  $('#main').scrollTop=0;render();
 }
@@ -57,7 +57,7 @@ function openTask(id){
  const t=T(id);if(!t)return;if(modalAI&&modalAI.tid!==id)modalAI=null;modalTask=id;ritual=null;
  const objs=weekObjs(monday(t.day||today())),r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
  const ests=[0,...durOpts(t.est)];
- showModal(`<div class="mhead"><input class="mtitle" data-f="title" value="${esc(t.title)}" aria-label="Titre"><button class="x" data-act="close" aria-label="Fermer">×</button></div>
+ showModal(`<div class="mhead"><textarea class="mtitle" data-f="title" rows="1" aria-label="Titre">${esc(t.title)}</textarea><button class="x" data-act="close" aria-label="Fermer">×</button></div>
  <div class="grid2">
  <label>Catégorie<button type="button" class="catbtn" data-act="pickcatm" data-id="${t.id}" style="--c:${esc(ch(t.channel)?ch(t.channel).color:'var(--line)')}">${ch(t.channel)?`<span class="chip">${esc(nodeLabel(t.channel))}</span>`:'<span class="mute">Choisir une catégorie…</span>'}<span class="mute">Changer</span></button></label><label>Projet<select data-f="proj"><option value="">Aucun</option>${(S.projects||[]).filter(p=>!p.done||p.id===t.proj).map(p=>`<option value="${esc(p.id)}" ${p.id===t.proj?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
  <label>Durée estimée<select data-f="est">${ests.map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${v?fmtMin(v):'—'}</option>`).join('')}</select></label>
@@ -76,10 +76,10 @@ function openTask(id){
 function modalAIHtml(t){
  const a=modalAI&&modalAI.tid===t.id?modalAI:null;
  if(!a)return `<div class="row" style="margin-top:8px"><button class="sm" data-act="aisplit" data-id="${t.id}">Découper</button></div>`;
- if(a.loading)return '<div class="aibox"><span class="mute">Claude réfléchit…</span></div>';
- if(a.error)return `<div class="aibox"><span class="mute">Claude : ${esc(a.error)}</span><button class="sm" data-act="aisplit" data-id="${t.id}">Réessayer</button></div>`;
+ if(a.loading)return '<div class="aibox"><span class="mute">Le Génie réfléchit…</span></div>';
+ if(a.error)return `<div class="aibox"><span class="mute">Génie : ${esc(a.error)}</span><button class="sm" data-act="aisplit" data-id="${t.id}">Réessayer</button></div>`;
  const items=propItems(a.prop),ap=a.applied||{};
- return `<div class="aibox"><b>Claude</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="modalapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="modalapplyall">Tout appliquer</button>':''}</div>`;
+ return `<div class="aibox"><b>Génie</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="modalapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="modalapplyall">Tout appliquer</button>':''}</div>`;
 }
 async function aiSplit(t){
  modalAI={tid:t.id,loading:true};openTask(t.id);
@@ -112,11 +112,11 @@ async function aiRitual(){
 function aiBox(){
  if(!ritual||!aiOn()||!RIT_AI[ritual.type+ritual.step])return '';
  const a=ritual.ai&&ritual.ai[ritual.step];
- if(!a)return `<div class="aibox"><div class="row"><span class="mute">Claude peut t’aider sur cette étape.</span><span class="sp"></span><button class="sm" data-act="ritai">Demander à Claude</button></div></div>`;
- if(a.loading)return `<div class="aibox"><span class="mute">Claude réfléchit…</span></div>`;
- if(a.error)return `<div class="aibox"><div class="row"><span class="mute">Claude : ${esc(a.error)}</span><span class="sp"></span><button class="sm" data-act="ritai">Réessayer</button></div></div>`;
+ if(!a)return `<div class="aibox"><div class="row"><span class="mute">Le Génie peut t’aider sur cette étape.</span><span class="sp"></span><button class="sm" data-act="ritai">Demander au Génie</button></div></div>`;
+ if(a.loading)return `<div class="aibox"><span class="mute">Le Génie réfléchit…</span></div>`;
+ if(a.error)return `<div class="aibox"><div class="row"><span class="mute">Génie : ${esc(a.error)}</span><span class="sp"></span><button class="sm" data-act="ritai">Réessayer</button></div></div>`;
  const items=propItems(a.prop),ap=a.applied||{};
- return `<div class="aibox"><b>Claude</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="ritapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="ritapplyall">Tout appliquer</button>':''}<div class="row"><span class="sp"></span><button class="sm ghost" data-act="ritai">Nouvelle proposition</button></div></div>`;
+ return `<div class="aibox"><b>Génie</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="ritapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="ritapplyall">Tout appliquer</button>':''}<div class="row"><span class="sp"></span><button class="sm ghost" data-act="ritai">Nouvelle proposition</button></div></div>`;
 }
 const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Boulot','Projets','Aperçu'],weekreview:['Chiffres','Réflexion']};
 function startRitual(type,day){modalTask=null;const sv=savedRit();ritual=sv&&sv.type===type&&sv.day===(day||cur)?Object.assign(sv,{step:0}):{type,step:0,day:day||cur,picked:{},ai:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}

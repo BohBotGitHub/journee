@@ -42,6 +42,8 @@ document.addEventListener('click',async e=>{
   case'ritunblock':{const t=T(id);if(t)clearBlock(t);renderRitual();break}
   case'autobox':{const n=autoBox(cur);toast(n?n+' tâche'+(n>1?'s':'')+' placée'+(n>1?'s':''):'Rien à placer, ou pas de créneau libre');break}
   case'close':closeModal();break;
+  case'moreside':closeModal();document.body.classList.add('side-open');break;
+  case'morego':closeModal();go(b.dataset.v);break;
   case'closeside':document.body.classList.remove('side-open');break;
   case'rollover':rolloverAll(today());toast('Tâches reportées à aujourd’hui');break;
   case'mv':moveTask(id,b.dataset.to,true);if(b.dataset.to>today())putFront([id],T(id)&&T(id).day);save();render();if(ritual)renderRitual();break;
@@ -93,7 +95,7 @@ document.addEventListener('click',async e=>{
   case'nodeup':nodeShift(id,-1);render();break;
   case'nodedown':nodeShift(id,1);render();break;
   case'projadd':{S.projects=S.projects||[];const np={id:uid(),name:'Nouveau projet',end:null,done:false};S.projects.push(np);if(view!=='projects')go('projects');else render();setTimeout(()=>{const i=document.querySelector(`[data-pn="${np.id}"]`);if(i){i.focus();i.select()}},50);break}
-  case'refine':{if(!aiOn())break;b.disabled=true;b.textContent='Claude range…';try{refineProp=await aiRefine((a,n)=>{b.textContent=`Claude range… ${a}/${n}`});if(!refineProp.length&&!refineLeft.length){toast('Plus rien à ranger');render()}else showModal(refineHtml())}catch(err){toast('Claude : '+err.message);render()}break}
+  case'refine':{if(!aiOn())break;b.disabled=true;b.textContent='Le Génie range…';try{refineProp=await aiRefine((a,n)=>{b.textContent=`Le Génie range… ${a}/${n}`});if(!refineProp.length&&!refineLeft.length){toast('Plus rien à ranger');render()}else showModal(refineHtml())}catch(err){toast('Génie : '+err.message);render()}break}
   case'refineok':{const skip=new Set([...document.querySelectorAll('[data-refine]')].filter(x=>!x.checked).map(x=>x.dataset.refine));const n=applyRefine(skip);closeModal();render();toast(n+' tâches rangées');break}
   case'chadd':S.channels.push({id:uid(),name:'Nouveau catégorie',color:'#'+Math.floor(Math.random()*0xaaaaaa+0x222222).toString(16).padStart(6,'0')});save();render();break;
   case'chdel':S.channels=S.channels.filter(c=>c.id!==id);S.tasks.forEach(t=>{if(t.channel===id)t.channel=null});save();render();break;
@@ -262,7 +264,7 @@ document.addEventListener('change',async e=>{
 });
 
 /* ---------- glisser-déposer ---------- */
-function calMinute(z,y){const r=z.getBoundingClientRect();let m=S.settings.dayStart*60+(y-r.top)/PX*60;m=Math.round(m/15)*15;return Math.max(S.settings.dayStart*60,Math.min(S.settings.dayEnd*60-15,m))}
+function calMinute(z,y){const r=z.getBoundingClientRect();let m=S.settings.dayStart*60+(y-r.top)/PX*60;m=Math.round(m/15)*15;return Math.max(S.settings.dayStart*60,Math.min(24*60-15,m))}
 document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]');if(!c)return;drag=c.dataset.drag;try{e.dataTransfer.setData('text/plain',drag);e.dataTransfer.effectAllowed='move'}catch(err){}
  // la tuile reste bien visible sous la souris : copie nette (pas l'original estompé) comme image de glissement
  try{const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragimg');{const id=(c.dataset.drag||'').split('|')[1];if(msel.size>1&&msel.has(id)){g.classList.add('dragmulti');g.setAttribute('data-n',msel.size)}}g.style.width=r.width+'px';document.body.appendChild(g);e.dataTransfer.setDragImage(g,Math.min(e.clientX-r.left,r.width-10),Math.min(e.clientY-r.top,r.height-6));setTimeout(()=>g.remove(),0)}catch(err){}
@@ -396,7 +398,7 @@ function palItems(q){
   const d=dateWord(ql.replace(/^(aller a|aller au|au|le)\s+/,''));if(d)out.unshift({k:'day:'+d,label:'Aller au '+fmtDay(d),grp:'Aller'});
   out.push({k:'new',label:'Créer la tâche « '+q.trim()+' »',grp:'Créer',hint:'Entrée'});
   out.push({k:'dump',label:'Ajouter au vide-tête',grp:'Créer'});
-  if(aiOn())out.push({k:'ask',label:'Demander à Claude : « '+q.trim()+' »',grp:'Créer'});
+  if(aiOn())out.push({k:'ask',label:'Demander à Génie : « '+q.trim()+' »',grp:'Créer'});
  }
  if(!cmdHit)cmds.filter(([l])=>!ql||norm(l).includes(ql)).slice(0,ql?6:14).forEach(([l,k])=>out.push({k,label:l,grp:'Commandes'}));
  if(ql.length>=2){
@@ -591,3 +593,9 @@ function subDrop(e){const row=e.target.closest('.csub,.sub');if(!row||!row.datas
  const s=p&&(p.subtasks||[]).find(x=>x.id===sid);if(!s||!q)return true;
  const pre=undoSnap();p.subtasks=p.subtasks.filter(x=>x!==s);q.subtasks=q.subtasks||[];let i=q.subtasks.findIndex(x=>x.id===rid);if(i<0)i=q.subtasks.length-1;q.subtasks.splice(after?i+1:i,0,s);
  if(q!==p)subShow(q.id);save();render();if(modalTask&&(modalTask===pid||modalTask===qid))openTask(modalTask);if(focusOn)renderFocus();undoCommit(pre,'drop');return true}
+
+// titre d'une tâche : sur plusieurs lignes si besoin (téléphone), Entrée valide au lieu d'aller à la ligne
+function fitTitle(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
+document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('textarea.mtitle'))fitTitle(e.target)});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('textarea.mtitle')){e.preventDefault();e.target.blur()}});
+new MutationObserver(()=>{const t=document.querySelector('#sheet textarea.mtitle');if(t&&!t.dataset.fit){t.dataset.fit=1;requestAnimationFrame(()=>fitTitle(t))}}).observe(document.getElementById('sheet'),{childList:true,subtree:true});

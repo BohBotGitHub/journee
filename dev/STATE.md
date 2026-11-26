@@ -14,7 +14,11 @@ Demande du propriétaire : avant toute nouvelle fonctionnalité, un audit comple
 7. Livrable : rapport d'audit (doc Claude, en français) + démo de tout ce qui a été corrigé.
 
 ## Avancement audit
-- (rien encore)
+- 26/11 ~16 h (session) : tour complet (3 largeurs, toutes vues, crawl de toutes les actions : 0 erreur JS ; titres piégés, 120 tâches : rendu 30 ms ; pas d'injection HTML).
+- Sunsama observé (compte du propriétaire, rien modifié) : menu groupé par usage (Today / This week / Board / Calendar / Focus, puis Rituels quotidiens Plan · Shutdown · Highlights, Rituels hebdo Plan · Review, puis Backlog, Archive, Search, Integrations) ; fiche tâche = une seule barre (catégorie, priorité, début, échéance, sous-tâches) + titre + START + réel/prévu ; agenda 0-24 h ; rail d'intégrations à droite.
+- Concurrence recherchée (Akiflow, Motion, Structured, Tiimo, TickTick, Amie/Routine/Reclaim).
+- Corrigé sur dev (v1.9.4, 75/75) : agenda de droite jusqu'à minuit ; « 14h » / « à 9h » = heure (créneau posé), « 1h30 » = durée ; téléphone : 5 onglets lisibles + menu Plus ; titre long lisible dans la fiche ; vocabulaire « Génie » partout (la clé reste « clé Claude ») ; Réglages « Ma journée » vs « Boulot » ; loupe du filtre Backlog.
+- Reste : rapport (doc), structure (branche audit-structure : menu par usage, rituels visibles, semaine/revue/projets regroupés, fiche tâche unique, en-têtes homogènes), démo.
 
 ## Dernier lot
 3e lancement autonome du 25/11 (nuit), sur `dev`, en démo (v=51), pas en ligne :

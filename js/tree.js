@@ -169,14 +169,14 @@ function ensureTree(){
 }
 function treeMigrationHtml(){
  const p=planTree(),rows=[];
- const fresh=buildTree(),nm=id=>{const n=fresh.find(x=>x.id===id);if(!n)return 'À classer (Claude proposera)';const d=fresh.find(x=>x.id===n.parent);return n.lvl===2?d.name+' › '+n.name:n.name+' (à affiner)'};
+ const fresh=buildTree(),nm=id=>{const n=fresh.find(x=>x.id===id);if(!n)return 'À classer (le Génie proposera)';const d=fresh.find(x=>x.id===n.parent);return n.lvl===2?d.name+' › '+n.name:n.name+' (à affiner)'};
  const pil=id=>{let n=fresh.find(x=>x.id===id);while(n&&n.parent)n=fresh.find(x=>x.id===n.parent);return n};
  const by={};for(const [id,c] of Object.entries(p.stats)){const pl=pil(id);const k=pl?pl.name:'À classer';(by[k]=by[k]||[]).push([nm(id),c])}
  const order=['Être','Grandir','Relier','Bâtir','À classer'];
  const fuzzy=Object.entries(p.stats).filter(([id])=>!id||id.startsWith('d-')).reduce((a,[,c])=>a+c,0);
  return `<div class="rit"><h2>Passer à l’arbre des catégories</h2><p class="lead">${p.n} tâches (actives et historique) vont être rangées dans les 4 piliers. Une sauvegarde est faite avant ; rien n’est perdu.</p>
  <div class="migl">${order.filter(k=>by[k]).map(k=>`<div class="migp"><b>${esc(k)}</b>${by[k].sort((a,b)=>b[1]-a[1]).map(([l,c])=>`<div class="migr"><span>${esc(l)}</span><span class="mute">${c}</span></div>`).join('')}</div>`).join('')}</div>
- ${fuzzy?`<p class="mute">${fuzzy} tâches n’ont pas pu être rangées dans une catégorie précise (titre non reconnu). Après la migration, « Affiner avec Claude » dans Réglages les classera par catégorie (tu valideras encore).</p>`:''}
+ ${fuzzy?`<p class="mute">${fuzzy} tâches n’ont pas pu être rangées dans une catégorie précise (titre non reconnu). Après la migration, « Affiner avec le Génie » dans Réglages les classera par catégorie (tu valideras encore).</p>`:''}
  <div class="row" style="margin-top:14px"><button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="treego">Ranger mes tâches</button></div></div>`;
 }
 /* ---------- affinage par Claude des tâches restées au niveau domaine ---------- */
@@ -204,8 +204,8 @@ function refineHtml(){
  const by={};for(const r of refineProp){const k=r.to;(by[k]=by[k]||[]).push(r)}
  const n=refineProp.reduce((a,r)=>a+r.x.ids.length,0);
  const opts=x=>'<option value="">Laisser à classer</option>'+S.channels.filter(c=>c.lvl===2&&(!x.c||c.parent===x.c)).map(c=>`<option value="${esc(c.id)}">${esc(nodeLabel(c.id))}</option>`).join('');
- const left=refineLeft.length?`<div class="migp"><b>À ranger toi-même (${refineLeft.length})</b><p class="mute" style="margin:2px 0 8px">Claude n’a pas trouvé de catégorie sûre pour celles-ci.</p>${refineLeft.slice(0,60).map((x,i)=>`<label class="migr"><span>${esc(x.t)}${x.ids.length>1?' <span class="mute">×'+x.ids.length+'</span>':''}</span><select data-refsel="${i}" style="max-width:260px;min-height:32px;font-size:14px">${opts(x)}</select></label>`).join('')}${refineLeft.length>60?`<small class="mute">… et ${refineLeft.length-60} autres</small>`:''}</div>`:'';
- return `<div class="rit"><h2>${n?'Proposition de Claude':'À ranger toi-même'}</h2><p class="lead">${n?`${n} tâches rangées dans ${Object.keys(by).length} catégories. Décoche ce qui ne va pas.`:'Claude a déjà rangé tout ce qu’il pouvait. Choisis une catégorie pour les tâches restantes.'}</p>
+ const left=refineLeft.length?`<div class="migp"><b>À ranger toi-même (${refineLeft.length})</b><p class="mute" style="margin:2px 0 8px">Le Génie n’a pas trouvé de catégorie sûre pour celles-ci.</p>${refineLeft.slice(0,60).map((x,i)=>`<label class="migr"><span>${esc(x.t)}${x.ids.length>1?' <span class="mute">×'+x.ids.length+'</span>':''}</span><select data-refsel="${i}" style="max-width:260px;min-height:32px;font-size:14px">${opts(x)}</select></label>`).join('')}${refineLeft.length>60?`<small class="mute">… et ${refineLeft.length-60} autres</small>`:''}</div>`:'';
+ return `<div class="rit"><h2>${n?'Proposition du Génie':'À ranger toi-même'}</h2><p class="lead">${n?`${n} tâches rangées dans ${Object.keys(by).length} catégories. Décoche ce qui ne va pas.`:'Le Génie a déjà rangé tout ce qu’il pouvait. Choisis une catégorie pour les tâches restantes.'}</p>
  <div class="migl">${Object.entries(by).map(([to,rs])=>`<div class="migp"><b>${esc(nodeLabel(to))}</b>${rs.slice(0,40).map(r=>`<label class="migr"><span><input type="checkbox" data-refine="${esc(r.x.ids[0].id)}" checked style="width:auto;min-height:0"> ${esc(r.x.t)}</span><span class="mute">${r.x.ids.length>1?'×'+r.x.ids.length:''}</span></label>`).join('')}${rs.length>40?`<small class="mute">… et ${rs.length-40} autres</small>`:''}</div>`).join('')}${left}</div>
  <div class="row" style="margin-top:14px"><button class="ghost" data-act="close">Annuler</button><span class="sp"></span><button class="pri" data-act="refineok">Appliquer</button></div></div>`;
 }

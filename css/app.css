@@ -1204,3 +1204,9 @@ button.pri:hover{filter:brightness(1.06)}
 .csub.subbefore::before,.csub.subafter::before,.sub.subbefore::before,.sub.subafter::before{content:'';position:absolute;left:0;right:0;height:2px;border-radius:2px;background:var(--acc);pointer-events:none}
 .csub.subbefore::before,.sub.subbefore::before{top:-2px}.csub.subafter::before,.sub.subafter::before{bottom:-2px}
 .csub.dragging,.sub.dragging{opacity:.4}
+/* v1.9.4 — téléphone : 5 onglets lisibles en bas, le reste dans « Plus » */
+@media (max-width:760px){#nav button[data-view="review"],#nav button[data-view="projects"],#nav button[data-view="tree"]{display:none!important}}
+textarea.mtitle{resize:none;overflow:hidden;line-height:1.3;min-height:0;width:100%;font-family:var(--fh)}
+/* backlog : la loupe à côté du champ, pas au-dessus */
+.bltools label.blfilter{display:inline-flex!important;flex-direction:row!important;align-items:center!important;gap:6px;height:34px;padding:0 12px}
+.bltools label.blfilter input{flex:1;min-width:0;margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important;height:30px}
