@@ -18,7 +18,8 @@ Demande du propriétaire : avant toute nouvelle fonctionnalité, un audit comple
 - Sunsama observé (compte du propriétaire, rien modifié) : menu groupé par usage (Today / This week / Board / Calendar / Focus, puis Rituels quotidiens Plan · Shutdown · Highlights, Rituels hebdo Plan · Review, puis Backlog, Archive, Search, Integrations) ; fiche tâche = une seule barre (catégorie, priorité, début, échéance, sous-tâches) + titre + START + réel/prévu ; agenda 0-24 h ; rail d'intégrations à droite.
 - Concurrence recherchée (Akiflow, Motion, Structured, Tiimo, TickTick, Amie/Routine/Reclaim).
 - Corrigé sur dev (v1.9.4, 75/75) : agenda de droite jusqu'à minuit ; « 14h » / « à 9h » = heure (créneau posé), « 1h30 » = durée ; téléphone : 5 onglets lisibles + menu Plus ; titre long lisible dans la fiche ; vocabulaire « Génie » partout (la clé reste « clé Claude ») ; Réglages « Ma journée » vs « Boulot » ; loupe du filtre Backlog.
-- Reste : rapport (doc), structure (branche audit-structure : menu par usage, rituels visibles, semaine/revue/projets regroupés, fiche tâche unique, en-têtes homogènes), démo.
+- 26/11 ~16 h 30 : AUDIT LIVRÉ. Rapport : doc Claude f3c97192-4a2a-4386-ac49-b5d9cd2686fc. Démo corrections (dev, v1.9.4) : artefact d3133bc8-48ab-40f2-ba0c-f60e40a36b16. Démo essai de structure (branche audit-structure, v2.0 essai, 76 tests) : artefact 33cd13e9-9efb-4930-aef1-30fd6ef6e877. Retour arrière : branche avant-audit.
+- **EN ATTENTE DES DÉCISIONS DU PROPRIÉTAIRE** (section « Décisions à prendre » du rapport) : garder la structure ? fiche tâche compacte ? refaire la Semaine ? mettre en ligne v1.9.4 ? Les lancements autonomes ne commencent RIEN de nouveau d'ici là : ils s'arrêtent en le disant en une ligne.
 
 ## Dernier lot
 3e lancement autonome du 25/11 (nuit), sur `dev`, en démo (v=51), pas en ligne :
