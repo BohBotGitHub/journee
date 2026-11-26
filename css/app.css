@@ -1150,3 +1150,4 @@ button.pri:hover{filter:brightness(1.06)}
 @media (max-width:520px){.donesky{flex-direction:column;align-items:flex-start}.donesky svg{width:100%}}
 @media (prefers-reduced-motion:reduce){.donesky .dssun{animation:none;transform:translateY(12px)}}
 .ripple{width:26px;height:26px;margin:-13px 0 0 -13px;background:radial-gradient(circle,color-mix(in srgb,var(--acc) 0%,transparent) 0,color-mix(in srgb,var(--acc) 0%,transparent) 48%,color-mix(in srgb,var(--acc) 55%,transparent) 58%,color-mix(in srgb,var(--acc) 18%,transparent) 66%,transparent 72%)}
+.donesky{border:0;background:transparent;padding:10px 0 6px;gap:18px}.donesky svg{border-radius:12px}
