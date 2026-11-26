@@ -6,7 +6,7 @@ function subShow(id){if(subOpen.has(id))return;subOpen.add(id);lsSet('journee.su
 function card(t){
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
  const so=t.subtasks&&t.subtasks.length&&subOpen.has(t.id),subs=t.subtasks&&t.subtasks.length?`<button class="subtog${so?' on':''}" data-act="subopen" data-id="${t.id}" aria-expanded="${!!so}" title="${so?'Replier':'Dérouler'} les sous-tâches"><i>▸</i>${t.subtasks.filter(s=>s.d).length}/${t.subtasks.length} sous-tâche${t.subtasks.length>1?'s':''}</button>`:'';
- const subl=so?`<div class="csubs">${t.subtasks.map(x=>`<div class="csub${x.d?' d':''}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${x.id}" aria-label="${x.d?'Rouvrir':'Terminer'} : ${esc(x.t)}">${x.d?'✓':''}</button><span>${esc(x.t)}</span></div>`).join('')}</div>`:'';
+ const subl=so?`<div class="csubs">${t.subtasks.map(x=>`<div class="csub${x.d?' d':''}" draggable="true" data-drag="sub|${t.id}|${x.id}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${x.id}" aria-label="${x.d?'Rouvrir':'Terminer'} : ${esc(x.t)}">${x.d?'✓':''}</button><span>${esc(x.t)}</span></div>`).join('')}</div>`:'';
  const act=actualSec(t);
  return `<div class="card${t.done?' done':''}${run?' running':''}" draggable="true" data-drag="task|${t.id}" data-id="${t.id}">
  <span class="tgrip" data-tgrip aria-hidden="true" title="Glisse pour déplacer"><svg viewBox="0 0 12 20" width="10" height="18"><g fill="currentColor"><circle cx="3" cy="4" r="1.6"/><circle cx="9" cy="4" r="1.6"/><circle cx="3" cy="10" r="1.6"/><circle cx="9" cy="10" r="1.6"/><circle cx="3" cy="16" r="1.6"/><circle cx="9" cy="16" r="1.6"/></g></svg></span>
@@ -46,12 +46,13 @@ function mobileTimeline(d){
  ${done.length?`<div class="rsec">Terminées</div><div class="list">${done.map(card).join('')}</div>`:''}
  <p class="mute" style="font-size:12.5px;margin-top:10px">Astuce : appui long sur une tâche pour la déplacer, la reporter ou fixer son heure.</p>`;
 }
+let sheetTid=null;
 function taskSheet(id){
- const t=T(id);if(!t)return;const d=t.day||cur,ts=dayTasks(d).filter(x=>!x.done),i=ts.indexOf(t);
+ const t=T(id);if(!t)return;sheetTid=id;const d=t.day||cur,ts=dayTasks(d).filter(x=>!x.done),i=ts.indexOf(t);
  showModal(`<div class="rit tsheet"><button class="sheetx" data-act="close" aria-label="Fermer" title="Fermer (Échap)">×</button><h2>${esc(t.title)}</h2><div class="menu">
   ${i>=0&&ts.length>1?`<div class="mvrow"><button class="mvico" data-act="mvup" data-id="${t.id}" aria-label="Monter d’un cran" title="Monter d’un cran" ${i>0?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><button class="mvico" data-act="mvdown" data-id="${t.id}" aria-label="Descendre d’un cran" title="Descendre d’un cran" ${i<ts.length-1?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button></div>`:''}
   <div class="mvrow">${PRIOS.map(([v,l])=>`<button class="mvico pbtn${(t.prio||'')===v?' on':''}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="Priorité ${l.toLowerCase()}" title="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</div>
-  <button data-act="play" data-id="${t.id}">Focus</button>
+  <button data-act="play" data-id="${t.id}">Focus<kbd>Espace</kbd></button>
   ${t.day!==today()?`<button data-act="sheetmv" data-id="${t.id}" data-to="${today()}">Aujourd’hui</button>`:''}
   <button data-act="sheetmv" data-id="${t.id}" data-to="${addDays(today(),1)}">Demain</button>
   <button data-act="sheetmv" data-id="${t.id}" data-to="backlog">Backlog</button>

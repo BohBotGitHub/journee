@@ -1198,3 +1198,9 @@ button.pri:hover{filter:brightness(1.06)}
 @keyframes dslr{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
 @keyframes dsll{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
 #main .head h1.dslide-r,#main .head h1.dslide-l{animation-duration:.28s}
+/* v1.9.3 — sous-tâches déplaçables : même trait que les tuiles */
+.csub[draggable],.sub[draggable]{cursor:grab}
+.csub.subbefore,.csub.subafter,.sub.subbefore,.sub.subafter{position:relative}
+.csub.subbefore::before,.csub.subafter::before,.sub.subbefore::before,.sub.subafter::before{content:'';position:absolute;left:0;right:0;height:2px;border-radius:2px;background:var(--acc);pointer-events:none}
+.csub.subbefore::before,.sub.subbefore::before{top:-2px}.csub.subafter::before,.sub.subafter::before{bottom:-2px}
+.csub.dragging,.sub.dragging{opacity:.4}

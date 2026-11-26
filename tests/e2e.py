@@ -1495,6 +1495,45 @@ def _(c):
     assert pg.locator('#modal.hidden').count() == 1
     assert not errs, errs; ctx.close()
 
+@test('v1.9.3 : glisser à la souris vers la droite d’une tuile en fait une sous-tâche')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    cards = pg.locator('#main .list .card[data-id]')
+    ids = st(pg, "[...document.querySelectorAll('#main .list .card[data-id]')].map(c=>c.dataset.id)")
+    pid, cid = ids[0], ids[2]
+    st(pg, f"(T('{cid}').subtasks=[],0)")
+    for fy in (.3, .5, .7):
+        b0 = cards.nth(0).bounding_box(); b2 = pg.locator(f'#main .card[data-id="{cid}"]').bounding_box()
+        pg.mouse.move(b2['x'] + 30, b2['y'] + b2['height'] / 2); pg.mouse.down()
+        pg.mouse.move(b0['x'] + b0['width'] * .8, b0['y'] + b0['height'] * fy, steps=8); pg.mouse.up(); tick(pg, 200)
+        assert st(pg, f"!T('{cid}')") and st(pg, f"T('{pid}').subtasks.length") > 0, fy
+        pg.keyboard.press('Control+z'); tick(pg, 200)
+        assert st(pg, f"!!T('{cid}')"), ('annuler', fy)
+    assert not errs, errs; ctx.close()
+
+@test('Sous-tâches glissables : réordonner, changer de tâche, en faire une tâche ; Espace lance le focus')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.evaluate("()=>{S.tasks.push(mk({id:'pp',title:'Parent',day:today(),est:20,order:0,subtasks:[{id:'a',t:'Un',d:false},{id:'b',t:'Deux',d:false},{id:'c',t:'Trois',d:false}]}));subShow('pp');save();render()}"); tick(pg, 150)
+    def dd(src, dst, fx=.3, fy=.5):
+        a = pg.locator(src).bounding_box(); b = pg.locator(dst).bounding_box()
+        pg.mouse.move(a['x'] + 40, a['y'] + a['height'] / 2); pg.mouse.down()
+        pg.mouse.move(b['x'] + b['width'] * fx, b['y'] + b['height'] * fy, steps=8); pg.mouse.up(); tick(pg, 200)
+    dd('[data-drag="sub|pp|c"]', '[data-drag="sub|pp|a"]', .3, .2)
+    assert st(pg, "T('pp').subtasks.map(x=>x.id)") == ['c', 'a', 'b'], st(pg, "T('pp').subtasks.map(x=>x.id)")
+    other = st(pg, "dayTasks(today()).find(t=>t.id!=='pp'&&!t.done).id")
+    dd('[data-drag="sub|pp|b"]', f'#main .card[data-id="{other}"]', .8, .5)
+    assert st(pg, f"T('{other}').subtasks.some(x=>x.id==='b')") and st(pg, "T('pp').subtasks.length") == 2
+    first = st(pg, "[...document.querySelectorAll('#main .list .card[data-id]')][0].dataset.id")
+    dd('[data-drag="sub|pp|a"]', f'#main .card[data-id="{first}"]', .2, .1)
+    n = st(pg, "S.tasks.find(t=>t.title==='Un')")
+    assert n and n['day'] == st(pg, "today()") and st(pg, "T('pp').subtasks.length") == 1, n
+    # Espace depuis la fenêtre d'une tâche
+    pg.evaluate("()=>taskSheet('pp')"); tick(pg, 150)
+    pg.keyboard.press('Space'); tick(pg, 300)
+    assert st(pg, "focusOn") == 'pp' and pg.locator('#modal.hidden').count() == 1
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')
