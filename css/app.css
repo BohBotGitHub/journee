@@ -1151,3 +1151,50 @@ button.pri:hover{filter:brightness(1.06)}
 @media (prefers-reduced-motion:reduce){.donesky .dssun{animation:none;transform:translateY(12px)}}
 .ripple{width:26px;height:26px;margin:-13px 0 0 -13px;background:radial-gradient(circle,color-mix(in srgb,var(--acc) 0%,transparent) 0,color-mix(in srgb,var(--acc) 0%,transparent) 48%,color-mix(in srgb,var(--acc) 55%,transparent) 58%,color-mix(in srgb,var(--acc) 18%,transparent) 66%,transparent 72%)}
 .donesky{border:0;background:transparent;padding:10px 0 6px;gap:18px}.donesky svg{border-radius:12px}
+
+/* v1.9.3 — emplacement de dépôt : un trait net entre les tuiles, plus de lueur */
+.card.dropbefore,.card.dropafter{box-shadow:none!important;position:relative}
+.card.dropbefore::before,.card.dropafter::before{content:'';position:absolute;left:4px;right:4px;height:2px;border-radius:2px;background:var(--acc);pointer-events:none;z-index:3;animation:dropin .14s ease-out}
+.card.dropbefore::after,.card.dropafter::after{content:'';position:absolute;left:0;width:8px;height:8px;border-radius:50%;border:2px solid var(--acc);background:var(--panel);box-sizing:border-box;pointer-events:none;z-index:4}
+.card.dropbefore::before{top:-6px}.card.dropafter::before{bottom:-6px}
+.card.dropbefore::after{top:-9px}.card.dropafter::after{bottom:-9px}
+.list.over:has(.dropbefore,.dropafter){background:transparent}
+.wcol .card.dropbefore::before{top:-4px}.wcol .card.dropafter::before{bottom:-4px}.wcol .card.dropbefore::after{top:-7px}.wcol .card.dropafter::after{bottom:-7px}
+@keyframes dropin{from{transform:scaleX(.6);opacity:0}to{transform:none;opacity:1}}
+
+/* v1.9.3 — en-tête du jour : flèches fixes à gauche de la date, haut allégé */
+.head .dline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.head .dline .dnav{display:inline-flex;gap:2px;margin:0 0 0 -6px}
+.head .dline .dnav button{min-width:28px;width:28px;height:28px;padding:0;border:0;background:transparent;box-shadow:none;border-radius:8px;font-size:17px;line-height:1;color:var(--mute)}
+.head .dline .dnav button:hover{background:var(--tint2,rgba(0,0,0,.05));color:var(--ink)}
+.head .dline .dtoday{border:0;background:transparent;box-shadow:none;padding:2px 8px;min-height:0;font-size:13px;color:var(--acc);border-radius:999px}
+.head .dline .dtoday:hover{background:var(--acc2)}
+.sumdet{position:relative}.sumdet .sumx{position:absolute;top:6px;right:6px;z-index:2}
+.nownext{grid-template-columns:1fr!important}
+@media (max-width:720px){.head .dline .dnav button{min-width:40px;width:40px;height:40px;min-height:40px}}
+/* v1.9.3 — menu replié : le logo reste visible ; le bouton du volet apparaît à son survol, comme dans Claude */
+@media (min-width:761px){
+ body.hidenav #nav .brand{visibility:visible;padding-left:1px;color:transparent;transition:color .2s}
+ body.hidenav #nav .brand svg{transition:opacity .15s}
+ body.hidenav #navtog{opacity:0;transition:opacity .15s;z-index:30}
+ body.hidenav #navtog:hover,body.hidenav #navtog:focus-visible{opacity:1;background:var(--panel2)}
+ body.hidenav:has(#navtog:hover) #nav .brand svg,body.hidenav:has(#navtog:focus-visible) #nav .brand svg{opacity:0}
+}
+/* date : sur une ligne */
+.head .dline .dtxt{white-space:nowrap}
+.head.tight .htitle{min-width:0;flex:1 1 auto}
+.head .dline>*{flex:none}
+.horizon.hzoff{visibility:hidden}
+.head .acts button.more:first-child{flex:none}
+/* v1.9.3 — fenêtres : toujours une croix pour sortir */
+.sheet{position:relative}
+.mclose{position:absolute;top:10px;right:10px;z-index:5;width:36px;height:36px;min-height:0;padding:0;border:0;background:transparent;color:var(--mute);font-size:22px;line-height:1;border-radius:10px;box-shadow:none}
+.mclose:hover{background:var(--panel2);color:var(--ink)}
+.sheet:has(>.mclose)>.rit>h2:first-child,.sheet:has(>.mclose)>div>h2:first-child{padding-right:44px}
+@media (max-width:760px){#sheet{transition:transform .18s ease-out}.mclose{width:44px;height:44px;top:6px;right:6px}}
+/* surprise v1.9.3 : la journée glisse dans le sens du temps */
+.dslide-r{animation:dslr .34s cubic-bezier(.32,.72,0,1)}
+.dslide-l{animation:dsll .34s cubic-bezier(.32,.72,0,1)}
+@keyframes dslr{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes dsll{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+#main .head h1.dslide-r,#main .head h1.dslide-l{animation-duration:.28s}

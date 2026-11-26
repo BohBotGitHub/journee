@@ -38,12 +38,14 @@ function flowOn(){return S.settings.liveShift!==false}
 var flowQ=null,inFlow=false;
 // les tâches non faites des jours passés reviennent aujourd'hui, sans bruit ; on compte seulement les reports
 function rollOver(){
+ // un appareil resté hors ligne ne reporte rien avant d'avoir reçu les changements des autres appareils
+ if(!syncTried&&(gTok()||gWas()))return 0;
  const t0=today();let n=0;const moved=[];
  for(const t of pastUndone()){
   if(t.recurId){deleteTask(t.id);n++;continue}
   if(t.evId&&t.block){t.done=true;t.doneAt=+new Date(t.block.end);continue} // rendez-vous passé : compté comme fait, il ne revient pas
   if(t.block)clearBlock(t,true);
-  t.roll=(t.roll||0)+1;t.pinned=false;t.day=t0;t.order=nextOrder(t0);moved.push(t.id);n++;
+  t.rf=t.u||0;t.rfAt=Date.now();t.roll=(t.roll||0)+1;t.pinned=false;t.day=t0;t.order=nextOrder(t0);moved.push(t.id);n++;
  }
  putFront(moved,t0);
  return n;

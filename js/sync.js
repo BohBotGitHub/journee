@@ -9,7 +9,7 @@ async function dfetch(url,opts={}){
  return r;
 }
 async function driveSync(light){
- if(!gTok())return;if(syncBusy){if(!light)syncAgain=true;return}syncBusy=true;
+ if(!gTok()){if(!syncTried&&!gWas()){syncTried=true;queueFlow()}return}if(syncBusy){if(!light)syncAgain=true;return}syncBusy=true;
  try{
   const q=encodeURIComponent("name='journee.json'");
   const list=await (await dfetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,modifiedTime)`)).json();
@@ -31,7 +31,7 @@ async function driveSync(light){
    S.syncedAt=Date.now();lsSet(KEY,JSON.stringify(S));syncState='Synchronisé';
   }
  }catch(e){syncState='Synchro en échec : '+e.message;if(/insufficient|scope|permission/i.test(e.message))syncState='Reconnecte Google pour activer la synchro'}
- finally{syncBusy=false;document.querySelectorAll('[data-live="sync"]').forEach(el=>el.textContent=syncState);renderSyncBar();if(syncAgain){syncAgain=false;setTimeout(()=>driveSync(),300)}}
+ finally{syncBusy=false;if(!syncTried){syncTried=true;queueFlow()}document.querySelectorAll('[data-live="sync"]').forEach(el=>el.textContent=syncState);renderSyncBar();if(syncAgain){syncAgain=false;setTimeout(()=>driveSync(),300)}}
 }
 
 /* ---------- synchro quasi immédiate : envoi 1,5 s après chaque modification, vérification toutes les 15 s ---------- */

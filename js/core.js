@@ -32,13 +32,14 @@ S.settings=Object.assign(defaults().settings,S.settings||{});
 (S.tasks||[]).forEach(t=>{if(t.prio==='urgent')t.prio='high'});
 if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
-let pushT=null,snap=null;
+let pushT=null,snap=null,syncTried=false;
 /* ---------- horodatage par élément (base de la synchro par fusion) ---------- */
 const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage','merged'];
 function scalJson(k){return JSON.stringify(S[k]===undefined?null:S[k])}
 function stamp(){
  const now=Date.now(),prev=snap,next={};S.deleted=S.deleted||{};S.su=S.su||{};
- const mark=(k,x)=>{const {u,...r}=x,j=JSON.stringify(r);next[k]=j;if(prev?prev[k]!==j:!x.u)x.u=now};
+ const mark=(k,x)=>{if(x.rfAt&&now-x.rfAt>3000&&prev&&prev[k]!==undefined){const {u:_u,rf:_a,rfAt:_b,...o}=x,{rf:_c,rfAt:_d,...p}=JSON.parse(prev[k]);if(JSON.stringify(o)!==JSON.stringify(p)){delete x.rf;delete x.rfAt}}
+  const {u,...r}=x,j=JSON.stringify(r);next[k]=j;if(prev?prev[k]!==j:!x.u)x.u=now};
  for(const c of COLL)for(const x of S[c]||[])mark(c+':'+x.id,x);
  for(const c of MAPS)for(const [key,v] of Object.entries(S[c]||{}))if(v&&typeof v==='object')mark(c+':'+key,v);
  for(const k of SCAL){const j=scalJson(k);next['s:'+k]=j;if(prev&&prev['s:'+k]!==j)S.su[k]=now}
@@ -52,7 +53,7 @@ function mergeState(L,R){
  // fusion élément par élément : pour chaque tâche, objectif, jour… la version la plus récente gagne ; les suppressions sont respectées
  const out=Object.assign({},L),del=Object.assign({},L.deleted||{});
  for(const [k,v] of Object.entries(R.deleted||{}))del[k]=Math.max(del[k]||0,v);
- for(const c of COLL){const m=new Map();for(const x of R[c]||[])m.set(x.id,x);for(const x of L[c]||[]){const r=m.get(x.id);if(!r||(x.u||0)>=(r.u||0))m.set(x.id,x)}out[c]=[...m.values()].filter(x=>!((del[c+':'+x.id]||0)>(x.u||0)))}
+ for(const c of COLL){const m=new Map();for(const x of R[c]||[])m.set(x.id,x);for(const x of L[c]||[]){const r=m.get(x.id);if(!r)m.set(x.id,x);else{const lw=(x.u||0)>=(r.u||0),stale=lw?(x.rf!==undefined&&(r.u||0)>x.rf&&!r.rf):(r.rf!==undefined&&(x.u||0)>r.rf&&!x.rf);if(lw!==stale)m.set(x.id,x)}}out[c]=[...m.values()].filter(x=>!((del[c+':'+x.id]||0)>(x.u||0)))}
  for(const c of MAPS){out[c]=Object.assign({},R[c]||{});for(const [k,v] of Object.entries(L[c]||{})){const r=out[c][k];if(!r||((v&&v.u)||0)>=((r&&r.u)||0))out[c][k]=v}}
  const ids=new Set((L.archive||[]).map(a=>a.id));out.archive=[...(L.archive||[]),...(R.archive||[]).filter(a=>!ids.has(a.id))];
  out.su=Object.assign({},L.su||{});
@@ -128,6 +129,8 @@ function parseQuick(txt){
   .replace(/\s(\d{1,2})\/(\d{1,2})(?=\s)/,(m,dd,mm)=>{const y=new Date().getFullYear();let d=ymd(new Date(y,+mm-1,+dd));if(d<t0)d=ymd(new Date(y+1,+mm-1,+dd));day=d;return ' '});
  return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due,proj:pj,prio,where};
 }
+// catégorie déjà donnée à une tâche du même nom (routines, modèles, récurrences)
+function catGuess(title){const n=(title||'').trim().toLowerCase();if(!n)return null;const x=S.tasks.find(t=>t.channel&&(t.title||'').trim().toLowerCase()===n);if(x)return x.channel;const a=(S.archive||[]).find(a=>a.c&&(a.t||'').trim().toLowerCase()===n);if(a)return a.c;return typeof hasTree==='function'&&hasTree()?ruleFor(title)||null:null}
 function addTask(text,day){
  const q=parseQuick(text);if(!q.title)return null;if(q.day!==undefined)day=q.day;
  if(!q.channel&&hasTree())q.channel=ruleFor(q.title);
@@ -190,6 +193,7 @@ function genRecurring(){
   for(const r of S.recurring){
    if(day<r.from||(r.skip||[]).includes(day)||!matches(r,day))continue;
    if(S.tasks.some(t=>t.recurId===r.id&&t.day===day))continue;
+   if(!r.channel)r.channel=catGuess(r.title);
    S.tasks.push(mk({title:r.title,channel:r.channel,est:r.est,notes:r.notes||'',day,recurId:r.id,order:nextOrder(day),subtasks:(r.subs||[]).map(x=>({id:uid(),t:x,d:false}))}));changed=true;
   }}
  if(changed)save();

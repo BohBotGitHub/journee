@@ -1,6 +1,8 @@
 // Diem — vues (Aujourd’hui, Semaine, Vide-tête, Backlog, Revue, Réglages, agendas)
 /* ---------- rendu : morceaux communs ---------- */
 let subOpen=new Set((()=>{try{return JSON.parse(localStorage.getItem('journee.subopen')||'[]')}catch(e){return[]}})());
+// une sous-tâche ajoutée déplie sa tâche pour qu'on la voie
+function subShow(id){if(subOpen.has(id))return;subOpen.add(id);lsSet('journee.subopen',JSON.stringify([...subOpen].filter(x=>T(x))))}
 function card(t){
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
  const so=t.subtasks&&t.subtasks.length&&subOpen.has(t.id),subs=t.subtasks&&t.subtasks.length?`<button class="subtog${so?' on':''}" data-act="subopen" data-id="${t.id}" aria-expanded="${!!so}" title="${so?'Replier':'Dérouler'} les sous-tâches"><i>▸</i>${t.subtasks.filter(s=>s.d).length}/${t.subtasks.length} sous-tâche${t.subtasks.length>1?'s':''}</button>`:'';
@@ -71,12 +73,10 @@ function summaryHtml(d,isT){
  const open=uiOpen;const chip=(k,txt,cls)=>`<button class="sumchip${cls?' '+cls:''}${open===k?' on':''}" data-act="sum" data-k="${k}">${txt}</button>`;
  const chips=[
   chip('load',`<i class="meter"><i style="width:${Math.min(100,(L.task+L.meet)/L.cap*100)}%"></i></i>${fmtMin(L.task+L.meet)} / ${fmtMin(L.cap)}`,L.over>0?'warn':''),
-  chip('job',ico('case')+jobLabel(d),jobOf(d)?'':'quiet'),
   isT?(()=>{const base=+parseYmd(d),end=base+dayHours(d).e*3600e3,left=Math.max(0,Math.round((end-Date.now())/60000)),plan=dayTasks(d).filter(t=>!t.done).reduce((s,t)=>s+Math.max(0,(t.est||0)-Math.floor((t.actual||0)/60)),0);return chip('left',`${ico('clock')}${left?'<span class="lg">Il te reste </span>'+fmtMin(left):'Journée finie'}<span class="lg"> · ${fmtMin(plan)} prévues</span>`,plan>left?'warn':'')})():'',
-  evs.length?chip('ev',`${evs.length} rendez-vous`):'',
   soon.length?chip('due',`⏰ ${soon.length} échéance${soon.length>1?'s':''}`,'acc'):'',
   objs.length?chip('obj',`${objs.filter(o=>o.done).length}/${objs.length} objectif${objs.length>1?'s':''}`):'',
-  isT&&flowOn()?`<button class="sumchip${info.frozen?' on':''}" data-act="freeze" title="${info.frozen?'Journée figée : les créneaux ne glissent plus avec l’heure':'Les créneaux suivent l’heure ; clique pour figer'}">${info.frozen?'❄ Figée':'Figer'}</button>`:''
+  isT&&flowOn()&&info.frozen?`<button class="sumchip on" data-act="freeze" title="Journée figée : les créneaux ne glissent plus avec l’heure. Clique pour libérer">❄ Figée</button>`:''
  ].join('');
  let det='';
  if(open==='load')det=loadBar(d);
@@ -85,7 +85,7 @@ function summaryHtml(d,isT){
  else if(open==='late'&&past.length)det=`<div class="row" style="flex-wrap:wrap"><span>${past.length} tâche${past.length>1?'s':''} non terminée${past.length>1?'s':''} des jours précédents.</span><span class="sp"></span><button class="sm pri" data-act="rollover">Tout ici</button><button class="sm" data-act="plan">Trier une à une</button></div>`;
  else if(open==='due')det=`<div class="row" style="flex-wrap:wrap">${soon.map(t=>`<button class="sm ghost" data-act="open" data-id="${t.id}">${esc(t.title)} · ${dueLabel(t).replace(/<[^>]+>/g,'').replace('⏰ ','')}</button>`).join('')}</div>`;
  else if(open==='obj')det=objChips(monday(d))||'';
- return `<div class="summary">${chips}</div>${det?`<div class="sumdet">${det}</div>`:''}`;
+ return `<div class="summary">${chips}</div>${det?`<div class="sumdet"><button class="x sumx" data-act="sum" data-k="${open}" aria-label="Fermer">×</button>${det}</div>`:''}`;
 }
 let uiOpen='',uiDoneOpen=false;
 // bascule liste ⇄ grand agenda : une icône, toujours au même endroit dans l'en-tête
@@ -98,10 +98,10 @@ function viewToday(){
  // une seule action mise en avant, selon le moment ; les autres sont dans •••
  const h=new Date().getHours(),past=d<today();
  const main=past?null:!isT||(!info.planned&&h<S.settings.workEnd)?['plan',planLbl,'P']:h>=S.settings.workEnd&&!info.shutdown?['shutdown','Clôturer la journée','S']:dayTasks(d).some(t=>!t.done)?['focusnext','Focus','F']:['shutdown',info.shutdown?'Revoir le bilan':'Clôturer la journée','S'];
- const pct=ts.length?Math.round(done.length/ts.length*100):0,ring=ts.length?`<span class="dayring${pct===100?' full':''}" title="${done.length}/${ts.length} tâches faites" aria-label="${done.length} sur ${ts.length} tâches faites"><svg viewBox="0 0 36 36"><circle class="rbg" cx="18" cy="18" r="15.9"/><circle class="rfg" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="${pct} 100"/>${pct===100?'<g class="rsun"><circle cx="18" cy="18" r="5"/><path d="M18 8.5v2.5M18 25v2.5M8.5 18h2.5M25 18h2.5M11.3 11.3l1.8 1.8M22.9 22.9l1.8 1.8M24.7 11.3l-1.8 1.8M13.1 22.9l-1.8 1.8"/></g>':`<text x="18" y="21.5">${done.length}</text>`}</svg></span>`:'';
- const hz=isT?(()=>{const h=dayHours(d),b=+parseYmd(d),p=Math.max(0,Math.min(1,(Date.now()-(b+h.s*3600e3))/((h.e-h.s)*3600e3))),hr=new Date().getHours();const sky=hr<5||hr>=21?'night':hr<9?'dawn':hr<17?'day':'dusk';return `<div class="horizon sky-${sky}" style="--p:${p.toFixed(3)}" title="Ta journée : ${Math.round(p*100)} % du temps écoulé" aria-hidden="true"><i class="hsun${hr>=20||hr<6?' moon':''}"></i></div>`})():'';
- return `${hz}<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub kicker">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</div></div>
- <div class="acts"><div class="dnav"><button data-act="prev" aria-label="Jour précédent">‹</button>${isT?'':'<button data-act="gotoday">Aujourd’hui</button>'}<button data-act="next" aria-label="Jour suivant">›</button></div>${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
+ const pct=ts.length?Math.round(done.length/ts.length*100):0,ring=ts.length?`<span class="dayring${pct===100?' full':''}" title="${done.length}/${ts.length} tâches faites" aria-label="${done.length} sur ${ts.length} tâches faites"><svg viewBox="0 0 36 36"><circle class="rbg" cx="18" cy="18" r="15.9"/><circle class="rfg" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="${pct} 100"/>${pct===100?'<g class="rsun"><circle cx="18" cy="18" r="5"/><path d="M18 8.5v2.5M18 25v2.5M8.5 18h2.5M25 18h2.5M11.3 11.3l1.8 1.8M22.9 22.9l1.8 1.8M24.7 11.3l-1.8 1.8M13.1 22.9l-1.8 1.8"/></g>':`<text x="18" y="21.5">${done.length}</text>`}</svg></span>`:'<span class="dayring" style="visibility:hidden" aria-hidden="true"></span>';
+ const hz=isT?(()=>{const h=dayHours(d),b=+parseYmd(d),p=Math.max(0,Math.min(1,(Date.now()-(b+h.s*3600e3))/((h.e-h.s)*3600e3))),hr=new Date().getHours();const sky=hr<5||hr>=21?'night':hr<9?'dawn':hr<17?'day':'dusk';return `<div class="horizon sky-${sky}" style="--p:${p.toFixed(3)}" title="Ta journée : ${Math.round(p*100)} % du temps écoulé" aria-hidden="true"><i class="hsun${hr>=20||hr<6?' moon':''}"></i></div>`})():'<div class="horizon hzoff" aria-hidden="true"></div>';
+ return `${hz}<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub kicker dline"><span class="dnav"><button data-act="prev" aria-label="Jour précédent" title="Jour précédent (←)">‹</button><button data-act="next" aria-label="Jour suivant" title="Jour suivant (→)">›</button></span><span class="dtxt">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</span>${isT?'':'<button class="dtoday" data-act="gotoday">Revenir à aujourd’hui</button>'}</div></div>
+ <div class="acts">${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}
 
  <button class="addopen" data-act="addopen" data-d="${d}" aria-label="Ajouter une tâche (touche N)">${ico('plus')}<span>Ajouter une tâche</span><kbd>N</kbd></button>
@@ -129,6 +129,8 @@ function dayMenu(){
   <button data-act="shutdown">${info.shutdown?'Revoir le bilan du jour':'Clôturer la journée'}<kbd>S</kbd></button>
   ${flowOn()&&d===today()?`<button data-act="freeze">${info.frozen?'Libérer la journée (les créneaux suivent l’heure)':'Figer la journée (les créneaux ne glissent plus)'}</button>`:''}
   ${d===today()&&flowOn()?`<button data-act="plan">Mes heures et mon plan du jour (${hhmm(dayHours(d).s)} → ${hhmm(dayHours(d).end)})</button>`:''}
+  <button class="hasic" data-act="sum" data-k="job">${ico('case')}<span>${esc(jobLabel(d))}</span></button>
+  ${timedEvents(d).length?`<button class="hasic" data-act="sum" data-k="ev">${ico('cal')}<span>${timedEvents(d).length} rendez-vous ce jour-là</span></button>`:''}
   <button data-act="tplfromday">Enregistrer comme modèle</button>
   <button data-act="palopen">Rechercher ou lancer une commande<kbd>⌘K</kbd></button>
  </div></div>`);
@@ -186,7 +188,7 @@ function dictate(){
 /* ---------- routines et modèles ---------- */
 const tplText=tp=>tp.items.map(i=>`${i.title}${i.est?' '+i.est+'m':''}${ch(i.channel)?' #'+ch(i.channel).name.replace(/\s+/g,''):''}${(i.subs||[]).map(x=>'\n- '+x).join('')}`).join('\n');
 function tplFromText(txt){const items=[];for(const raw of txt.split('\n')){const l=raw.trim();if(!l)continue;if(/^[-•]\s*/.test(l)&&items.length){items[items.length-1].subs.push(l.replace(/^[-•]\s*/,''));continue}const q=parseQuick(l);if(q.title)items.push({title:q.title,est:q.est,channel:q.channel,subs:[]})}return items}
-function applyTpl(id,day){const tp=(S.templates||[]).find(x=>x.id===id);if(!tp)return;for(const i of tp.items)S.tasks.push(mk({title:i.title,est:i.est,channel:i.channel,day,order:nextOrder(day),subtasks:(i.subs||[]).map(x=>({id:uid(),t:x,d:false}))}));save();render();toast(`« ${tp.name} » : ${tp.items.length} tâche${tp.items.length>1?'s':''} ajoutée${tp.items.length>1?'s':''} ${day?'au '+fmtDay(day,{weekday:'long',day:'numeric'}):'au backlog'}`);emit('template:apply',{tpl:tp,day})}
+function applyTpl(id,day){const tp=(S.templates||[]).find(x=>x.id===id);if(!tp)return;const nw=[];for(const i of tp.items){if(!i.channel)i.channel=catGuess(i.title);const t=mk({title:i.title,est:i.est,channel:i.channel,day,order:nextOrder(day),subtasks:(i.subs||[]).map(x=>({id:uid(),t:x,d:false}))});S.tasks.push(t);nw.push(t)}nw.forEach(t=>{if(typeof aiWatch==='function')aiWatch(t)});save();render();toast(`« ${tp.name} » : ${tp.items.length} tâche${tp.items.length>1?'s':''} ajoutée${tp.items.length>1?'s':''} ${day?'au '+fmtDay(day,{weekday:'long',day:'numeric'}):'au backlog'}`);emit('template:apply',{tpl:tp,day})}
 function tplSuggestions(){
  if(!(S.archive||[]).length)return [];const by={};
  for(const a of S.archive){if(!a.c)continue;const k=a.c;by[k]=by[k]||{};const t=a.t.trim();by[k][t]=by[k][t]||{n:0,s:0};by[k][t].n++;by[k][t].s+=a.a||0}
@@ -432,7 +434,7 @@ function nowNext(d){
  const inWin=t=>t.block&&+new Date(t.block.start)<=now&&+new Date(t.block.end)>now;
  const cur=r&&r.day===d?r:ts.find(inWin)||ts[0],nx=ts.filter(t=>t!==cur).sort((a,b)=>(a.block?+new Date(a.block.start):9e15)-(b.block?+new Date(b.block.start):9e15))[0];
  const run=r===cur,end=cur.block?hm(new Date(cur.block.end)):null;
- return `<div class="nownext"><div class="nowc${run?' run':''}"><small>${run?'En cours':'Maintenant'}</small><button class="nowt" data-act="open" data-id="${cur.id}">${esc(cur.title)}</button><span class="mute">${end?'jusqu’à '+end:cur.est?fmtMin(cur.est):''}</span><button class="nowplay" data-act="${run?'timer':'play'}" data-id="${cur.id}" aria-label="${run?'Pause':'Lancer le focus'}" title="${run?'Pause':'Lancer le focus'}">${ico(run?'pause':'play')}</button></div>${nx?`<div class="nextc"><small>Ensuite</small><button class="nowt" data-act="open" data-id="${nx.id}">${esc(nx.title)}</button><span class="mute">${nx.block?'à '+hm(new Date(nx.block.start)):''}</span></div>`:''}</div>`}
+ return `<div class="nownext"><div class="nowc${run?' run':''}"><small>${run?'En cours':'Maintenant'}</small><button class="nowt" data-act="open" data-id="${cur.id}">${esc(cur.title)}</button><span class="mute">${end?'jusqu’à '+end:cur.est?fmtMin(cur.est):''}</span><button class="nowplay" data-act="${run?'timer':'play'}" data-id="${cur.id}" aria-label="${run?'Pause':'Lancer le focus'}" title="${run?'Pause':'Lancer le focus'}">${ico(run?'pause':'play')}</button></div></div>`}
 
 /* ---------- fenêtre d'ajout d'une tâche ---------- */
 let ad=null;
@@ -455,12 +457,13 @@ function addSheetHtml(){
   <span class="prow" role="radiogroup" aria-label="Priorité">${[['high','Haute'],['','Normale'],['low','Basse']].map(([v,l])=>`<button type="button" class="pbtn${(ad.prio||q.prio||'')===v?' on':''}" data-act="adprio" data-v="${v}" aria-label="Priorité ${l.toLowerCase()}" title="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>
   <span class="prow" role="radiogroup" aria-label="Lieu">${WHERES.map(([v,l])=>`<button type="button" class="pbtn${(ad.where||q.where||'')===v?' on':''}" data-act="adwhere" data-v="${v}" aria-label="${v?l:'Auto'}" title="${v?l:'Lieu : selon la catégorie'}">${ico({'':'auto',any:'laptop',home:'home',out:'walk'}[v])}</button>`).join('')}</span>
  </div>
- <div class="mfoot"><small class="mute">Entrée pour ajouter et enchaîner · Échap pour fermer</small><span class="sp"></span><button class="ghost" data-act="close">Fermer</button><button class="pri" data-act="adok">Ajouter</button></div></div>`}
+ <div class="mfoot"><small class="mute">Entrée pour ajouter · Maj + Entrée pour en ajouter une autre</small><span class="sp"></span><button class="ghost" data-act="close">Fermer</button><button class="pri" data-act="adok">Ajouter</button></div></div>`}
 function renderAdd(first){if(!ad)return;const i=document.querySelector('[data-adtitle]'),pos=i?i.selectionStart:null;showModal(addSheetHtml());const n=document.querySelector('[data-adtitle]');if(n){n.focus();if(pos!==null&&!first)n.setSelectionRange(pos,pos)}}
-function addSubmit(){if(!ad)return;const t0=(document.querySelector('[data-adtitle]')||{}).value||'';if(!t0.trim()){toast('Écris d’abord un titre');return}
+function addSubmit(chain){if(!ad)return;const t0=(document.querySelector('[data-adtitle]')||{}).value||'';if(!t0.trim()){toast('Écris d’abord un titre');return}
  const t=addTask(t0,ad.day);if(!t)return;
  if(ad.est)setEst(t,ad.est);if(ad.channel)t.channel=ad.channel;if(ad.prio!=='')t.prio=ad.prio;if(ad.where)t.where=ad.where;
  if(ad.prio||ad.where||ad.channel)placeNew(t);save();render();toast('Ajoutée : '+t.title);
+ if(!chain){closeModal();return}
  ad=Object.assign(ad,{title:'',est:0,channel:null,prio:'',where:''});renderAdd(true)}
 
 // surprise : la journée accomplie, un soleil qui se couche doucement derrière l'horizon
