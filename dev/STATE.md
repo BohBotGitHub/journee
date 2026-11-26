@@ -1,7 +1,20 @@
 # Diem : état du travail autonome
 
-mode: actif
+mode: veille
 (« veille » = le propriétaire est absent, les lancements automatiques travaillent ; « actif » = ils s'arrêtent aussitôt. Claude le change quand il dit « mode veille » ou quand il revient.)
+
+## MISSION EN COURS (26/11, 15 h) : AUDIT COMPLET « BÊTA-TESTEUR » — prioritaire sur toute la file
+Demande du propriétaire : avant toute nouvelle fonctionnalité, un audit complet pour une appli fonctionnelle, ergonomique, belle, « produit fini commercialisable » (il ne la vendra pas).
+1. Tester TOUTES les fonctions comme un bêta-testeur (ordinateur / tablette / téléphone ; profils pressé, maladroit, exigeant ; skills `claude-beta-tester:beta-test`, `rampstack-starter:qa-testing`, `rampstack-starter:accessibility-audit`). Repérer le maladroit et le bloquant.
+2. Comparer avec Sunsama en l'utilisant (navigateur intégré, compte du propriétaire : ne créer que des tâches « TEST Claude » et les effacer ; ne rien modifier d'autre ; ne jamais saisir de mot de passe).
+3. Comparer aux fonctionnalités de : Akiflow, Motion, Todoist, TickTick, Things, Structured, Tiimo, Amie, Routine, Reclaim (recherche web).
+4. Cohérence (« pas un Frankenstein ») : où sont rangées les choses, vocabulaire, réglages, menus, doublons.
+5. Bugs trouvés : les corriger sur `dev` (tests + démo à jour).
+6. Changements de STRUCTURE : seulement sur la branche `audit-structure` (partie de `dev`), avec démo avant / après. Retour en arrière : la branche `avant-audit` = `dev` avant l'audit. Rien en ligne ; avis du propriétaire à la fin.
+7. Livrable : rapport d'audit (doc Claude, en français) + démo de tout ce qui a été corrigé.
+
+## Avancement audit
+- (rien encore)
 
 ## Dernier lot
 3e lancement autonome du 25/11 (nuit), sur `dev`, en démo (v=51), pas en ligne :
