@@ -4,9 +4,10 @@ Ce fichier guide chaque lancement automatique. Chaque lancement repart de zéro 
 
 ## Démarrage d'un lancement (dans cet ordre)
 1. **Garde-fou** : cloner le dépôt `BohBotGitHub/journee` (branche `dev`) et lire `dev/STATE.md`. Si la ligne `mode:` ne vaut pas `veille`, s'arrêter tout de suite et le dire en une ligne : le propriétaire est là, on ne travaille pas à sa place.
-2. Toujours travailler sur la branche **`dev`** (jamais `main`).
-3. Lire le plan : doc Claude `7f87661b-2ef4-4776-a963-50e75e54c599`, onglet `0454f7db-ba01`, tableau des lots `m7dyfaegn36.14769`. Les lignes « À faire » sont le travail restant.
-4. Relire `dev/STATE.md` (dernier lot fait, file d'attente, questions en suspens).
+2. **Session déjà au travail ?** Si le dernier commit de `dev` (ou de `audit-structure`) date de moins de 90 minutes, une autre session travaille : s'arrêter tout de suite en le disant en une ligne.
+3. Toujours travailler sur la branche **`dev`** (jamais `main`).
+4. Lire le plan : doc Claude `7f87661b-2ef4-4776-a963-50e75e54c599`, onglet `0454f7db-ba01`, tableau des lots `m7dyfaegn36.14769`. Les lignes « À faire » sont le travail restant.
+5. Relire `dev/STATE.md` (la « MISSION EN COURS » passe avant tout ; (dernier lot fait, file d'attente, questions en suspens).
 
 ## Règles du propriétaire (à respecter strictement)
 - Parler et écrire en **français naturel**.
