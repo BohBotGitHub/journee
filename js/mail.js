@@ -5,11 +5,21 @@ function gmailOk(){return !!gTok()&&/gmail\.readonly/.test(gScope())}
 function outlookOk(){try{const o=JSON.parse(lsGet('journee.m')||'null');return !!(o&&/Mail\.Read/i.test(o.scope||''))}catch(e){return false}}
 function mailOn(){return gmailOk()||outlookOk()}
 let mailBusy=false;
+/* Message clair selon la cause réelle du refus Gmail */
+function gmailErr(st,j){
+ const e=(j&&j.error)||{},m=(e.message||'')+' '+JSON.stringify(e.details||e.errors||'');
+ if(st===401)return 'ta connexion Google a expiré : Réglages › Réglages avancés › Trier mes mails › Gmail › Arrêter puis Autoriser';
+ if(/accessNotConfigured|SERVICE_DISABLED|has not been used|is disabled/i.test(m))return 'l’API Gmail n’est pas activée dans ton projet Google Cloud (Bibliothèque › Gmail API › Activer), puis réessaie dans quelques minutes';
+ if(st===403&&/insufficient|scope|ACCESS_TOKEN_SCOPE/i.test(m))return 'Google n’a pas donné l’accès aux mails : Réglages › Réglages avancés › Trier mes mails › Gmail › Arrêter puis Autoriser, et coche « Afficher vos e-mails » sur l’écran Google';
+ if(st===403)return 'accès Gmail refusé ('+(e.message||'403')+')';
+ if(st===429)return 'Gmail limite les lectures pour l’instant, réessaie dans une minute';
+ return e.message||'Gmail : erreur '+st;
+}
 async function gmailUnread(){
  const t=gTok(),H={Authorization:'Bearer '+t},B='https://gmail.googleapis.com/gmail/v1/users/me/messages';
  const r=await fetch(B+'?maxResults=25&q='+encodeURIComponent('is:unread in:inbox newer_than:14d'),{headers:H});
- if(r.status===401||r.status===403)throw new Error('accès Gmail refusé : réautorise la lecture dans Réglages');
- const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error((j.error&&j.error.message)||'Gmail : erreur '+r.status);
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(gmailErr(r.status,j));
  const out=[];
  for(const m of (j.messages||[]).slice(0,25)){
   const x=await fetch(`${B}/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,{headers:H}).then(r=>r.ok?r.json():null).catch(()=>null);if(!x)continue;
