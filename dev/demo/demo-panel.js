@@ -5,9 +5,12 @@
   ['Bascule fluide des volets','Icône en haut à gauche : le menu glisse en rail ; icônes, Actualiser, Réglages et version ne bougent pas d’un pixel. Pareil pour l’agenda à droite.','today'],
   ['Le menu se replie en premier','Réduis la fenêtre : le menu passe en rail avant que l’agenda ne disparaisse.','today'],
   ['Bouton liste ⇄ agenda','Dans la rangée de boutons de l’en-tête ; plus de doublon dans le volet de droite.','today'],
-  ['Surprise','Lance un focus (bouton ▶ sur une tâche).','today'],
+  ['Surprise 1 : respirer','Lance un focus (bouton ▶ sur une tâche).','today'],
+  ['Surprise 2 : le ciel du jour','La barre tout en haut d’Aujourd’hui change de couleurs selon l’heure : aube, plein jour, crépuscule, nuit.','today'],
+  ['Surprise 3 : la coche','Coche une tâche et regarde autour de la case.','today'],
+  ['Surprise 4 : la fin','Coche toutes les tâches du jour.','today'],
   ['Son Cristal','Coche une tâche : petit son clair (Réglages › Apparence › Sons).','today']];
- const K='journee.demo53.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+ const K='journee.demo54.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const box=document.createElement('div');box.id='demopanel';document.body.appendChild(box);
  const css=document.createElement('style');css.textContent=`body:has(#mselbar:not(.hidden)) #demopanel{bottom:190px}#demopanel{position:fixed;right:12px;bottom:12px;z-index:90;width:min(360px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:2px solid #c2410c;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);font-size:14px}
@@ -50,6 +53,6 @@
   if(d==='tog'){min=!min;draw()}
   if(d==='show')show(b.dataset.k);
   if(d==='ok'||d==='ko'){const i=b.dataset.i;st[i]=st[i]===d?undefined:d;save();draw()}
-  if(d==='reset'){['journee.v1','journee.demo','journee.demo53.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
+  if(d==='reset'){['journee.v1','journee.demo','journee.demo54.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
  draw();
 })();

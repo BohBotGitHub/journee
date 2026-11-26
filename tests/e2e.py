@@ -1404,6 +1404,21 @@ def _(c):
     tick(pg, 9500); assert pg.locator('#focus .breathe').count() == 0
     assert not errs, errs; ctx.close()
 
+@test('Surprises : ciel du jour, onde de la coche, journée accomplie')
+def _(c):
+    for h, k in [(7, 'dawn'), (13, 'day'), (19, 'dusk'), (23, 'night')]:
+        ctx, pg, errs = new_page(c['b'], clock=at(h, 0))
+        assert pg.locator(f'#main .horizon.sky-{k}').count() == 1, (h, k)
+        ctx.close()
+    ctx, pg, errs = new_page(c['b'], clock=at(10, 0))
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
+    pg.click(f'#main .card[data-id="{tid}"] .chk'); pg.wait_for_timeout(100)
+    assert pg.locator('body > .ripple').count() == 1
+    tick(pg, 1400); assert pg.locator('body > .ripple').count() == 0
+    pg.evaluate("()=>{dayTasks(today()).forEach(t=>{t.done=true});save();render()}"); tick(pg, 200)
+    assert pg.locator('#main .donesky').count() == 1 and 'Journée accomplie' in pg.inner_text('#main .donesky')
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')
