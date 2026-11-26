@@ -40,13 +40,19 @@ function go(v){
 }
 
 /* ---------- modale ---------- */
-function showModal(html){$('#sheet').innerHTML=html;$('#modal').classList.remove('hidden');iconize($('#sheet'))}
-function closeModal(){if(typeof ad!=='undefined')ad=null;
+function showModal(html){const was=$('#modal').classList.contains('hidden');$('#sheet').innerHTML=html;
+ // toujours une façon visible de fermer (téléphone surtout)
+ if(!$('#sheet').querySelector('.sheetx,[data-act="close"]'))$('#sheet').insertAdjacentHTML('afterbegin','<button class="x mclose" data-act="close" aria-label="Fermer" title="Fermer (Échap)">×</button>');
+ $('#modal').classList.remove('hidden');iconize($('#sheet'));
+ // le bouton « retour » du téléphone ferme la fenêtre au lieu de quitter l'appli
+ if(was&&!navigator.webdriver){try{history.pushState({m:1},'')}catch(e){}}}
+function closeModal(fromBack){if(typeof ad!=='undefined')ad=null;if(typeof sheetTid!=='undefined')sheetTid=null;
+ if(!fromBack&&history.state&&history.state.m&&!$('#modal').classList.contains('hidden')){try{history.back()}catch(e){}}
  if(modalTask){const t=T(modalTask);if(t&&t.block&&t.block.gcalId&&t.block.title!==t.title&&gTok()){t.block.title=t.title;save();gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{})}}
  $('#modal').classList.add('hidden');modalTask=null;ritual=null;render();
 }
 let focusEdit=null;
-function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':''}${focusOn===t.id&&focusSub===s.id?' cur':''}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${s.id}" aria-label="Cocher">${s.d?'✓':''}</button><span>${esc(s.t)}</span>${s.d?'':`<button class="play" data-act="focussub" data-tid="${t.id}" data-s="${s.id}" aria-label="Focus sur cette sous-tâche">▶</button>`}<button class="x" data-act="subd" data-tid="${t.id}" data-s="${s.id}" aria-label="Supprimer">×</button></div>`).join('')}
+function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':''}${focusOn===t.id&&focusSub===s.id?' cur':''}" draggable="true" data-drag="sub|${t.id}|${s.id}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${s.id}" aria-label="Cocher">${s.d?'✓':''}</button><span>${esc(s.t)}</span>${s.d?'':`<button class="play" data-act="focussub" data-tid="${t.id}" data-s="${s.id}" aria-label="Focus sur cette sous-tâche">▶</button>`}<button class="x" data-act="subd" data-tid="${t.id}" data-s="${s.id}" aria-label="Supprimer">×</button></div>`).join('')}
 function openTask(id){
  const t=T(id);if(!t)return;if(modalAI&&modalAI.tid!==id)modalAI=null;modalTask=id;ritual=null;
  const objs=weekObjs(monday(t.day||today())),r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);

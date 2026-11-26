@@ -9,6 +9,7 @@ runFlow(); // les fonctions des autres modules n'existaient pas encore pendant l
 if(S.running&&T(S.running.taskId))renderRun();
 if(msOn()&&S.settings.msClientId)setTimeout(syncTodo,1500);
 setTimeout(()=>{if(!gTok())gSilent();driveSync()},300);
+setTimeout(()=>{if(!syncTried){syncTried=true;queueFlow()}},12000); // filet : hors ligne, le report se fait quand même
 setTimeout(aiMorning,1500);
 // migration vers l'arbre : après la première synchro (un autre appareil l'a peut-être déjà faite)
 if(treePending)setTimeout(()=>{if(ensureTree()&&$('#modal').classList.contains('hidden'))showModal(treeMigrationHtml());else{render()}},gTok()?3500:500);
@@ -37,3 +38,11 @@ function applyPanes(){const b=document.body;if(innerWidth<=760){b.classList.remo
  b.classList.toggle('hideside',!showS);b.classList.toggle('hidenav',!showN)}
 applyPanes();
 let paneW=innerWidth;addEventListener('resize',()=>{if(Math.abs(innerWidth-paneW)>40){lsDel("journee.pside");lsDel("journee.pnav");paneW=innerWidth}applyPanes()});
+// retour du téléphone : ferme la fenêtre ouverte
+window.addEventListener('popstate',()=>{if(!$('#modal').classList.contains('hidden'))closeModal(true)});
+// glisser la fenêtre vers le bas pour la fermer (téléphone)
+(function(){let y0=null,sh=null;
+ document.addEventListener('touchstart',e=>{const s=e.target.closest('#sheet');if(!s||innerWidth>760||e.target.closest('input,textarea,select,[data-tgrip]'))return;const sc=e.target.closest('.rit>*:not(h2),.mbody')||s;if(sc.scrollTop>0||s.scrollTop>0)return;y0=e.touches[0].clientY;sh=s},{passive:true});
+ document.addEventListener('touchmove',e=>{if(y0===null)return;const dy=e.touches[0].clientY-y0;if(dy>0)sh.style.transform=`translateY(${Math.min(dy,240)*.6}px)`},{passive:true});
+ document.addEventListener('touchend',e=>{if(y0===null)return;const dy=(e.changedTouches[0]||{}).clientY-y0;sh.style.transform='';y0=null;if(dy>110)closeModal()},{passive:true});
+})();

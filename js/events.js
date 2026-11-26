@@ -4,7 +4,7 @@ let toastT;
 let toastFn=null;
 function toast(msg,act,fn){if(!act&&typeof msg==='string'&&/⌘\/Ctrl Z pour annuler/.test(msg)){msg=msg.replace(/\s*·?\s*⌘\/Ctrl Z pour annuler/,'');act='Annuler';fn=()=>undoPop()}const el=$('#toast');el.textContent=msg;toastFn=act&&fn?fn:null;if(toastFn){const b=document.createElement('button');b.className='tact';b.dataset.act='toastact';b.textContent=act;el.appendChild(b)}el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>{el.classList.remove('show');toastFn=null},toastFn?7000:3200)}
 document.addEventListener('click',async e=>{
- const nv=e.target.closest('#nav [data-view]');if(nv){go(nv.dataset.view);return}
+ const nv=e.target.closest('#nav [data-view]');if(nv){if(nv.dataset.view==='today')cur=today();go(nv.dataset.view);return}
  const sd=e.target.closest('[data-side]');if(sd){sideTab=sd.dataset.side;renderSide();return}
  if(e.target.id==='modal'){if(!ritual&&downOnBackdrop)closeModal();return}
  // multi-sélection : ⌘/Ctrl-clic ajoute ou retire une tâche, Maj-clic prend toute la plage
@@ -25,11 +25,11 @@ document.addEventListener('click',async e=>{
   case'focusmax':{const fid=id||focusMin;focusMin=null;if(fid)openFocus(fid);break}
   case'focusdone':{await toggleDone(id);const nx=dayTasks(cur).find(t=>!t.done);focusOn=null;renderFocus();toast(nx?'Bravo ! Prochaine : '+nx.title:'Bravo ! Tout est fait.');break}
   case'timer':if(S.running&&S.running.taskId===id){stopTimer();render()}else{startTimer(id);const tt=T(id);if(tt)activate(tt)}renderFocus();break;
-  case'prev':cur=addDays(cur,-1);render();break;
-  case'next':cur=addDays(cur,1);render();break;
+  case'prev':cur=addDays(cur,-1);render();daySlide(-1);break;
+  case'next':cur=addDays(cur,1);render();daySlide(1);break;
   case'prevw':cur=addDays(cur,-7);render();break;
   case'nextw':cur=addDays(cur,7);render();break;
-  case'gotoday':cur=today();render();break;
+  case'gotoday':{const s=cur>today()?-1:1;cur=today();render();daySlide(s);break}
   case'openday':cur=b.dataset.day;go('today');break;
   case'plan':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();startRitual('plan',cur);break;
   case'shutdown':if(!$('#modal').classList.contains('hidden')&&!ritual)$('#modal').classList.add('hidden');startRitual('shutdown',cur>today()?today():cur);break;
@@ -166,7 +166,7 @@ document.addEventListener('click',async e=>{
   case'mvdown':closeModal();swapTask(id,1);break;
   case'tobacklog':{const t=T(id);if(t&&t.day){moveTask(id,'backlog');toast('Renvoyée au backlog');if(modalTask===id)openTask(id)}break}
   case'sheetmv':{closeModal();const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0;let to=b.dataset.to;if(t&&to===addDays(today(),1))to=nextFreeDay(t);moveTask(id,to,true);if(to!=='backlog'&&to>today())putFront([id],T(id).day);save();render();toast(to==='backlog'?'Renvoyée au backlog':to===today()?'Pour aujourd’hui':to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
-  case'sum':uiOpen=uiOpen===b.dataset.k?'':b.dataset.k;render();break;
+  case'sum':if(b.closest('#modal'))closeModal();uiOpen=uiOpen===b.dataset.k?'':b.dataset.k;render();break;
   case'freeze':{const d=cur;S.days[d]=Object.assign(S.days[d]||{},{frozen:!(S.days[d]||{}).frozen});save();if(!$('#modal').classList.contains('hidden'))closeModal();render();toast(S.days[d].frozen?'Journée figée : les créneaux ne bougent plus avec l’heure':'Les créneaux suivent à nouveau l’heure');break}
   case'daymenu':dayMenu();break;
   case'estmenu':{const t=T(id);if(t)estMenu(t,b);break}
@@ -200,7 +200,7 @@ document.addEventListener('submit',e=>{
  if(k==='add'){const nt=addTask(v,f.dataset.day||null);if(nt&&f.dataset.proj&&!nt.proj){nt.proj=f.dataset.proj;save();render()}const n=document.querySelector(`[data-keep="${inp.dataset.keep}"]`);if(n)n.value='';if(ritual)renderRitual()}
  else if(k==='obj'){S.objectives.push({id:uid(),week:monday(ritual?ritual.day:cur),title:v,done:false});save();render();if(ritual)renderRitual()}
  else if(k==='ai'){inp.value='';aiAsk(v,false);return}
- else if(k==='sub'){const t=T(f.dataset.tid);if(t){t.subtasks.push({id:uid(),t:v,d:false});save();if(focusOn)renderFocus();if(modalTask===t.id)openTask(t.id);render()}}
+ else if(k==='sub'){const t=T(f.dataset.tid);if(t){t.subtasks.push({id:uid(),t:v,d:false});subShow(t.id);save();if(focusOn)renderFocus();if(modalTask===t.id)openTask(t.id);render()}}
  const n=document.querySelector(`[data-keep="${inp.dataset.keep}"]`);if(n){n.value='';n.focus()}
 });
 document.addEventListener('input',e=>{
@@ -266,24 +266,34 @@ function calMinute(z,y){const r=z.getBoundingClientRect();let m=S.settings.daySt
 document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]');if(!c)return;drag=c.dataset.drag;try{e.dataTransfer.setData('text/plain',drag);e.dataTransfer.effectAllowed='move'}catch(err){}
  // la tuile reste bien visible sous la souris : copie nette (pas l'original estompé) comme image de glissement
  try{const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragimg');{const id=(c.dataset.drag||'').split('|')[1];if(msel.size>1&&msel.has(id)){g.classList.add('dragmulti');g.setAttribute('data-n',msel.size)}}g.style.width=r.width+'px';document.body.appendChild(g);e.dataTransfer.setDragImage(g,Math.min(e.clientX-r.left,r.width-10),Math.min(e.clientY-r.top,r.height-6));setTimeout(()=>g.remove(),0)}catch(err){}
- requestAnimationFrame(()=>{c.classList.add('dragging');const id=drag.split('|')[1];if(msel.size>1&&msel.has(id))msel.forEach(x=>document.querySelectorAll(`#main .card[data-id="${x}"]`).forEach(k=>k.classList.add('dragging')))})});
-document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over,.dropbefore,.dropafter,.dropsub').forEach(x=>x.classList.remove('dragging','over','dropbefore','dropafter','dropsub'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
+ requestAnimationFrame(()=>{c.classList.add('dragging');const id=drag.split('|')[1];if(drag.startsWith('task|')&&msel.size>1&&msel.has(id))msel.forEach(x=>document.querySelectorAll(`#main .card[data-id="${x}"]`).forEach(k=>k.classList.add('dragging')))})});
+document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over,.dropbefore,.dropafter,.dropsub,.subbefore,.subafter').forEach(x=>x.classList.remove('dragging','over','dropbefore','dropafter','dropsub','subbefore','subafter'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
+// zone de dépôt : aussi juste au-dessus d'une liste (pour placer en première position)
+function dropZone(e){const z=e.target.closest('[data-drop]');if(z)return z;for(const l of document.querySelectorAll('#main .list[data-drop^="day:"]')){const r=l.getBoundingClientRect();if(r.width&&e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top-56&&e.clientY<r.top)return l}return null}
 document.addEventListener('dragover',e=>{
- const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
+ if(drag&&drag.startsWith('sub|')){const row=e.target.closest('.csub,.sub');document.querySelectorAll('.subbefore,.subafter').forEach(x=>{if(x!==row)x.classList.remove('subbefore','subafter')});
+  if(row&&row.dataset.drag&&row.dataset.drag!==drag){e.preventDefault();const r=row.getBoundingClientRect(),cls=e.clientY<r.top+r.height/2?'subbefore':'subafter';row.classList.remove('subbefore','subafter');row.classList.add(cls);return}}
+ const z=dropZone(e);if(!z||!drag)return;e.preventDefault();
  document.querySelectorAll('.over').forEach(x=>{if(x!==z)x.classList.remove('over')});z.classList.add('over');
  // place d'arrivée : un trait de couleur entre les tuiles
- {const card=e.target.closest('.list .card,.mrow .card'),cur=document.querySelector('.dropbefore,.dropafter,.dropsub');const sub=card&&drag.startsWith('task|')&&!(msel.size>1&&msel.has(drag.split('|')[1]));if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),cls=sub&&e.clientX>r.left+r.width*.55?'dropsub':e.clientY<r.top+r.height/2?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter','dropsub');card.classList.add(cls)}else if(!card&&(z.dataset.drop||'').startsWith('day:')){const n=nearCard(z,e.clientY);if(n){if(cur&&(cur!==n.c||!cur.classList.contains(n.cls)))cur.classList.remove('dropbefore','dropafter','dropsub');n.c.classList.add(n.cls)}}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter','dropsub')}
+ {const card=e.target.closest('.list .card,.mrow .card'),cur=document.querySelector('.dropbefore,.dropafter,.dropsub');const sub=card&&(drag.startsWith('task|')||drag.startsWith('sub|')&&card.dataset.id!==drag.split('|')[1])&&!(msel.size>1&&msel.has(drag.split('|')[1]));if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),fy=(e.clientY-r.top)/r.height,cls=sub&&e.clientX>r.left+r.width*.55&&fy>.2&&fy<.8?'dropsub':fy<.5?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter','dropsub');card.classList.add(cls)}else if(!card&&(z.dataset.drop||'').startsWith('day:')){const n=nearCard(z,e.clientY);if(n){if(cur&&(cur!==n.c||!cur.classList.contains(n.cls)))cur.classList.remove('dropbefore','dropafter','dropsub');n.c.classList.add(n.cls)}}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter','dropsub')}
  document.querySelectorAll('.ghostblk').forEach(x=>{if(!z.contains(x))x.classList.add('hidden')});const g=z.querySelector('.ghostblk');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
 });
 document.addEventListener('drop',async e=>{
- const z=e.target.closest('[data-drop]');if(!z||!drag)return;e.preventDefault();
+ if(drag&&drag.startsWith('sub|')&&subDrop(e))return;
+ const z=dropZone(e);if(!z||!drag)return;e.preventDefault();
  const pre=undoSnap();setTimeout(()=>undoCommit(pre,'drop'),0);
  const dz=z.dataset.drop==='today'?'day:'+today():z.dataset.drop,src=drag.split('|');drag=null;z.classList.remove('over');
  let t;
  if(src[0]==='todo'){const x=(todo.tasks[src[1]]||[]).find(x=>x.id===src[2]);if(!x)return;t=importTodo(src[1],x,dz==='backlog'?null:dz.startsWith('day:')?dz.slice(4):(z.dataset.day||cur))}
+ else if(src[0]==='sub'){const p=T(src[1]),s=p&&(p.subtasks||[]).find(x=>x.id===src[2]);if(!s)return;
+  // sur une autre tâche (moitié droite) : elle y devient sous-tâche
+  const hs=e.target.closest('.card.dropsub');if(hs){const q=T(hs.dataset.id);hs.classList.remove('dropsub');if(q&&q!==p){p.subtasks=p.subtasks.filter(x=>x!==s);q.subtasks=q.subtasks||[];q.subtasks.push(s);subShow(q.id);save();render();toast('Sous-tâche déplacée dans « '+q.title+' »');return}}
+  // ailleurs : elle devient une tâche à part entière, à l'endroit du dépôt
+  p.subtasks=p.subtasks.filter(x=>x!==s);t=mk({title:s.t,done:!!s.d,doneAt:s.d?Date.now():null,channel:p.channel,proj:p.proj||null,day:null});S.tasks.push(t);src[0]='task';src[1]=t.id;toast('« '+s.t+' » est devenue une tâche')}
  else t=T(src[1]);
  if(!t)return;
- {const hs=e.target.closest('.card.dropsub');if(hs&&src[0]==='task'&&hs.dataset.id!==t.id){const p=T(hs.dataset.id);hs.classList.remove('dropsub');if(p){if(t.subtasks&&t.subtasks.length){toast('Cette tâche a déjà des sous-tâches : impossible d’en faire une sous-tâche');render();return}p.subtasks=p.subtasks||[];p.subtasks.push({id:uid(),t:t.title,d:!!t.done});deleteTask(t.id);save();render();toast('Devenue sous-tâche de « '+p.title+' » · ⌘/Ctrl Z pour annuler');return}}}
+ {const hs=e.target.closest('.card.dropsub');if(hs&&src[0]==='task'&&hs.dataset.id!==t.id){const p=T(hs.dataset.id);hs.classList.remove('dropsub');if(p){if(t.subtasks&&t.subtasks.length){toast('Cette tâche a déjà des sous-tâches : impossible d’en faire une sous-tâche');render();return}p.subtasks=p.subtasks||[];p.subtasks.push({id:uid(),t:t.title,d:!!t.done});subShow(p.id);deleteTask(t.id);save();render();toast('Devenue sous-tâche de « '+p.title+' » · ⌘/Ctrl Z pour annuler');return}}}
  if(src[0]!=='todo'&&msel.size>1&&msel.has(t.id)){const grp=mselOrdered([...msel]);msel.clear();renderMsel();return dropGroup(grp,z,dz,e)}
  if(dz==='cal'){const dd=z.dataset.day||cur,dt=parseYmd(dd);dt.setMinutes(calMinute(z,e.clientY));t.pinned=true;if(t.day!==dd)t.order=nextOrder(dd);const p=setBlock(t,dt,true);syncOrder(dd);save();render();await p;return}
  if(z.dataset.pz){const to=z.dataset.pz;moveTask(t.id,to);toast(to==='backlog'?'Au backlog':'Repoussée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
@@ -454,7 +464,7 @@ document.addEventListener('keydown',e=>{
  else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');else if(k==='a')go('tree');else if(k==='j')go('projects');else if(k==='r')go('review');
  else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur>today()?today():cur);
  else if(k==='f'){const t=(kbSel&&T(kbSel)&&!T(kbSel).done)?T(kbSel):dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
- else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,(view==='week'||view==='objectives')?7*s:s);render()}
+ else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,(view==='week'||view==='objectives')?7*s:s);render();daySlide(s)}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('brand')){e.preventDefault();e.target.click()}});
 
@@ -508,7 +518,7 @@ document.addEventListener('input',e=>{const i=e.target;if(!i.matches||!i.matches
 
 // fenêtre d'ajout : garder le titre tapé, Entrée pour ajouter, aperçu en direct
 function adKeep(){const i=document.querySelector('[data-adtitle]');if(ad&&i)ad.title=i.value}
-document.addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('[data-adtitle]')&&e.key==='Enter'){e.preventDefault();adKeep();addSubmit()}},true);
+document.addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('[data-adtitle]')&&e.key==='Enter'){e.preventDefault();adKeep();addSubmit(e.shiftKey)}},true);
 let adT=null;document.addEventListener('input',e=>{if(!e.target.matches||!e.target.matches('[data-adtitle]'))return;adKeep();const p=e.target.parentElement.querySelector('.qprev');if(p)p.innerHTML=quickPreview(e.target.value);clearTimeout(adT);adT=setTimeout(()=>{if(ad&&document.activeElement&&document.activeElement.matches('[data-adtitle]'))renderAdd()},350)});
 // ---------- volets : un bouton en haut à gauche (menu) et un en haut à droite (agenda) ----------
 function paneTog(which){if(innerWidth<=760){if(which==='side')document.body.classList.toggle('side-open');return}
@@ -565,3 +575,19 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&msel.size&&$('#moda
 // surprise : une onde douce part de la case cochée et se dissout dans la page
 function rippleAt(r){try{if(!r||!r.width||matchMedia('(prefers-reduced-motion: reduce)').matches)return;const o=document.createElement('i');o.className='ripple';o.style.left=(r.left+r.width/2)+'px';o.style.top=(r.top+r.height/2)+'px';document.body.appendChild(o);setTimeout(()=>o.remove(),1200)}catch(e){}}
 function ripple(id){try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const c=document.querySelector(`#main [data-id="${id}"] .chk`)||document.querySelector(`[data-id="${id}"] .chk`);if(!c)return;const r=c.getBoundingClientRect(),o=document.createElement('i');o.className='ripple';o.style.left=(r.left+r.width/2)+'px';o.style.top=(r.top+r.height/2)+'px';document.body.appendChild(o);setTimeout(()=>o.remove(),1200)}catch(e){}}
+
+// surprise v1.9.3 : en changeant de jour, la journée glisse doucement dans le sens du temps ; les flèches, elles, ne bougent pas
+function daySlide(dir){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const els=document.querySelectorAll('#main .summary,#main .addopen,#main .nownext,#main .list,#main .dtxt,#main .head h1,#main .empty,#main .mlist');els.forEach(el=>{el.classList.remove('dslide-l','dslide-r');void el.offsetWidth;el.classList.add(dir<0?'dslide-l':'dslide-r')})}
+
+// Espace depuis la fenêtre d'une tâche : lance le focus sur cette tâche
+document.addEventListener('keydown',e=>{if(e.code!=='Space'||e.repeat||$('#modal').classList.contains('hidden')||e.target.matches('input,textarea,select,[contenteditable]'))return;
+ const id=$('#sheet .tsheet')?sheetTid:modalTask&&$('#sheet .mhead')?modalTask:null,t=id&&T(id);if(!t||t.done)return;
+ e.preventDefault();e.stopImmediatePropagation();closeModal();openFocus(id)},true);
+
+// déposer une sous-tâche sur une autre sous-tâche : réordonner, ou changer de tâche parente
+function subDrop(e){const row=e.target.closest('.csub,.sub');if(!row||!row.dataset.drag||row.dataset.drag===drag)return false;
+ e.preventDefault();const [,pid,sid]=drag.split('|'),[,qid,rid]=row.dataset.drag.split('|'),p=T(pid),q=T(qid);drag=null;
+ const after=row.classList.contains('subafter');document.querySelectorAll('.subbefore,.subafter,.dragging').forEach(x=>x.classList.remove('subbefore','subafter','dragging'));
+ const s=p&&(p.subtasks||[]).find(x=>x.id===sid);if(!s||!q)return true;
+ const pre=undoSnap();p.subtasks=p.subtasks.filter(x=>x!==s);q.subtasks=q.subtasks||[];let i=q.subtasks.findIndex(x=>x.id===rid);if(i<0)i=q.subtasks.length-1;q.subtasks.splice(after?i+1:i,0,s);
+ if(q!==p)subShow(q.id);save();render();if(modalTask&&(modalTask===pid||modalTask===qid))openTask(modalTask);if(focusOn)renderFocus();undoCommit(pre,'drop');return true}

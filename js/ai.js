@@ -92,7 +92,7 @@ function applyItem(m,k){
  else if(k==='i'){S.days[cur]=Object.assign(S.days[cur]||{},{intent:p.intent})}
  else if(k[0]==='o'){const o=p.objectives[+k.slice(1)];if(o)S.objectives.push({id:uid(),week:monday(cur),title:o,done:false})}
  else if(k[0]==='u'&&p.updates[+k.slice(1)]&&p.updates[+k.slice(1)].drop){const t=T(p.updates[+k.slice(1)].id);if(t)deleteTask(t.id)}
- else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){if(u.subtasks)u.subtasks.forEach(x=>t.subtasks.push({id:uid(),t:x,d:false}));const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}t.aiSug=null}}
+ else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){if(u.subtasks)u.subtasks.forEach(x=>t.subtasks.push({id:uid(),t:x,d:false}));subShow(t.id);const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}t.aiSug=null}}
  else if(k[0]==='j'){const n=p.new_projects[+k.slice(1)];if(n){S.projects=S.projects||[];const pj={id:uid(),name:n.name,end:/^\d{4}-\d{2}-\d{2}$/.test(n.end||'')?n.end:null,done:false};S.projects.push(pj);(n.tasks||[]).forEach(tt=>{if(tt)S.tasks.push(mk({title:tt,est:0,day:null,order:nextOrder(null),proj:pj.id}))})}}
  else if(k[0]==='n'){const n=p.new_tasks[+k.slice(1)];if(n){const day=n.day==='backlog'?null:(n.day||cur);const c=chByName(n.channel);S.tasks.push(mk({title:n.title,est:n.est||0,channel:c?c.id:null,day,order:nextOrder(day)}))}}
  m.applied[k]=true;save();render();

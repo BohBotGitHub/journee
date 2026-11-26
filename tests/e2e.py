@@ -340,8 +340,9 @@ def _(c):
     g = Google()
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2), google=g, storage=TOKEN)
     tick(pg, 1500)
-    assert '2 rendez-vous' in pg.inner_text('.summary'), pg.inner_text('.summary')
-    pg.click('[data-act="sum"][data-k="ev"]'); tick(pg, 300)
+    pg.click('[data-act="daymenu"]'); tick(pg, 200)
+    assert '2 rendez-vous' in pg.inner_text('#sheet'), pg.inner_text('#sheet')
+    pg.click('#sheet [data-act="sum"][data-k="ev"]'); tick(pg, 300)
     assert pg.locator('.evrow').count() == 2, pg.locator('.evrow').count()
     load1 = st(pg, 'loadInfo(today()).meet')
     pg.click('.evrow:has-text("Réunion équipe") [data-act="evtoggle"]'); tick(pg)
@@ -469,7 +470,7 @@ def _(c):
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
     before = st(pg, "dayTasks(today()).map(t=>t.block.start)")
-    pg.click('[data-act="freeze"]'); tick(pg)
+    pg.click('[data-act="daymenu"]'); tick(pg, 150); pg.click('#sheet [data-act="freeze"]'); tick(pg)
     assert st(pg, 'S.days[today()].frozen') is True
     tick(pg, 90 * 60 * 1000)
     assert st(pg, "dayTasks(today()).map(t=>t.block.start)") == before, 'les créneaux ont bougé'
@@ -990,11 +991,12 @@ def _(c):
     pg.click('#sheet [data-act="adcat"]'); pg.wait_for_selector('#pickov')
     pg.click('#pickov [data-act="pkup"][data-i="0"]'); pg.click('#pickov .pkt:has-text("Bâtir")'); pg.click('#pickov .pkt:has-text("Foyer")'); pg.click('#pickov .pkt:has-text("Ménage")'); tick(pg, 100)
     assert 'Ménage' in pg.inner_text('#sheet')
-    pg.press('[data-adtitle]', 'Enter'); tick(pg, 200)
+    pg.press('[data-adtitle]', 'Shift+Enter'); tick(pg, 200)
     t = st(pg, "S.tasks.find(t=>t.title==='Ranger le bureau')")
     assert t['est'] == 25 and t['prio'] == 'high' and t['where'] == 'home' and t['channel'] == 'c-menage' and t['day'] == st(pg, "addDays(today(),1)"), t
     assert pg.locator('#sheet [data-adtitle]').count() == 1 and pg.input_value('[data-adtitle]') == '', 'on enchaîne'
-    pg.keyboard.press('Escape'); tick(pg, 100)
+    pg.fill('[data-adtitle]', 'Une seule'); pg.press('[data-adtitle]', 'Enter'); tick(pg, 200)
+    assert pg.locator('#modal.hidden').count() == 1, 'Entrée ajoute et ferme'
     # volets
     pg.click('#sidetog'); tick(pg, 150)
     assert not pg.locator('#side').is_visible()
@@ -1434,6 +1436,102 @@ def _(c):
     pg.evaluate("()=>{msel.clear();msel.add('r2');msel.add('r3');mselAct('tomorrow')}"); tick(pg, 150)
     o = st(pg, "dayTasks(addDays(today(),1)).filter(t=>!t.done).map(t=>t.id)")
     assert o[:2] == ['r2', 'r3'] and o.index('r4') > 1, o
+    assert not errs, errs; ctx.close()
+
+@test('v1.9.3 : glisser une tâche à la première place (avec et sans agenda)')
+def _(c):
+    for clk in (at(9, 2), at(7, 0)):
+        ctx, pg, errs = new_page(c['b'], clock=clk)
+        cards = pg.locator('#main .list .card[data-id]')
+        ids = st(pg, "[...document.querySelectorAll('#main .list .card[data-id]')].map(c=>c.dataset.id)")
+        mv = ids[2]
+        w = cards.nth(0).bounding_box()['width']
+        cards.nth(2).drag_to(cards.nth(0), target_position={'x': w * .7, 'y': 6}); tick(pg)
+        o = st(pg, "[...document.querySelectorAll('#main .list .card[data-id]')].map(c=>c.dataset.id)")
+        assert o[0] == mv, (clk, ids, o)
+        # au-dessus de la première tuile, dans l'espace libre
+        ids = o; mv = ids[1]; b0 = cards.nth(0).bounding_box()
+        cards.nth(1).hover(); pg.mouse.down(); pg.mouse.move(b0['x'] + 40, b0['y'] - 4, steps=6); pg.mouse.up(); tick(pg)
+        o = st(pg, "[...document.querySelectorAll('#main .list .card[data-id]')].map(c=>c.dataset.id)")
+        assert o[0] == mv, ('au-dessus', ids, o)
+        assert not errs, errs; ctx.close()
+
+@test('v1.9.3 : un report automatique fait sur un appareil en retard n’annule pas une tâche cochée ailleurs')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    r = pg.evaluate("""()=>{const base={tasks:[],recurring:[],objectives:[],templates:[],channels:[],projects:[],days:{},weeks:{},settings:{},su:{},deleted:{}};
+      const L=Object.assign({},base,{tasks:[{id:'a',title:'A',day:'2026-11-26',done:false,u:300,rf:100,rfAt:1,roll:1},{id:'b',title:'B',day:'2026-11-26',done:false,u:300}]});
+      const R=Object.assign({},base,{tasks:[{id:'a',title:'A',day:'2026-11-25',done:true,u:200},{id:'b',title:'B',day:'2026-11-25',done:true,u:200}]});
+      const m1=mergeState(L,R).tasks,m2=mergeState(R,L).tasks,g=(m,id)=>m.find(x=>x.id===id).done;
+      return [g(m1,'a'),g(m2,'a'),g(m1,'b'),g(m2,'b')]}""")
+    assert r == [True, True, False, False], r
+    assert not errs, errs; ctx.close()
+
+@test('v1.9.3 : sous-tâche ajoutée = tâche dépliée ; routine appliquée = catégories trouvées')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.evaluate("()=>{S.tasks.push(mk({id:'p1',title:'Parent',day:today(),est:20,order:0}));save();render()}"); tick(pg, 100)
+    assert not st(pg, "subOpen.has('p1')")
+    pg.evaluate("()=>{const t=T('p1');t.subtasks.push({id:uid(),t:'x',d:false});subShow('p1');render()}"); tick(pg, 100)
+    assert st(pg, "subOpen.has('p1')")
+    pg.evaluate("()=>{S.tasks.push(mk({id:'h1',title:'Lessive',channel:S.channels.find(c=>c.lvl===2)?.id||S.channels[0].id,day:addDays(today(),-3),done:true}));S.templates=[{id:'tp1',name:'Routine',items:[{title:'Lessive',est:15},{title:'Douche',est:10}]}];save();applyTpl('tp1',today())}"); tick(pg, 100)
+    r = st(pg, "dayTasks(today()).filter(t=>t.title==='Lessive'||t.title==='Douche').map(t=>[t.title,!!t.channel])")
+    assert all(x[1] for x in r), r
+    assert not errs, errs; ctx.close()
+
+@test('v1.9.3 : flèches des jours immobiles, menu Aujourd’hui ramène à aujourd’hui, croix sur toutes les fenêtres')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pos = []
+    for i in range(3):
+        pos.append(pg.evaluate("()=>{const b=document.querySelector('[data-act=next]').getBoundingClientRect();return [Math.round(b.x),Math.round(b.y)]}"))
+        pg.click('[data-act="next"]'); tick(pg, 400)
+    assert len(set(map(tuple, pos))) == 1, pos
+    pg.click('#nav [data-view="today"]'); tick(pg, 200)
+    assert st(pg, "cur===today()")
+    pg.click('[data-act="daymenu"]'); tick(pg, 150)
+    assert pg.locator('#sheet .mclose').count() == 1
+    pg.click('#sheet .mclose'); tick(pg, 150)
+    assert pg.locator('#modal.hidden').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('v1.9.3 : glisser à la souris vers la droite d’une tuile en fait une sous-tâche')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    cards = pg.locator('#main .list .card[data-id]')
+    ids = st(pg, "[...document.querySelectorAll('#main .list .card[data-id]')].map(c=>c.dataset.id)")
+    pid, cid = ids[0], ids[2]
+    st(pg, f"(T('{cid}').subtasks=[],0)")
+    for fy in (.3, .5, .7):
+        b0 = cards.nth(0).bounding_box(); b2 = pg.locator(f'#main .card[data-id="{cid}"]').bounding_box()
+        pg.mouse.move(b2['x'] + 30, b2['y'] + b2['height'] / 2); pg.mouse.down()
+        pg.mouse.move(b0['x'] + b0['width'] * .8, b0['y'] + b0['height'] * fy, steps=8); pg.mouse.up(); tick(pg, 200)
+        assert st(pg, f"!T('{cid}')") and st(pg, f"T('{pid}').subtasks.length") > 0, fy
+        pg.keyboard.press('Control+z'); tick(pg, 200)
+        assert st(pg, f"!!T('{cid}')"), ('annuler', fy)
+    assert not errs, errs; ctx.close()
+
+@test('Sous-tâches glissables : réordonner, changer de tâche, en faire une tâche ; Espace lance le focus')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.evaluate("()=>{S.tasks.push(mk({id:'pp',title:'Parent',day:today(),est:20,order:0,subtasks:[{id:'a',t:'Un',d:false},{id:'b',t:'Deux',d:false},{id:'c',t:'Trois',d:false}]}));subShow('pp');save();render()}"); tick(pg, 150)
+    def dd(src, dst, fx=.3, fy=.5):
+        a = pg.locator(src).bounding_box(); b = pg.locator(dst).bounding_box()
+        pg.mouse.move(a['x'] + 40, a['y'] + a['height'] / 2); pg.mouse.down()
+        pg.mouse.move(b['x'] + b['width'] * fx, b['y'] + b['height'] * fy, steps=8); pg.mouse.up(); tick(pg, 200)
+    dd('[data-drag="sub|pp|c"]', '[data-drag="sub|pp|a"]', .3, .2)
+    assert st(pg, "T('pp').subtasks.map(x=>x.id)") == ['c', 'a', 'b'], st(pg, "T('pp').subtasks.map(x=>x.id)")
+    other = st(pg, "dayTasks(today()).find(t=>t.id!=='pp'&&!t.done).id")
+    dd('[data-drag="sub|pp|b"]', f'#main .card[data-id="{other}"]', .8, .5)
+    assert st(pg, f"T('{other}').subtasks.some(x=>x.id==='b')") and st(pg, "T('pp').subtasks.length") == 2
+    first = st(pg, "[...document.querySelectorAll('#main .list .card[data-id]')][0].dataset.id")
+    dd('[data-drag="sub|pp|a"]', f'#main .card[data-id="{first}"]', .2, .1)
+    n = st(pg, "S.tasks.find(t=>t.title==='Un')")
+    assert n and n['day'] == st(pg, "today()") and st(pg, "T('pp').subtasks.length") == 1, n
+    # Espace depuis la fenêtre d'une tâche
+    pg.evaluate("()=>taskSheet('pp')"); tick(pg, 150)
+    pg.keyboard.press('Space'); tick(pg, 300)
+    assert st(pg, "focusOn") == 'pp' and pg.locator('#modal.hidden').count() == 1
     assert not errs, errs; ctx.close()
 
 def main():
