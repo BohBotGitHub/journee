@@ -1,6 +1,10 @@
 // Démo Diem : panneau « à tester » (n'existe pas dans la vraie appli)
 (function(){
  const ITEMS=[
+  ['ESSAI DE STRUCTURE : menu par usage','À gauche : Aujourd’hui, Semaine, Backlog, Vide-tête ; puis RITUELS (Planifier, Clôturer, Ma semaine) ; puis ORGANISER (Projets & Routines, Arbre, Statistiques). Comme Sunsama.','today'],
+  ['Rituels en un clic','« Planifier », « Clôturer » et « Ma semaine » sont dans le menu (avant : cachés dans •••). « Ma semaine » ouvre le plan du lundi au jeudi, la revue du vendredi au dimanche.','today'],
+  ['Revue → Statistiques','L’ancienne page Revue (doublon de Semaine et de Projets) devient « Statistiques » ; les projets en cours sont dans Projets & Routines.','today'],
+  ['En-têtes homogènes','Jour, Semaine et Grand agenda : mêmes flèches ‹ › à gauche du sous-titre, même lien « Revenir à… ».','today'],
   ['Agenda jusqu’à minuit','Fais défiler l’agenda de droite : il va jusqu’à 23 h 59, on peut y glisser une tâche le soir.','today'],
   ['« 14h » = une heure','Ajoute « Réunion 14h 30m » : la tâche se pose à 14 h pour 30 min. « Sport 1h30 » reste une durée.','today'],
   ['Téléphone : 5 onglets','Sur téléphone, la barre du bas a 5 onglets lisibles ; « Plus » ouvre Revue, Projets, Arbre, Réglages, Rechercher.','today'],
@@ -9,7 +13,7 @@
   ['Réglages plus clairs','Réglages › Journée type : « Ma journée » (tes heures) et « Boulot » (ton travail) ne se confondent plus.','settings'],
   ['Filtre du backlog','La loupe est à côté du champ, plus au-dessus.','backlog'],
   ['Contrastes','Textes gris et couleurs d’accent (Or, Pêche, Sauge) un peu plus foncés en clair, pour se lire partout.','today']];
- const K='journee.demo55.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+ const K='journee.demo56.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const box=document.createElement('div');box.id='demopanel';document.body.appendChild(box);
  const css=document.createElement('style');css.textContent=`body:has(#mselbar:not(.hidden)) #demopanel{bottom:190px}#demopanel{position:fixed;right:12px;bottom:12px;z-index:90;width:min(360px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:2px solid #c2410c;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);font-size:14px}
@@ -52,6 +56,6 @@
   if(d==='tog'){min=!min;draw()}
   if(d==='show')show(b.dataset.k);
   if(d==='ok'||d==='ko'){const i=b.dataset.i;st[i]=st[i]===d?undefined:d;save();draw()}
-  if(d==='reset'){['journee.v1','journee.demo','journee.demo55.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
+  if(d==='reset'){['journee.v1','journee.demo','journee.demo56.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
  draw();
 })();
