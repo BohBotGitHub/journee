@@ -216,7 +216,7 @@ function ritNext(){
 function openFocus(id,sub){
  const t=T(id);if(!t)return;
  if(!$('#modal').classList.contains('hidden')){$('#modal').classList.add('hidden');modalTask=null;ritual=null}
- focusOn=id;const fs=sub&&t.subtasks.find(x=>x.id===sub)||t.subtasks.find(x=>!x.d);focusSub=fs?fs.id:null;if(!S.running||S.running.taskId!==id){startTimer(id);chime(523)}activate(t);renderFocus();
+ focusOn=id;const fs=sub&&t.subtasks.find(x=>x.id===sub)||t.subtasks.find(x=>!x.d);focusSub=fs?fs.id:null;const fresh=!S.running||S.running.taskId!==id;if(fresh){startTimer(id);chime(523)}activate(t);renderFocus();if(fresh)breathe();
 }
 function renderFocus(){
  const el=$('#focus');
@@ -241,3 +241,7 @@ setInterval(()=>{
  document.querySelectorAll('[data-live="now"]').forEach(nl=>{const n=new Date();nl.style.top=((n.getHours()-S.settings.dayStart)*60+n.getMinutes())/60*PX+'px'});
  if(today()!==lastDay){const was=lastDay;lastDay=today();if(cur===was)cur=lastDay;genRecurring();render()}
 },1000);
+
+// une respiration avant de commencer : le cercle grandit (inspire) puis se resserre (expire), puis s'efface ; ne bloque rien
+function breathe(){try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const f=document.getElementById('focus');if(!f||f.classList.contains('hidden'))return;
+ const o=document.createElement('div');o.className='breathe';o.setAttribute('aria-hidden','true');o.innerHTML='<i></i><span class="in">Inspire</span><span class="out">Expire</span>';f.appendChild(o);setTimeout(()=>o.remove(),9000)}catch(e){}}

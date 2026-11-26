@@ -15,7 +15,7 @@ document.addEventListener('click',async e=>{
  const a=b.dataset.act,id=b.dataset.id;
  const pre=UNDO_ACTS.has(a)?undoSnap():null;
  switch(a){
-  case'toggle':{const keep=keepUnder(b);await toggleDone(id);keep();if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done)celebrate(id);break}
+  case'toggle':{const rr=b.getBoundingClientRect(),keep=keepUnder(b);await toggleDone(id);keep();if(ritual)renderRitual();const tt=T(id);if(tt&&tt.done){rippleAt(rr);celebrate(id)}break}
   case'open':if(!e.target.closest('.chk'))openTask(id);break;
   case'play':openFocus(id);break;
   case'openfocus':openFocus(id);break;
@@ -561,3 +561,7 @@ function mselAct(v){
  else if(v==='del'){ids.forEach(id=>deleteTask(id));msg=n+' supprimée'+(n>1?'s':'')}
  msel.clear();save();render();renderMsel();toast(msg+' · ⌘/Ctrl Z pour annuler')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&msel.size&&$('#modal').classList.contains('hidden')){msel.clear();renderMsel()}});
+
+// surprise : une onde douce part de la case cochée et se dissout dans la page
+function rippleAt(r){try{if(!r||!r.width||matchMedia('(prefers-reduced-motion: reduce)').matches)return;const o=document.createElement('i');o.className='ripple';o.style.left=(r.left+r.width/2)+'px';o.style.top=(r.top+r.height/2)+'px';document.body.appendChild(o);setTimeout(()=>o.remove(),1200)}catch(e){}}
+function ripple(id){try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const c=document.querySelector(`#main [data-id="${id}"] .chk`)||document.querySelector(`[data-id="${id}"] .chk`);if(!c)return;const r=c.getBoundingClientRect(),o=document.createElement('i');o.className='ripple';o.style.left=(r.left+r.width/2)+'px';o.style.top=(r.top+r.height/2)+'px';document.body.appendChild(o);setTimeout(()=>o.remove(),1200)}catch(e){}}

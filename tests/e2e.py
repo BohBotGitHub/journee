@@ -999,7 +999,7 @@ def _(c):
     pg.click('#sidetog'); tick(pg, 150)
     assert not pg.locator('#side').is_visible()
     pg.click('#navtog'); tick(pg, 150)
-    nb = pg.locator('#nav').bounding_box(); assert nb and nb['width'] <= 70, ('menu replié en rail', nb); assert not pg.locator('#nav [data-view="week"] .ll').is_visible(); mw = pg.locator('#main').bounding_box()['width']; assert mw > pg.viewport_size['width'] - 110, mw
+    nb = pg.locator('#nav').bounding_box(); assert nb and nb['width'] <= 70, ('menu replié en rail', nb); assert pg.evaluate("getComputedStyle(document.querySelector('#nav [data-view=week] .ll')).opacity") == '0'; mw = pg.locator('#main').bounding_box()['width']; assert mw > pg.viewport_size['width'] - 110, mw
     pg.click('#navtog'); pg.click('#sidetog'); tick(pg, 150)
     assert pg.locator('#side').is_visible() and pg.locator('#nav').is_visible()
     assert not errs, errs; ctx.close()
@@ -1214,10 +1214,10 @@ def _(c):
     pg.evaluate("()=>go('settings')"); tick(pg, 150)
     assert 'Projets' not in pg.evaluate("[...document.querySelectorAll('#main section h2')].map(h=>h.textContent).join('|')")
     pg.select_option('[data-set="mode"]', 'light'); tick(pg, 200)
-    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(230, 230, 227)', bg
+    bg = pg.evaluate("getComputedStyle(document.body).backgroundColor"); assert bg == 'rgb(237, 237, 234)', bg
     assert pg.evaluate("document.documentElement.style.colorScheme") == 'light'
     pg.select_option('[data-set="mode"]', 'auto'); tick(pg, 200)
-    assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(16, 16, 18)'
+    assert pg.evaluate("getComputedStyle(document.body).backgroundColor") == 'rgb(23, 23, 22)'
     assert not errs, errs; ctx.close()
 
 @test('v1.7 : croix du menu clic droit, appui long à la souris')
@@ -1393,6 +1393,30 @@ def _(c):
     pg.click('.swatch[data-v="lavande"]'); tick(pg, 150)
     assert st(pg, "S.settings.accent") == 'lavande' and st(pg, "S.su['set.accent']") > 0
     assert pg.evaluate("document.documentElement.dataset.accent") == 'lavande'
+    assert not errs, errs; ctx.close()
+
+@test('Surprise : une respiration au début du focus, qui ne bloque rien et s’efface')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(10, 0))
+    pg.evaluate("()=>{S.running=null;openFocus(dayTasks(today()).find(t=>!t.done).id)}"); tick(pg, 300)
+    assert pg.locator('#focus .breathe').count() == 1
+    assert pg.evaluate("getComputedStyle(document.querySelector('#focus .breathe')).pointerEvents") == 'none'
+    tick(pg, 9500); assert pg.locator('#focus .breathe').count() == 0
+    assert not errs, errs; ctx.close()
+
+@test('Surprises : ciel du jour, onde de la coche, journée accomplie')
+def _(c):
+    for h, k in [(7, 'dawn'), (13, 'day'), (19, 'dusk'), (23, 'night')]:
+        ctx, pg, errs = new_page(c['b'], clock=at(h, 0))
+        assert pg.locator(f'#main .horizon.sky-{k}').count() == 1, (h, k)
+        ctx.close()
+    ctx, pg, errs = new_page(c['b'], clock=at(10, 0))
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
+    pg.click(f'#main .card[data-id="{tid}"] .chk'); pg.wait_for_timeout(100)
+    assert pg.locator('body > .ripple').count() == 1
+    tick(pg, 1400); assert pg.locator('body > .ripple').count() == 0
+    pg.evaluate("()=>{dayTasks(today()).forEach(t=>{t.done=true});save();render()}"); tick(pg, 200)
+    assert pg.locator('#main .donesky').count() == 1 and 'Journée accomplie' in pg.inner_text('#main .donesky')
     assert not errs, errs; ctx.close()
 
 def main():
