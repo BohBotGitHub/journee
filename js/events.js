@@ -44,9 +44,9 @@ document.addEventListener('click',async e=>{
   case'close':closeModal();break;
   case'closeside':document.body.classList.remove('side-open');break;
   case'rollover':rolloverAll(today());toast('Tâches reportées à aujourd’hui');break;
-  case'mv':moveTask(id,b.dataset.to);if(ritual)renderRitual();break;
+  case'mv':moveTask(id,b.dataset.to,true);if(b.dataset.to>today())putFront([id],T(id)&&T(id).day);save();render();if(ritual)renderRitual();break;
   case'mvall':rolloverAll(b.dataset.to);renderRitual();break;
-  case'mvday':{const to0=b.dataset.to;dayTasks(ritual.day).filter(t=>!t.done).forEach(t=>moveTask(t.id,to0===addDays(today(),1)?nextFreeDay(t):to0,true));save();render();renderRitual();break}
+  case'mvday':{const to0=b.dataset.to;{const mvd=dayTasks(ritual.day).filter(t=>!t.done);mvd.forEach(t=>moveTask(t.id,to0===addDays(today(),1)?nextFreeDay(t):to0,true));if(to0!=='backlog'){const by={};mvd.forEach(t=>{if(t.day)(by[t.day]=by[t.day]||[]).push(t.id)});Object.entries(by).forEach(([dd,ids])=>putFront(ids,dd))}}save();render();renderRitual();break}
   case'rmsheet':{const tt=T(id);closeModal();deleteTask(id);render();toast('Supprimée : '+(tt?tt.title:''),'Annuler',()=>undoPop());break}
   case'rm':deleteTask(id);render();if(ritual)renderRitual();break;
   case'dur':{const t=T(id);if(t){setEst(t,+b.dataset.v);renderRitual()}break}
@@ -135,7 +135,7 @@ document.addEventListener('click',async e=>{
    location.reload();break}
   case'hoursreset':{const i=S.days[today()];if(i){delete i.hs;delete i.he}save();closeModal();render();break}
   case'rollmenu':rollMenu(id);break;
-  case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();const to=nextFreeDay(t);moveTask(id,to);toast(to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
+  case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();const to=nextFreeDay(t);moveTask(id,to,true);putFront([id],T(id).day);save();render();toast(to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
   case'rolldrop':deleteTask(id);closeModal();render();toast('Tâche supprimée');break;
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
   case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();if(ritual)renderRitual();break}
@@ -165,7 +165,7 @@ document.addEventListener('click',async e=>{
   case'mvup':closeModal();swapTask(id,-1);break;
   case'mvdown':closeModal();swapTask(id,1);break;
   case'tobacklog':{const t=T(id);if(t&&t.day){moveTask(id,'backlog');toast('Renvoyée au backlog');if(modalTask===id)openTask(id)}break}
-  case'sheetmv':{closeModal();const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0;let to=b.dataset.to;if(t&&to===addDays(today(),1))to=nextFreeDay(t);moveTask(id,to);toast(to==='backlog'?'Renvoyée au backlog':to===today()?'Pour aujourd’hui':to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
+  case'sheetmv':{closeModal();const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0;let to=b.dataset.to;if(t&&to===addDays(today(),1))to=nextFreeDay(t);moveTask(id,to,true);if(to!=='backlog'&&to>today())putFront([id],T(id).day);save();render();toast(to==='backlog'?'Renvoyée au backlog':to===today()?'Pour aujourd’hui':to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
   case'sum':uiOpen=uiOpen===b.dataset.k?'':b.dataset.k;render();break;
   case'freeze':{const d=cur;S.days[d]=Object.assign(S.days[d]||{},{frozen:!(S.days[d]||{}).frozen});save();if(!$('#modal').classList.contains('hidden'))closeModal();render();toast(S.days[d].frozen?'Journée figée : les créneaux ne bougent plus avec l’heure':'Les créneaux suivent à nouveau l’heure');break}
   case'daymenu':dayMenu();break;
@@ -554,7 +554,7 @@ function mselAct(v){
  const n=ids.length;let msg='';
  if(v==='done'){ids.forEach(id=>{const t=T(id);if(!t.done){t.done=true;t.doneAt=Date.now()}});msg=n+' cochée'+(n>1?'s':'')}
  else if(v==='today'){ids.forEach(id=>moveTask(id,today(),true));msg='Pour aujourd’hui'}
- else if(v==='tomorrow'){ids.forEach(id=>moveTask(id,nextFreeDay(T(id)),true));msg='Reportées'}
+ else if(v==='tomorrow'){ids.forEach(id=>moveTask(id,nextFreeDay(T(id)),true));const by={};ids.forEach(id=>{const t=T(id);if(t&&t.day)(by[t.day]=by[t.day]||[]).push(id)});Object.entries(by).forEach(([dd,xs])=>putFront(xs,dd));msg='Reportées'}
  else if(v==='backlog'){ids.forEach(id=>{T(id).roll=0;moveTask(id,'backlog',true)});msg='Au backlog'}
  else if(v==='top'||v==='bottom'){mselMove(ids,v==='top');save();render();renderMsel();toast((v==='top'?'En haut':'En bas')+' · ⌘/Ctrl Z pour annuler');return}
  else if(v.startsWith('p:')){ids.forEach(id=>{T(id).prio=v.slice(2)});msg='Priorité changée'}

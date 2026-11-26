@@ -177,6 +177,9 @@ function rolloverAll(to){
  save();render();
 }
 function renorm(day){dayTasks(day).forEach((t,i)=>t.order=i+1)}
+// une tâche reportée à un autre jour passe devant ce qui y était déjà prévu (l'ordre entre elles est gardé)
+function putFront(ids,day){if(!day||day==='backlog')return;const set=new Set(ids),mv=ids.map(T).filter(t=>t&&t.day===day&&!t.done).sort((a,b)=>(a.order||0)-(b.order||0));if(!mv.length)return;
+ const rest=dayTasks(day).filter(t=>!set.has(t.id)),lo=rest.length?Math.min(...rest.map(t=>t.order||0)):1;mv.forEach((t,i)=>t.order=lo-mv.length+i);renorm(day)}
 
 /* ---------- récurrence ---------- */
 const RULES={daily:'Tous les jours',weekdays:'Jours ouvrés (lun–ven)',weekly:'Chaque semaine',monthly:'Chaque mois'};

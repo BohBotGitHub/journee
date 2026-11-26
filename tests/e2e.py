@@ -1419,6 +1419,23 @@ def _(c):
     assert pg.locator('#main .donesky').count() == 1 and 'Journée accomplie' in pg.inner_text('#main .donesky')
     assert not errs, errs; ctx.close()
 
+@test('Report au lendemain : la tâche reportée passe devant celles déjà prévues (minuit, Demain, sélection)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(23, 40))
+    pg.evaluate("()=>{const tm=addDays(today(),1);S.tasks.filter(t=>t.day===today()||t.day===tm).forEach(t=>t.day=null);S.tasks.push(mk({id:'r1',title:'Pas faite',day:today(),est:30,order:1}),mk({id:'r2',title:'Déjà demain A',day:tm,est:30,order:1}),mk({id:'r3',title:'Déjà demain B',day:tm,est:30,order:2}));save();render()}")
+    tick(pg, 40 * 60 * 1000)
+    o = st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>t.id)")
+    assert o[:3] == ['r1', 'r2', 'r3'], o
+    pg.evaluate("()=>{S.tasks.push(mk({id:'r4',title:'À repousser',day:today(),est:20,order:9}),mk({id:'r5',title:'Demain déjà',day:addDays(today(),1),est:20,order:1}));save();render()}"); tick(pg, 100)
+    pg.evaluate("()=>taskSheet('r4')"); tick(pg, 100)
+    pg.click('#sheet [data-act="sheetmv"][data-to="' + st(pg, "addDays(today(),1)") + '"]'); tick(pg, 150)
+    o = st(pg, "dayTasks(addDays(today(),1)).filter(t=>!t.done).map(t=>t.id)")
+    assert o[0] == 'r4' and o.index('r5') > 0, o
+    pg.evaluate("()=>{msel.clear();msel.add('r2');msel.add('r3');mselAct('tomorrow')}"); tick(pg, 150)
+    o = st(pg, "dayTasks(addDays(today(),1)).filter(t=>!t.done).map(t=>t.id)")
+    assert o[:2] == ['r2', 'r3'] and o.index('r4') > 1, o
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')
