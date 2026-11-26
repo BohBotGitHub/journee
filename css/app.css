@@ -9,12 +9,12 @@
 --line:light-dark(#e4e4e2,#2e2e31);--ink:light-dark(#1c1c1e,#ededee);--mute:light-dark(#6e6e73,#8e8e93);
 --acc:light-dark(var(--al),var(--ad));--acc-strong:light-dark(var(--al),var(--ad));--on-acc:light-dark(#ffffff,#141415);--acc2:color-mix(in srgb,var(--acc) 15%,var(--panel));
 --ok-strong:#1f7a4f;--ok:#2f9e6a;--warn:#d6336c;--ev:light-dark(#ececef,#2a2a2e);--evi:light-dark(#44444a,#c8c8cd);
---al:#94731F;--ad:#D4B05A;
+--al:#856618;--ad:#D4B05A;
 --sh:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04)}
-:root[data-accent=peche]{--al:#C9714A;--ad:#E8A283}
-:root[data-accent=sauge]{--al:#4F7D57;--ad:#8DBA96}
+:root[data-accent=peche]{--al:#A5532F;--ad:#E8A283}
+:root[data-accent=sauge]{--al:#46724E;--ad:#8DBA96}
 :root[data-accent=lavande]{--al:#625CA8;--ad:#A9A3E6}
-:root[data-accent=or]{--al:#94731F;--ad:#D4B05A}
+:root[data-accent=or]{--al:#856618;--ad:#D4B05A}
 :root[data-accent=ardoise]{--al:#41679E;--ad:#86A8D8}
 :root[data-accent=petrole]{--al:#26737A;--ad:#6DC0C4}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
@@ -1107,7 +1107,7 @@ button.pri:hover{filter:brightness(1.06)}
 @media (min-width:761px){body.hidenav #nav button[data-view] .ll,body.hidenav #nav .navrefresh span{display:inline-block}}
 /* 26/11 : gris « Zen doux » façon Sunsama (choix du propriétaire) */
 :root{--bg:light-dark(#EDEDEA,#171716);--panel:light-dark(#FCFCFB,#212120);--panel2:light-dark(#E4E4E0,#282827);
---line:light-dark(#DADAD5,#323230);--ink:light-dark(#1C1C1B,#EDEDEB);--mute:light-dark(#6E6E69,#9C9C97)}
+--line:light-dark(#DADAD5,#323230);--ink:light-dark(#1C1C1B,#EDEDEB);--mute:light-dark(#65655F,#9C9C97)}
 #nav{background:var(--panel2)}
 /* rail : mêmes marges que le menu ouvert, au pixel près */
 @media (min-width:761px){
