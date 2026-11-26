@@ -141,8 +141,8 @@ function dayMenu(){
 function viewWeek(){
  const w=monday(cur),days=[...Array(7)].map((_,i)=>addDays(w,i));
  const tot=days.reduce((a,d)=>a+dayTasks(d).reduce((x,t)=>x+(t.est||0),0),0);
- return `<div class="head"><div><h1>Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</h1><div class="sub kicker">${fmtMin(tot)} de tâches prévues</div></div>
- <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
+ const thisW=w===monday(today());
+ return `<div class="head tight"><div class="htitle"><h1>Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</h1><div class="sub kicker dline"><span class="dnav"><button data-act="prevw" aria-label="Semaine précédente" title="Semaine précédente">‹</button><button data-act="nextw" aria-label="Semaine suivante" title="Semaine suivante">›</button></span><span class="dtxt">${fmtMin(tot)} de tâches prévues</span>${thisW?'':'<button class="dtoday" data-act="gotoday">Revenir à cette semaine</button>'}</div></div>
  <div class="acts"><button data-act="weekplan">Planifier la semaine</button>${layoutBtn()}</div></div>
  ${objChips(w)}
  <div class="week">${days.map(d=>{const ts=dayTasks(d),L=loadInfo(d);return `<div class="wcol${d===today()?' today':''}">
@@ -281,6 +281,8 @@ function viewStats(){
 }
 
 function viewReview(){
+ // structure (audit) : la page devient « Statistiques » ; la semaine se planifie et se revoit depuis les rituels
+ if(view!=='objectives')return viewStats();
  const tab=view==='stats'?'stats':'objectives';
  const tabs=`<div class="seg revtabs"><button class="sm${tab==='objectives'?' on':''}" data-act="go" data-v="objectives">Semaine et projets</button><button class="sm${tab==='stats'?' on':''}" data-act="go" data-v="stats">Statistiques</button></div>`;
  return tabs+(tab==='stats'?viewStats():viewObjectives());
@@ -381,8 +383,7 @@ const bigDays=()=>{const n=innerWidth<720?1:calSpan;const s0=n===7?monday(cur):c
 function viewBigCal(){
  const days=bigDays(),{st,en,H}=calGeom();
  const axis=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
- return `<div class="head"><div><h1>${days.length===1?cap1(fmtDay(days[0],{weekday:'long',day:'numeric',month:'long'})):cap1(fmtDay(days[0],{day:'numeric',month:'short'}))+' – '+fmtDay(days[days.length-1],{day:'numeric',month:'short'})}</h1><div class="sub">Grand agenda · tes tâches sont à droite</div></div>
- <div class="dnav"><button data-act="${days.length===7?'prevw':'prev'}" aria-label="Précédent">‹</button><button data-act="gotoday">Aujourd’hui</button><button data-act="${days.length===7?'nextw':'next'}" aria-label="Suivant">›</button></div>
+ return `<div class="head tight"><div class="htitle"><h1>${days.length===1?cap1(fmtDay(days[0],{weekday:'long',day:'numeric',month:'long'})):cap1(fmtDay(days[0],{day:'numeric',month:'short'}))+' – '+fmtDay(days[days.length-1],{day:'numeric',month:'short'})}</h1><div class="sub kicker dline"><span class="dnav"><button data-act="${days.length===7?'prevw':'prev'}" aria-label="Précédent" title="Précédent">‹</button><button data-act="${days.length===7?'nextw':'next'}" aria-label="Suivant" title="Suivant">›</button></span><span class="dtxt">Grand agenda · tes tâches sont à droite</span>${days.includes(today())?'':'<button class="dtoday" data-act="gotoday">Revenir à aujourd’hui</button>'}</div></div>
  <div class="acts"><div class="seg">${[1,3,7].map(n=>`<button class="sm${calSpan===n?' on':''}" data-act="span" data-n="${n}">${n===1?'Jour':n===3?'3 jours':'Semaine'}</button>`).join('')}</div>${layoutBtn()}</div></div>
  ${gStateHtml(cur)}
  <div class="bigcal" style="--n:${days.length}">
@@ -476,7 +477,10 @@ function moreMenu(){
  const it=(act,attr,icon,label)=>`<button class="hasic" ${act} ${attr||''}>${ico(icon)}<span>${label}</span></button>`;
  showModal(`<div class="rit"><h2>Plus</h2><div class="menu">
   ${it('data-act="moreside"','','cal','Agenda, To Do et Génie')}
-  ${it('data-act="morego"','data-v="review"','target','Revue et statistiques')}
+  ${it('data-act="morego"','data-v="rit-plan"','sunrise','Planifier ma journée')}
+  ${it('data-act="morego"','data-v="rit-shutdown"','moon','Clôturer la journée')}
+  ${it('data-act="morego"','data-v="rit-week"','cal','Ma semaine (planifier ou revoir)')}
+  ${it('data-act="morego"','data-v="stats"','target','Statistiques')}
   ${it('data-act="morego"','data-v="projects"','folder','Projets & Routines')}
   ${it('data-act="morego"','data-v="tree"','tree','Arbre')}
   ${it('data-act="morego"','data-v="settings"','gear','Réglages')}

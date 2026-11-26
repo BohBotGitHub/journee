@@ -1210,3 +1210,7 @@ textarea.mtitle{resize:none;overflow:hidden;line-height:1.3;min-height:0;width:1
 /* backlog : la loupe à côté du champ, pas au-dessus */
 .bltools label.blfilter{display:inline-flex!important;flex-direction:row!important;align-items:center!important;gap:6px;height:34px;padding:0 12px}
 .bltools label.blfilter input{flex:1;min-width:0;margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important;height:30px}
+/* structure (audit) : menu rangé par usage, comme Sunsama — journée, rituels, organiser */
+#nav .navsec{font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);padding:14px 12px 4px;white-space:nowrap;transition:opacity .2s}
+body.hidenav #nav .navsec{opacity:0}
+@media (max-width:760px){#nav .navsec,#nav .navrit,#nav button[data-view="stats"]{display:none!important}}

@@ -34,6 +34,8 @@ function renderRun(){
  $('#runchip').innerHTML=t?`<div class="runbox" data-act="openfocus" data-id="${t.id}"><span>En cours</span><b>${esc(t.title)}</b><span class="t" data-live="run">${clock(actualSec(t))}</span></div>`:'';
 }
 function go(v){
+ if(v&&v.startsWith('rit-')){const d=cur<today()?today():cur,w=new Date().getDay();if(innerWidth<=760)document.body.classList.remove('side-open');if(v==='rit-plan')startRitual('plan',d);else if(v==='rit-shutdown')startRitual('shutdown',d>today()?today():d);else startRitual(w===0||w>=5?'weekreview':'weekplan',d);return}
+ if(v==='review'||v==='objectives')v='stats';
  if(v==='side'){if(innerWidth<=760&&!document.body.classList.contains('side-open')){moreMenu();return}document.body.classList.toggle('side-open');return}
  view=v;try{history.replaceState(null,'','#'+v)}catch(e){}
  $('#main').scrollTop=0;render();
