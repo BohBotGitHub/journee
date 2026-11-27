@@ -33,6 +33,7 @@ class Google:
         self.drive = None
         self.ver = 0
         self.downloads = 0
+        self.inbox = {}
         self.add('primary', 'Réunion équipe', at(14), at(15))
         self.add('primary', 'Déjeuner', at(12, 30), at(13, 30), transparent=True)
         self.add('primary', 'Dentiste', at(10, 0, 1), at(11, 0, 1))
@@ -57,6 +58,14 @@ class Google:
                 return J(body)
             return J({'id': eid or 'x'}) if m != 'DELETE' else route.fulfill(status=204, body='')
         if 'oauth2/v3/userinfo' in req.url: return J({'email': 'test@example.com'})
+        qq = urllib.parse.unquote(u.query)
+        if '/drive/v3/files' in path and 'boîte de réception' in qq:
+            return J({'files': [{'id': 'fold'}]})
+        if '/drive/v3/files' in path and "'fold' in parents" in qq:
+            return J({'files': [{'id': k, 'name': k + '.json'} for k in self.inbox]})
+        fm = re.search(r'/drive/v3/files/([^/?]+)$', path)
+        if fm and fm.group(1) in self.inbox:
+            return J(self.inbox[fm.group(1)])
         if '/drive/v3/files' in path and m == 'GET' and 'alt=media' not in req.url:
             return J({'files': [{'id': 'f1', 'modifiedTime': f'2026-01-01T00:00:{self.ver:02d}Z'}] if self.drive else []})
         if 'alt=media' in req.url:
@@ -1720,6 +1729,42 @@ def _(c):
     assert all('Reformule' not in json.dumps(x['messages']) for x in calls[2:])
     pg.evaluate("()=>{window.__m='retry'}"); pg.fill('[data-keep="ai"]', 'Et là'); pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
     assert pg.locator('[data-act="aiapply"]').count() >= 1
+    assert not errs, errs; ctx.close()
+
+@test('v2.5 : boîte de réception Claude (ajout direct, plan d’attaque, suggestions à accepter)')
+def _(c):
+    g = Google()
+    tok = TOKEN.replace("drive.appdata'", "drive.appdata https://www.googleapis.com/auth/drive.readonly'")
+    ctx, pg, errs = new_page(c['b'], google=g, storage=tok + "localStorage.setItem('journee.g.inbox','1');")
+    pg.evaluate("()=>{window.journee.state.projects=[];}")
+    g.inbox['fileAAAAAAAA1'] = {'diem': 1, 'kind': 'add', 'note': 'plan déménagement', 'items': [
+        {'type': 'project', 'name': 'Déménagement', 'end': '2026-12-20', 'tasks': ['Cartons cuisine 1h demain #menage', {'title': 'Résilier la box', 'est': 15, 'prio': 'high', 'subtasks': ['Trouver le contrat', 'Appeler']}]},
+        {'type': 'task', 'quick': 'Appeler le notaire 15m lundi'},
+        {'type': 'routine', 'title': 'Arroser les plantes', 'rule': 'weekly', 'dow': 'samedi', 'est': 10},
+        {'type': 'habit', 'name': 'Lire 10 pages', 'freq': 'daily', 'icon': 'book'}]}
+    g.inbox['fileTESTTTTT2'] = {'diem': 1, 'kind': 'test', 'items': []}
+    pg.evaluate("async()=>{await inboxPoll()}"); pg.wait_for_timeout(200)
+    pj = st(pg, "S.projects.find(p=>p.name==='Déménagement')"); assert pj and pj['end'] == '2026-12-20', pj
+    t = st(pg, "S.tasks.find(t=>t.title==='Cartons cuisine')"); assert t and t['proj'] == pj['id'] and t['est'] == 60 and t['day'] == d(1) and t['channel'] == 'c-menage', t
+    t = st(pg, "S.tasks.find(t=>t.title==='Résilier la box')"); assert t and t['prio'] == 'high' and len(t['subtasks']) == 2 and t['day'] is None, t
+    t = st(pg, "S.tasks.find(t=>t.title==='Appeler le notaire')"); assert t and t['est'] == 15 and datetime.date.fromisoformat(t['day']).weekday() == 0, t
+    assert st(pg, "S.recurring.some(r=>r.title==='Arroser les plantes'&&r.dow===6)")
+    assert st(pg, "S.habits.some(h=>h.name==='Lire 10 pages'&&h.icon==='book')")
+    assert 'Ajouté depuis Claude' in st(pg, "S.chat.at(-1).text")
+    # déjà vu : rien n'est ajouté deux fois
+    n = st(pg, "S.tasks.length"); pg.evaluate("async()=>{await inboxPoll()}"); pg.wait_for_timeout(150)
+    assert st(pg, "S.tasks.length") == n and set(st(pg, "S.settings.inboxSeen")) >= {'fileAAAAAAAA1', 'fileTESTTTTT2'}
+    # suggestions : dans l'onglet du Génie, à accepter
+    g.inbox['fileSUGGEST3'] = {'diem': 1, 'kind': 'suggest', 'note': 'tu parlais de piano', 'items': [{'type': 'habit', 'name': 'Piano 5 min', 'icon': 'piano', 'reason': 'Tu veux reprendre le piano'}, {'type': 'task', 'title': 'Acheter un pupitre', 'est': 20}]}
+    pg.evaluate("async()=>{await inboxPoll()}"); pg.wait_for_timeout(150)
+    assert not st(pg, "S.habits.some(h=>h.name==='Piano 5 min')")
+    pg.click('.stabs [data-side="ai"]'); pg.wait_for_timeout(200)
+    assert 'Tu veux reprendre le piano' in pg.inner_text('#side')
+    pg.locator('[data-act="aiapply"]').first.click(); pg.wait_for_timeout(150)
+    assert st(pg, "S.habits.some(h=>h.name==='Piano 5 min')") and not st(pg, "S.tasks.some(t=>t.title==='Acheter un pupitre')")
+    # réglages : section visible, reliée
+    pg.evaluate("()=>go('settings')"); pg.wait_for_timeout(200)
+    assert 'Claude : tes conversations' in pg.inner_text('#main') and 'Relié' in pg.inner_text('#main')
     assert not errs, errs; ctx.close()
 
 def main():

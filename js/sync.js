@@ -34,7 +34,7 @@ async function driveSync(light){
    S.syncedAt=Date.now();lsSet(KEY,JSON.stringify(S));syncState='Synchronisé';
   }
  }catch(e){syncState='Synchro en échec : '+e.message;if(/insufficient|scope|permission/i.test(e.message))syncState='Reconnecte Google pour activer la synchro'}
- finally{syncBusy=false;if(!syncTried){syncTried=true;queueFlow()}document.querySelectorAll('[data-live="sync"]').forEach(el=>el.textContent=syncState);renderSyncBar();if(syncAgain){syncAgain=false;setTimeout(()=>driveSync(),300)}}
+ finally{syncBusy=false;if(typeof inboxPoll==='function')setTimeout(inboxPoll,50);if(!syncTried){syncTried=true;queueFlow()}document.querySelectorAll('[data-live="sync"]').forEach(el=>el.textContent=syncState);renderSyncBar();if(syncAgain){syncAgain=false;setTimeout(()=>driveSync(),300)}}
 }
 
 /* ---------- synchro quasi immédiate : envoi 1,5 s après chaque modification, vérification toutes les 15 s ---------- */
