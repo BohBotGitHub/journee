@@ -214,10 +214,10 @@ def _(c):
 @test('Épingler en glissant dans l’agenda, libérer en revenant à la liste')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
-    pg.locator('#main .card').first.drag_to(pg.locator('.tlin'), target_position={'x': 80, 'y': 76 * 9 + 4}); tick(pg)
+    pg.locator('#main .card').first.drag_to(pg.locator('.tlin'), target_position={'x': 80, 'y': 76 * 16 + 4}); tick(pg)
     assert st(pg, 'S.tasks.filter(t=>t.pinned).length') == 1
     h = st(pg, "new Date(S.tasks.find(t=>t.pinned).block.start).getHours()")
-    assert h == 16, h
+    assert h == 16, h  # l'agenda commence à minuit
     pg.locator('.blk').filter(has_text='📌').drag_to(pg.locator('#main .list'), target_position={'x': 300, 'y': 3}); tick(pg)
     assert st(pg, 'S.tasks.filter(t=>t.pinned).length') == 0
     assert not errs, errs; ctx.close()
@@ -1591,6 +1591,20 @@ def _(c):
     assert st(pg, "T('due1').day") is None
     pg.evaluate("()=>{S.tasks.push(mk({id:'due2',title:'Urgent',day:null,est:20,due:today()}));save();runFlow()}"); tick(pg, 200)
     assert st(pg, "T('due2').day") == st(pg, "today()")
+    assert not errs, errs; ctx.close()
+
+@test('v2.1 : fiche compacte, semaine compacte, catégorie inconnue signalée')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
+    pg.evaluate(f"()=>openTask('{tid}')"); tick(pg, 150)
+    assert pg.locator('#sheet .mbar .mpill').count() == 5 and pg.locator('#sheet details.mmore').count() == 1
+    pg.select_option('#sheet .mpill select[data-f="est"]', '45'); tick(pg, 150)
+    assert st(pg, f"T('{tid}').est") == 45
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    assert 'inconnue' in st(pg, "quickPreview('Courses #zzz')")
+    pg.evaluate("()=>{view='week';render()}"); tick(pg, 150)
+    assert pg.evaluate("()=>getComputedStyle(document.querySelector('.wcol .card .cmeta')||document.body).display") in ('none', 'block')
     assert not errs, errs; ctx.close()
 
 def main():

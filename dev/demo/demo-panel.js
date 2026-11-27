@@ -1,18 +1,15 @@
 // Démo Diem : panneau « à tester » (n'existe pas dans la vraie appli)
 (function(){
  const ITEMS=[
-  ['Menu revu','À gauche : Aujourd’hui, Vide-tête (remonté en 2e), Semaine, Backlog, puis Projets & Routines, Arbre, Statistiques. Plus de section Rituels : ils restent dans ••• et dans le bouton principal du jour.','today'],
-  ['Revue → Statistiques','L’ancienne page Revue devient « Statistiques » ; les projets en cours sont dans Projets & Routines.','today'],
-  ['En-têtes homogènes','Jour, Semaine et Grand agenda : mêmes flèches ‹ › à gauche du sous-titre, même lien « Revenir à… ».','today'],
-  ['Agenda jusqu’à minuit','Fais défiler l’agenda de droite : il va jusqu’à 23 h 59, on peut y glisser une tâche le soir.','today'],
-  ['« 14h » = une heure','Ajoute « Réunion 14h 30m » : la tâche se pose à 14 h pour 30 min. « Sport 1h30 » reste une durée.','today'],
-  ['Téléphone : 5 onglets','Sur téléphone, la barre du bas a 5 onglets lisibles ; « Plus » ouvre Revue, Projets, Arbre, Réglages, Rechercher.','today'],
-  ['Titre long lisible','Ouvre une tâche au titre long sur téléphone : il passe à la ligne au lieu d’être coupé.','today'],
-  ['Génie partout','L’assistant s’appelle « Génie » partout (onglet, vide-tête, rituels) ; seule la clé reste « clé Claude ».','today'],
-  ['Réglages plus clairs','Réglages › Journée type : « Ma journée » (tes heures) et « Boulot » (ton travail) ne se confondent plus.','settings'],
-  ['Filtre du backlog','La loupe est à côté du champ, plus au-dessus.','backlog'],
-  ['Contrastes','Textes gris et couleurs d’accent (Or, Pêche, Sauge) un peu plus foncés en clair, pour se lire partout.','today']];
- const K='journee.demo57.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+  ['Agenda 0 h – 24 h','L’agenda de droite commence à minuit et s’ouvre sur l’heure en cours (au tiers haut). Les autres jours s’ouvrent sur le début de ta journée.','today'],
+  ['Créneau « journée entière » déplaçable','Dans l’agenda, attrape le créneau Mvision (journée entière) par le milieu et glisse-le : il se déplace en entier ; les poignées haut et bas changent début et fin.','today'],
+  ['Créneau libéré = rempli','Clique un rendez-vous de l’agenda pour le passer en « disponible » : les tâches du jour viennent s’y placer.','today'],
+  ['Échéances sobres','Une tâche à échéance n’est plus posée d’office sur un jour : seulement si l’échéance est aujourd’hui ou dépassée.','backlog'],
+  ['Fiche tâche compacte','Ouvre une tâche : une barre (durée, jour, heure, échéance, priorité), la catégorie, puis « Plus » replié (projet, répétition, lieu, temps passé).','today'],
+  ['Semaine lisible','Vue Semaine : 7 jours visibles, tuiles réduites au titre. Sur téléphone, un jour par écran, ouvert sur aujourd’hui.','week'],
+  ['Au doigt','Sur téléphone : poignée ⋮⋮ aussi sur les sous-tâches, zones plus grandes pour les petites pastilles.','today'],
+  ['Catégorie inconnue signalée','Tape « Courses #zzz » dans Ajouter : l’aperçu signale que la catégorie n’existe pas.','today']];
+ const K='journee.demo58.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const box=document.createElement('div');box.id='demopanel';document.body.appendChild(box);
  const css=document.createElement('style');css.textContent=`body:has(#mselbar:not(.hidden)) #demopanel{bottom:190px}#demopanel{position:fixed;right:12px;bottom:12px;z-index:90;width:min(360px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:2px solid #c2410c;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);font-size:14px}
@@ -55,6 +52,6 @@
   if(d==='tog'){min=!min;draw()}
   if(d==='show')show(b.dataset.k);
   if(d==='ok'||d==='ko'){const i=b.dataset.i;st[i]=st[i]===d?undefined:d;save();draw()}
-  if(d==='reset'){['journee.v1','journee.demo','journee.demo57.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
+  if(d==='reset'){['journee.v1','journee.demo','journee.demo58.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
  draw();
 })();
