@@ -61,7 +61,11 @@ async function mailSort(){
 }
 // autoriser la lecture : on relance la connexion avec l'accès en plus (la page de consentement officielle s'ouvre)
 function mailAllow(k){if(k==='g'){lsSet('journee.g.mail','1');gLogin()}else{lsSet('journee.m.mail','1');msLogin()}}
-function mailStop(k){if(k==='g'){lsDel('journee.g.mail');toast('Gmail : Diem ne demandera plus la lecture des mails (révocation complète : myaccount.google.com › Sécurité › Applis tierces)')}else{lsDel('journee.m.mail');toast('Outlook : lecture des mails désactivée à la prochaine connexion')}render()}
+function mailStop(k){if(k==='g'){
+  // vraiment arrêter : Google retire l'accès donné à Diem (agenda compris), puis on se reconnecte sans les mails
+  lsDel('journee.g.mail');const t=gTok();
+  if(t){toast('Gmail arrêté : reconnexion à Google pour garder l’agenda…');fetch('https://oauth2.googleapis.com/revoke?token='+encodeURIComponent(t),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'}}).catch(()=>{}).finally(()=>{lsDel('journee.g');setTimeout(()=>gLogin(),600)});return}
+  toast('Gmail : lecture des mails arrêtée')}else{lsDel('journee.m.mail');toast('Outlook : lecture des mails désactivée à la prochaine connexion')}render()}
 function mailSettingsHtml(){
  const g=gmailOk(),o=outlookOk();
  return `<section><h2>Trier mes mails</h2><p>Le Génie lit tes mails non lus des 14 derniers jours (lecture seule, sans rien enregistrer) quand tu cliques « Trier mes mails » dans son onglet, et propose des tâches : réponses attendues, colis, rendez-vous, factures, échéances. Les mails partent seulement vers Claude, avec ta clé.</p>
