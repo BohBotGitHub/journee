@@ -96,6 +96,8 @@ document.addEventListener('click',async e=>{
   case'inboxallow':inboxAllow();break;
   case'inboxstop':inboxStop();break;
   case'inboxnow':inboxPoll();break;
+  case'cxapply':{const m=S.chat[+b.dataset.m];if(m){applyItem(m,b.dataset.k);toast('Ajouté')}if(ritual)renderRitual();break}
+  case'cxdismiss':{const m=S.chat[+b.dataset.m];if(m){m.cxDismiss=true;save()}if(ritual)renderRitual();break}
   case'dupgo':dupDecide(id,b.dataset.k);break;
   case'nodedelgo':if(nodeDelGo)nodeDelGo();break;
   case'nodemove':{const n=node(id);if(!n)break;closeModal();openPicker({title:'Déplacer « '+n.name+' » vers…',levels:[n.lvl-1],current:n.parent,exclude:new Set([n.parent]),noneLabel:false,onPick:to=>{if(to){nodeMove(id,to);toast('« '+n.name+' » déplacé dans '+node(to).name)}render()}});break}
