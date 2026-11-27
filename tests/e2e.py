@@ -1558,12 +1558,11 @@ def _(c):
         assert st(pg, "view") == 'tree'
         assert not errs, errs; ctx.close()
 
-@test('Structure : menu par usage (rituels visibles), en-têtes homogènes jour / semaine / grand agenda')
+@test('Structure : menu (Vide-tête en 2e, Statistiques), en-têtes homogènes jour / semaine / grand agenda')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
-    pg.click('#nav [data-view="rit-plan"]'); tick(pg, 200)
-    assert st(pg, "ritual&&ritual.type") == 'plan'
-    pg.keyboard.press('Escape'); tick(pg, 150)
+    order = pg.evaluate("()=>[...document.querySelectorAll('#nav button[data-view]')].map(b=>b.dataset.view)")
+    assert order[:4] == ['today', 'dump', 'week', 'backlog'] and not any(v.startswith('rit-') for v in order), order
     pg.click('#nav [data-view="week"]'); tick(pg, 150)
     assert pg.locator('#main .dline [data-act="prevw"]').count() == 1
     pg.click('#main [data-act="nextw"]'); tick(pg, 150)
