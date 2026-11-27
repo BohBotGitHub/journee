@@ -109,7 +109,7 @@ document.addEventListener('click',async e=>{
   case'dictate':dictate();break;
   case'dumpaiclose':dumpAI=null;render();break;
   case'dumpapply':{if(dumpAI){applyItem(dumpAI,b.dataset.k);render()}break}
-  case'dumpapplyall':{if(dumpAI){propItems(dumpAI.prop).forEach(it=>applyItem(dumpAI,it.k));S.dump='';dumpAI=null;save();render();toast('Vide-tête transformé en tâches')}break}
+  case'dumpapplyall':{if(dumpAI){propItems(dumpAI.prop).forEach(it=>applyItem(dumpAI,it.k));S.dump='';dumpAI=null;save();render();toast('Idées transformées en tâches')}break}
   case'inbox':{const t=T(id);if(t){t.inbox=false;moveTask(t.id,b.dataset.to);toast(b.dataset.to==='backlog'?'Rangée au backlog':'Planifiée')}break}
   case'keys':showKeys();break;
   case'layout':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();toggleLayout();break;
@@ -352,7 +352,7 @@ async function dropGroup(grp,z,dz,e){
  if(!flowOn())reflow(day);save();render();toast(n+' tâches déplacées · ⌘/Ctrl Z pour annuler');
 }
 /* ---------- interactions fluides liste ↔ agenda ---------- */
-const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Vide-tête'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['J','Projets & Routines'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Maj ↑ ↓','Étendre la sélection'],['⌘/Ctrl A','Sélectionner toute la liste'],['Alt ↑ ↓','Monter ou descendre la tâche choisie'],['Suppr','Supprimer la sélection'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Idées'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['J','Projets & Routines'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Maj ↑ ↓','Étendre la sélection'],['⌘/Ctrl A','Sélectionner toute la liste'],['Alt ↑ ↓','Monter ou descendre la tâche choisie'],['Suppr','Supprimer la sélection'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
 let tipI=0;
 function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
@@ -397,13 +397,13 @@ setInterval(gSilent,60000);setTimeout(gSilent,2000);
 let pal=null;
 function palItems(q){
  const out=[],ql=norm(q).trim();
- const cmds=[['Aujourd’hui','go:today'],['Semaine','go:week'],['Vide-tête','go:dump'],['Backlog et modèles','go:backlog'],['Revue : semaine et projets','go:objectives'],['Projets & Routines','go:projects'],['Arbre des catégories','go:tree'],['Revue : statistiques','go:stats'],['Figer ou libérer la journée','freeze'],['Réglages','go:settings'],['Planifier ma journée','plan'],['Clôturer la journée','shutdown'],['Focus sur la prochaine tâche','focus'],['Inverser liste et grand agenda','layout'],['Planifier la semaine','weekplan'],['Revue de la semaine','weekreview'],['Nouveau modèle','tplnew'],...(S.templates||[]).map(t=>['Appliquer « '+t.name+' » aujourd’hui','tpl:'+t.id])];
+ const cmds=[['Aujourd’hui','go:today'],['Semaine','go:week'],['Idées','go:dump'],['Backlog et modèles','go:backlog'],['Revue : semaine et projets','go:objectives'],['Projets & Routines','go:projects'],['Arbre des catégories','go:tree'],['Revue : statistiques','go:stats'],['Figer ou libérer la journée','freeze'],['Réglages','go:settings'],['Planifier ma journée','plan'],['Clôturer la journée','shutdown'],['Focus sur la prochaine tâche','focus'],['Inverser liste et grand agenda','layout'],['Planifier la semaine','weekplan'],['Revue de la semaine','weekreview'],['Nouveau modèle','tplnew'],...(S.templates||[]).map(t=>['Appliquer « '+t.name+' » aujourd’hui','tpl:'+t.id])];
  const cmdHit=ql&&cmds.some(([l])=>norm(l).startsWith(ql));
  if(cmdHit)cmds.filter(([l])=>norm(l).includes(ql)).slice(0,6).forEach(([l,k])=>out.push({k,label:l,grp:'Commandes'}));
  if(ql){
   const d=dateWord(ql.replace(/^(aller a|aller au|au|le)\s+/,''));if(d)out.unshift({k:'day:'+d,label:'Aller au '+fmtDay(d),grp:'Aller'});
   out.push({k:'new',label:'Créer la tâche « '+q.trim()+' »',grp:'Créer',hint:'Entrée'});
-  out.push({k:'dump',label:'Ajouter au vide-tête',grp:'Créer'});
+  out.push({k:'dump',label:'Ajouter aux idées',grp:'Créer'});
   if(aiOn())out.push({k:'ask',label:'Demander à Génie : « '+q.trim()+' »',grp:'Créer'});
  }
  if(!cmdHit)cmds.filter(([l])=>!ql||norm(l).includes(ql)).slice(0,ql?6:14).forEach(([l,k])=>out.push({k,label:l,grp:'Commandes'}));
@@ -428,7 +428,7 @@ function runPal(it){
  if(k.startsWith('arch:')){const a=(S.archive||[]).find(x=>x.id===k.slice(5));if(a)showModal(`<div class="rit"><h2>${esc(a.t)}</h2><p class="lead">Terminée le ${fmtDay(a.d)}${a.a?' · '+fmtMin(a.a/60)+' passées':''}${a.e?' · '+fmtMin(a.e)+' estimées':''}${ch(a.c)?' · '+esc(ch(a.c).name):''}${a.o?' · objectif « '+esc(a.o)+' »':''}</p><div class="mfoot"><button class="ghost" data-act="close">Fermer</button><span class="sp"></span><button class="pri" data-act="archcopy" data-id="${esc(a.id)}">Refaire aujourd’hui</button></div></div>`);return}
  if(k.startsWith('tpl:'))return applyTpl(k.slice(4),today());
  if(k==='new'){const t=addTask(q,view==='backlog'?null:cur);if(t)toast('Tâche créée'+(t.day?' le '+fmtDay(t.day,{weekday:'long',day:'numeric'}):' au backlog'));return}
- if(k==='dump'){S.dump=(S.dump?S.dump.replace(/\s*$/,'')+'\n':'')+q;save();toast('Ajouté au vide-tête');return}
+ if(k==='dump'){S.dump=(S.dump?S.dump.replace(/\s*$/,'')+'\n':'')+q;save();toast('Ajouté aux idées');return}
  if(k==='ask'){sideTab='ai';document.body.classList.add('side-open');return aiAsk(q,false)}
  if(k==='plan')return startRitual('plan',cur);if(k==='shutdown')return startRitual('shutdown',cur>today()?today():cur);if(k==='weekplan')return startRitual('weekplan',cur);if(k==='weekreview')return startRitual('weekreview',cur);
  if(k==='focus'){const t=dayTasks(cur).find(t=>!t.done);return t?openFocus(t.id):toast('Aucune tâche à faire')}

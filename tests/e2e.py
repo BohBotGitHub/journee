@@ -1621,6 +1621,25 @@ def _(c):
     assert pg.evaluate("()=>getComputedStyle(document.querySelector('.wcol .card .cmeta')||document.body).display") in ('none', 'block')
     assert not errs, errs; ctx.close()
 
+@test('Synchro : une tâche supprimée ne revient pas à cause d’un placement ou d’un report automatique ailleurs')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    r = pg.evaluate("""()=>{const base={tasks:[],recurring:[],objectives:[],templates:[],channels:[],projects:[],days:{},weeks:{},settings:{},su:{},deleted:{}};
+      // ordinateur : supprimée à 200 ; téléphone en retard : la même tâche replacée par l'agenda vivant à 300 (uu reste 100)
+      const L=Object.assign({},base,{deleted:{'tasks:g1':200}});
+      const R=Object.assign({},base,{tasks:[{id:'g1',title:'manuel G1',u:300,uu:100,block:{start:1,end:2}},{id:'g2',title:'modifiée après',u:300,uu:300}]});
+      R.deleted={};L.deleted['tasks:g2']=200;
+      return mergeState(L,R).tasks.map(t=>t.id)}""")
+    assert r == ['g2'], r
+    # en vrai : un changement de créneau ne compte pas comme une modification
+    pg.evaluate("()=>{S.tasks.push(mk({id:'z1',title:'Z',day:today(),est:10}));save()}"); tick(pg, 100)
+    uu = st(pg, "T('z1').uu")
+    pg.evaluate("()=>{const t=T('z1');t.block={start:new Date().toISOString(),end:new Date(Date.now()+6e5).toISOString()};t.order=99;save()}"); tick(pg, 100)
+    assert st(pg, "T('z1').uu") == uu
+    pg.evaluate("()=>{T('z1').title='Z2';save()}"); tick(pg, 100)
+    assert st(pg, "T('z1').uu") != uu
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

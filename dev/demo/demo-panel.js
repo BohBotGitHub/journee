@@ -1,6 +1,8 @@
 // Démo Diem : panneau « à tester » (n'existe pas dans la vraie appli)
 (function(){
  const ITEMS=[
+  ['« Idées » partout','La page de capture s’appelle « Idées » partout (menu, titre, onglet du téléphone, messages).','dump'],
+  ['Tâches supprimées','Une tâche supprimée ne revient plus quand un autre appareil, resté en retard, l’avait seulement replacée dans l’agenda ou reportée au matin.','today'],
   ['Agenda 0 h – 24 h','L’agenda de droite commence à minuit et s’ouvre sur l’heure en cours (au tiers haut). Les autres jours s’ouvrent sur le début de ta journée.','today'],
   ['Créneau « journée entière » déplaçable','Dans l’agenda, attrape le créneau Mvision (journée entière) par le milieu et glisse-le : il se déplace en entier ; les poignées haut et bas changent début et fin.','today'],
   ['Créneau libéré = rempli','Clique un rendez-vous de l’agenda (même « Exploitation ») pour le passer en « disponible », ou « Libérer » sur une journée entière : les tâches du jour viennent s’y placer.','today'],
@@ -9,7 +11,7 @@
   ['Semaine lisible','Vue Semaine : 7 jours visibles, tuiles réduites au titre. Sur téléphone, un jour par écran, ouvert sur aujourd’hui.','week'],
   ['Au doigt','Sur téléphone : poignée ⋮⋮ aussi sur les sous-tâches, zones plus grandes pour les petites pastilles.','today'],
   ['Catégorie inconnue signalée','Tape « Courses #zzz » dans Ajouter : l’aperçu signale que la catégorie n’existe pas.','today']];
- const K='journee.demo58.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+ const K='journee.demo59.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const box=document.createElement('div');box.id='demopanel';document.body.appendChild(box);
  const css=document.createElement('style');css.textContent=`body:has(#mselbar:not(.hidden)) #demopanel{bottom:190px}#demopanel{position:fixed;right:12px;bottom:12px;z-index:90;width:min(360px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:2px solid #c2410c;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);font-size:14px}
@@ -52,6 +54,6 @@
   if(d==='tog'){min=!min;draw()}
   if(d==='show')show(b.dataset.k);
   if(d==='ok'||d==='ko'){const i=b.dataset.i;st[i]=st[i]===d?undefined:d;save();draw()}
-  if(d==='reset'){['journee.v1','journee.demo','journee.demo58.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
+  if(d==='reset'){['journee.v1','journee.demo','journee.demo59.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
  draw();
 })();
