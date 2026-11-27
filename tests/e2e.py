@@ -1640,6 +1640,18 @@ def _(c):
     assert st(pg, "T('z1').uu") != uu
     assert not errs, errs; ctx.close()
 
+@test('Focus partagé entre appareils : le plus récent gagne, l’arrêt aussi')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    r = pg.evaluate("""()=>{const base={tasks:[],recurring:[],objectives:[],templates:[],channels:[],projects:[],days:{},weeks:{},settings:{},deleted:{}};
+      const L=Object.assign({},base,{running:null,su:{running:100}}),R=Object.assign({},base,{running:{taskId:'x',start:5},su:{running:200}});
+      const a=mergeState(L,R).running,b=mergeState(R,Object.assign({},base,{running:null,su:{running:300}})).running;return [a&&a.taskId,b]}""")
+    assert r == ['x', None], r
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
+    pg.evaluate(f"()=>startTimer('{tid}')"); tick(pg, 100)
+    assert st(pg, "S.su.running") > 0 and 'running' in st(pg, "Object.keys(JSON.parse(JSON.stringify(S)))")
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

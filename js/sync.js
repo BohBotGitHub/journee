@@ -14,14 +14,17 @@ async function driveSync(light){
   const q=encodeURIComponent("name='journee.json'");
   const list=await (await dfetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,modifiedTime)`)).json();
   const f=list.files&&list.files[0];
-  const local=()=>{const c=Object.assign({},S);delete c.running;c.settings=Object.assign({},S.settings);return JSON.stringify(c)};
+  const local=()=>{const c=Object.assign({},S);c.settings=Object.assign({},S.settings);return JSON.stringify(c)};
   const dirty=(S.updatedAt||0)>(S.syncedAt||0);
   if(f&&light&&!dirty&&f.modifiedTime===remoteMod){syncState='Synchronisé à '+hm(new Date());return}
   if(f){remoteMod=f.modifiedTime;
    const remote=await (await dfetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`)).json();
    const base=S.syncedAt?S:Object.assign({},S,{tasks:S.tasks.filter(t=>!/^Exemple : /.test(t.title))});
    const merged=mergeState(base,remote);
-   if(dataJson(merged)!==dataJson(S)){const run=S.running;S=Object.assign(defaults(),merged);S.settings=Object.assign(defaults().settings,merged.settings||{});S.running=run;snap=null;stamp();if(hasTree())treeColors();genRecurring();render()}
+   if(dataJson(merged)!==dataJson(S)){const run0=S.running&&S.running.taskId;S=Object.assign(defaults(),merged);S.settings=Object.assign(defaults().settings,merged.settings||{});snap=null;stamp();
+    // focus lancé ou arrêté sur un autre appareil
+    {const run1=S.running&&S.running.taskId;if(run1!==run0){if(run1&&T(run1))toast('Focus en cours sur un autre appareil : '+T(run1).title);else if(run0&&typeof focusOn!=='undefined'&&focusOn===run0&&typeof renderFocus==='function')renderFocus()}}
+    if(hasTree())treeColors();genRecurring();render()}
    S.syncedAt=Date.now();lsSet(KEY,JSON.stringify(S));
    if(dataJson(S)!==dataJson(Object.assign(defaults(),remote))){const up=await (await dfetch(`https://www.googleapis.com/upload/drive/v3/files/${f.id}?uploadType=media&fields=id,modifiedTime`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:local()})).json().catch(()=>({}));if(up.modifiedTime)remoteMod=up.modifiedTime}
    syncState='Synchronisé à '+hm(new Date());

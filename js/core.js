@@ -34,7 +34,7 @@ if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null,snap=null,syncTried=false;
 /* ---------- horodatage par élément (base de la synchro par fusion) ---------- */
-const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage','merged'];
+const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage','merged','running']; // running : le focus en cours, partagé entre appareils
 function scalJson(k){return JSON.stringify(S[k]===undefined?null:S[k])}
 const AUTOF=['block','order','roll','rf','rfAt','pinned','inbox'];
 function stamp(){
