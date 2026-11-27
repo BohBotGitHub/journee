@@ -85,10 +85,10 @@ function openTask(id){
 function modalAIHtml(t){
  const a=modalAI&&modalAI.tid===t.id?modalAI:null;
  if(!a)return `<div class="row" style="margin-top:8px"><button class="sm" data-act="aisplit" data-id="${t.id}">Découper</button></div>`;
- if(a.loading)return '<div class="aibox"><span class="mute">Le Génie réfléchit…</span></div>';
+ if(a.loading)return `<div class="aibox"><span class="gthink">${LAMP_SVG}Le Génie réfléchit…</span></div>`;
  if(a.error)return `<div class="aibox"><span class="mute">Génie : ${esc(a.error)}</span><button class="sm" data-act="aisplit" data-id="${t.id}">Réessayer</button></div>`;
  const items=propItems(a.prop),ap=a.applied||{};
- return `<div class="aibox"><b>Génie</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="modalapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="modalapplyall">Tout appliquer</button>':''}</div>`;
+ return `<div class="aibox">${genieTag()}${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="modalapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="modalapplyall">Tout appliquer</button>':''}</div>`;
 }
 async function aiSplit(t){
  modalAI={tid:t.id,loading:true};openTask(t.id);
@@ -122,10 +122,10 @@ function aiBox(){
  if(!ritual||!aiOn()||!RIT_AI[ritual.type+ritual.step])return '';
  const a=ritual.ai&&ritual.ai[ritual.step];
  if(!a)return `<div class="aibox"><div class="row"><span class="mute">Le Génie peut t’aider sur cette étape.</span><span class="sp"></span><button class="sm" data-act="ritai">Demander au Génie</button></div></div>`;
- if(a.loading)return `<div class="aibox"><span class="mute">Le Génie réfléchit…</span></div>`;
+ if(a.loading)return `<div class="aibox"><span class="gthink">${LAMP_SVG}Le Génie réfléchit…</span></div>`;
  if(a.error)return `<div class="aibox"><div class="row"><span class="mute">Génie : ${esc(a.error)}</span><span class="sp"></span><button class="sm" data-act="ritai">Réessayer</button></div></div>`;
  const items=propItems(a.prop),ap=a.applied||{};
- return `<div class="aibox"><b>Génie</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="ritapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="ritapplyall">Tout appliquer</button>':''}<div class="row"><span class="sp"></span><button class="sm ghost" data-act="ritai">Nouvelle proposition</button></div></div>`;
+ return `<div class="aibox">${genieTag()}${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="ritapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="ritapplyall">Tout appliquer</button>':''}<div class="row"><span class="sp"></span><button class="sm ghost" data-act="ritai">Nouvelle proposition</button></div></div>`;
 }
 const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Boulot','Projets','Aperçu'],weekreview:['Chiffres','Habitudes','Réflexion']};
 function startRitual(type,day){modalTask=null;const sv=savedRit();ritual=sv&&sv.type===type&&sv.day===(day||cur)?Object.assign(sv,{step:0}):{type,step:0,day:day||cur,picked:{},ai:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}

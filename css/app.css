@@ -564,9 +564,9 @@ button.danger.hasic .ic,button.pri.hasic .ic{opacity:1}
 .swatch{display:inline-flex;align-items:center;gap:8px;font-weight:500}
 .swatch i{width:16px;height:16px;border-radius:50%;background:light-dark(var(--sl),var(--sd));display:inline-block}
 .swatch.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
-.logo .la{fill:var(--acc)}.logo .lt{fill:color-mix(in srgb,var(--acc) 45%,var(--bg))}
-.logo .ls{fill:none;stroke:color-mix(in srgb,var(--acc) 45%,var(--bg));stroke-width:2.5;stroke-linecap:round}
-.logo .lr{fill:none;stroke:var(--acc);stroke-width:2;stroke-linecap:round}
+.logo .la{fill:var(--acc)}.logo .ll{fill:color-mix(in srgb,var(--acc) 72%,#fff)}.logo .lt{fill:color-mix(in srgb,var(--acc) 70%,#000)}
+.logo .lh{fill:none;stroke:var(--acc);stroke-width:7}.logo .le{fill:var(--bg)}.logo .lm{fill:none;stroke:var(--bg);stroke-width:2.6;stroke-linecap:round}
+.logo .lf{fill:color-mix(in srgb,var(--acc) 55%,#fff)}.logo .ls{fill:none;stroke:color-mix(in srgb,var(--acc) 60%,var(--bg));stroke-width:3;stroke-linecap:round}
 .rrow>.chk{margin:0}.rrow>.chk+div{flex:1}
 button.fclock{background:none;border:0;padding:0;min-height:0;cursor:text;border-radius:8px}button.fclock:hover{background:var(--panel2)}
 input.fedit{width:5ch;font-size:clamp(48px,10vw,80px);padding:0 8px;min-height:0;text-align:center}
@@ -1366,3 +1366,10 @@ details.mmore .grid2{margin-top:8px}
 .flampsvg.run .fflame{animation:fflame 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
 @keyframes fflame{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 @media (prefers-reduced-motion:reduce){.flampsvg .fflame{animation:none}}
+
+/* v2.4.1 · la lampe du Génie, partout */
+.gtag{display:inline-flex;align-items:center;gap:6px}.gtag .glogo{width:22px;height:22px;flex:none}
+.gthink{display:inline-flex;align-items:center;gap:8px;color:var(--mute)}.gthink .glogo{width:24px;height:24px;flex:none;animation:gbob 1.6s ease-in-out infinite}
+.gthink .glogo .lf{animation:fflame 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes gbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.gthink .glogo,.gthink .glogo .lf{animation:none}}
