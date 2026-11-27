@@ -239,14 +239,16 @@ const RING_C=2*Math.PI*104;
 function ringFrac(t){const a=actualSec(t);return t.est?Math.min(1,a/(t.est*60)):(a%3600)/3600}
 function lampSvg(t,run){
  const f=ringFrac(t),over=!!(t.est&&actualSec(t)>=t.est*60),nd=Math.min(5,(t.subtasks||[]).filter(x=>x.d).length);
- const wisps=[...Array(nd)].map((_,i)=>`<path class="fwisp" style="--i:${i}" d="M${150+i*3} 132c-9-6 6-14-3-23s-15-3-13-11c1-8 9-10 6-19"/>`).join('');
+ const wisps=[...Array(nd)].map((_,i)=>`<path class="fwisp" style="--i:${i}" d="M${198+i*2} 94c-7-5 5-11-2-18s-12-2-10-9c1-6 7-8 5-15"/>`).join('');
  return `<svg class="flampsvg${run?' run':''}${over?' over':''}" viewBox="0 0 260 260" aria-hidden="true">
  <circle cx="130" cy="130" r="104" class="frtrack"/>
  <circle cx="130" cy="130" r="104" class="frbar" data-live="ring" stroke-dasharray="${(f*RING_C).toFixed(1)} ${RING_C.toFixed(1)}" transform="rotate(-90 130 130)"/>
  <g class="frdots"><circle cx="234" cy="130" r="2"/><circle cx="130" cy="234" r="2"/><circle cx="26" cy="130" r="2"/><circle cx="130" cy="26" r="2"/></g>
- <g transform="translate(130 136) scale(1.3) translate(-115 -130)"><g class="fwisps">${wisps}</g>
- <g class="fsparks"><circle cx="146" cy="104" r="2.6"/><circle cx="158" cy="92" r="1.8"/><circle cx="140" cy="86" r="1.4"/></g>
- <g class="fbody"><path d="M76 156c0-9 13-14 34-14 13 0 21 3 26 8l14-9c2.5-1.6 5 .8 3.3 3.2l-12 13z"/><path d="M96 156h31l-5 8h-21z"/><rect x="91" y="164" width="41" height="5" rx="2.5"/><circle cx="111" cy="138" r="3.4"/></g></g>
+ <g class="fwisps">${wisps}</g>
+ <g class="fsparks"><circle cx="200" cy="86" r="2.6"/><circle cx="214" cy="78" r="1.8"/><circle cx="196" cy="70" r="1.4"/></g>
+ <g class="fbody"><circle cx="78" cy="138" r="13" class="fhandle"/><path d="M168 142C180 136 190 122 200 116c6-4 12 2 8 8-8 14-22 32-42 36z"/><ellipse cx="126" cy="146" rx="48" ry="30"/><path class="flid" d="M96 126a30 22 0 0 1 60 0z"/><circle class="flid" cx="126" cy="100" r="6"/><rect class="ffoot" x="106" y="172" width="40" height="8" rx="4"/>
+ ${run?'<circle class="feye" cx="112" cy="150" r="3"/><circle class="feye" cx="140" cy="150" r="3"/>':'<path class="feyec" d="M108 150q4 3 8 0M136 150q4 3 8 0"/>'}<path class="fmouth" d="M119 158q7 5 14 0"/></g>
+ <circle class="fflame" cx="206" cy="104" r="7"/>
  </svg>`}
 function renderFocus(){
  const el=$('#focus');

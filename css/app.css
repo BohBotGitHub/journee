@@ -1336,7 +1336,7 @@ details.mmore .grid2{margin-top:8px}
 .frdots{fill:var(--gold);opacity:.55}
 .fbody{fill:var(--gold);transition:opacity .6s}
 .flampsvg:not(.run) .fbody{opacity:.55}
-.fwisp{fill:none;stroke:var(--gold);stroke-width:2.4;stroke-linecap:round;opacity:.7;transform-box:fill-box;transform-origin:bottom;transform:translate(calc(var(--i)*7px - 14px),calc(var(--i)*-6px)) rotate(calc(var(--i)*9deg - 18deg))}
+.fwisp{fill:none;stroke:var(--gold);stroke-width:2.4;stroke-linecap:round;opacity:.7;transform-box:fill-box;transform-origin:bottom;transform:translate(calc(var(--i)*-9px - 6px),calc(var(--i)*3px)) rotate(calc(var(--i)*-8deg))}
 .fsparks{fill:var(--gold2);opacity:0}
 .flampsvg.run .fsparks{animation:fspark 3.2s ease-in-out infinite}
 .flampsvg.run .fwisp{animation:fwisp 6s ease-in-out infinite;animation-delay:calc(var(--i)*-1.2s)}
@@ -1356,3 +1356,13 @@ details.mmore .grid2{margin-top:8px}
 @media (max-width:720px){.fhero{grid-template-columns:1fr;gap:10px}.flampsvg{max-width:190px}.focus.lamp .finfo{align-items:center;text-align:center}.focus.lamp .fclockrow,.focus.lamp .fbtns{justify-content:center}}
 @media (prefers-reduced-motion:reduce){.flampsvg .fsparks,.flampsvg .fwisp{animation:none}.frbar{transition:none}}
 .focus.lamp .ftopacts{margin-left:auto}
+/* v2.4.1 · lampe ronde et mignonne */
+.fbody .fhandle{fill:none;stroke:var(--gold);stroke-width:7}
+.fbody .flid{fill:#E4C677}.fbody .ffoot{fill:#B8923E}
+.feye{fill:#141418}.feyec,.fmouth{fill:none;stroke:#141418;stroke-width:2.4;stroke-linecap:round}
+.fflame{fill:var(--gold2);transition:opacity .6s}
+.flampsvg:not(.run) .fflame{opacity:.35}
+.flampsvg:not(.run) .fbody{opacity:.8}
+.flampsvg.run .fflame{animation:fflame 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes fflame{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+@media (prefers-reduced-motion:reduce){.flampsvg .fflame{animation:none}}
