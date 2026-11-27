@@ -43,12 +43,20 @@ function hbToggle(id,d){const h=H(id);if(!h)return;const v=!hbDone(h,d);hbSet(h,
 // tâches des habitudes « placées dans ma journée » (jours prévus, à partir d'aujourd'hui, sur 7 jours)
 function genHabitTasks(){
  const t0=today();let ch=false;
- for(const h of S.habits||[]){if(!h.toDay||!(h.est>0)||h.freq==='week'||h.paused)continue;
+ // « X fois par semaine » : proposée seulement aujourd'hui, tant que l'objectif de la semaine n'est pas atteint
+ const wkOpen=h=>hbWeekCount(h,t0)<(h.n||1);
+ const live=h=>h&&h.toDay&&h.est>0&&!h.paused;
+ for(const h of S.habits||[]){if(!live(h))continue;
+  if(h.freq==='week'){
+   if(wkOpen(h)&&!hbDone(h,t0)&&!(h.skip||[]).includes(t0)&&!S.tasks.some(t=>t.habitId===h.id&&t.day===t0)){
+    S.tasks.push(mk({title:h.name,est:h.est,channel:h.channel||null,day:t0,habitId:h.id,done:false,order:nextOrder(t0)}));ch=true}
+   continue}
   for(let i=0;i<7;i++){const d=addDays(t0,i);if(!hbDue(h,d)||(h.skip||[]).includes(d))continue;
    if(S.tasks.some(t=>t.habitId===h.id&&t.day===d))continue;
    S.tasks.push(mk({title:h.name,est:h.est,channel:h.channel||null,day:d,habitId:h.id,done:hbDone(h,d),order:nextOrder(d)}));ch=true}}
  // une habitude qu'on ne place plus dans la journée : ses tâches à venir (non faites) disparaissent
- const keep=t=>{if(!t.habitId)return true;const h=H(t.habitId);return t.done||(h&&h.toDay&&h.est>0&&!h.paused&&h.freq!=='week'&&hbDue(h,t.day))||(t.day&&t.day<t0)};
+ const keep=t=>{if(!t.habitId)return true;if(t.done||(t.day&&t.day<t0))return true;const h=H(t.habitId);if(!live(h))return false;
+  return h.freq==='week'?(t.day===t0&&wkOpen(h)):hbDue(h,t.day)};
  const n0=S.tasks.length;S.tasks=S.tasks.filter(keep);if(S.tasks.length!==n0)ch=true;
  return ch}
 
@@ -96,8 +104,8 @@ function hbEditRender(){
  <button type="button" class="catbtn" data-act="hbcat" style="--c:${esc(h.channel&&ch(h.channel)?ch(h.channel).color:'var(--line)')}">${h.channel&&ch(h.channel)?`<span class="chip">${esc(nodeLabel(h.channel))}</span>`:'<span class="mute">Choisir une catégorie…</span>'}<span class="mute">Changer</span></button>
  <div class="hbicons">${HB_ICONS.map(([k,l])=>`<button class="${h.icon===k?'on':''}" data-act="hbset" data-k="icon" data-v="${k}" title="${l}" aria-label="${l}">${ico('hb-'+k)}</button>`).join('')}</div>
  ${h.kind==='quit'?'':`<h4>Dans ma journée</h4>
- <label class="chkrow"><input type="checkbox" data-hbf="toDay" ${h.toDay?'checked':''} ${h.freq==='week'?'disabled':''}> La placer comme une tâche les jours prévus${h.freq==='week'?' (pas pour « X fois par semaine »)':''}</label>
- ${h.toDay&&h.freq!=='week'?`<label>Durée<select data-hbf="est">${[5,10,15,20,30,45,60,90].map(v=>`<option value="${v}" ${v===(h.est||15)?'selected':''}>${fmtMin(v)}</option>`).join('')}</select></label>`:''}`}
+ <label class="chkrow"><input type="checkbox" data-hbf="toDay" ${h.toDay?'checked':''}> ${h.freq==='week'?'La proposer chaque jour comme une tâche, jusqu’à atteindre l’objectif de la semaine':'La placer comme une tâche les jours prévus'}</label>
+ ${h.toDay?`<label>Durée<select data-hbf="est">${[5,10,15,20,30,45,60,90].map(v=>`<option value="${v}" ${v===(h.est||15)?'selected':''}>${fmtMin(v)}</option>`).join('')}</select></label>`:''}`}
  <div class="mfoot">${h.id?`<button class="danger" data-act="hbdel">Supprimer</button><button class="ghost" data-act="hbpause">${h.paused?'Reprendre':'Mettre en pause'}</button>`:''}<span class="sp"></span><button class="pri" data-act="hbsave">${h.id?'Enregistrer':'Créer'}</button></div></div>`);
  setTimeout(()=>{const i=document.querySelector('[data-hbf="name"]');if(i&&!h.name)i.focus()},30)}
 function hbSave(){

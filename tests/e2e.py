@@ -1685,6 +1685,21 @@ def _(c):
     assert st(pg, "S.habits.find(h=>h.name==='Piano').est") == 10
     assert not errs, errs; ctx.close()
 
+@test('Habitudes X fois par semaine : proposée chaque jour jusqu’à l’objectif')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    r = pg.evaluate("""()=>{const h={id:'sw',name:'Natation',freq:'week',n:2,toDay:true,est:45,log:{},skip:[],created:Date.now()};S.habits.push(h);genHabitTasks();
+      const a=S.tasks.filter(t=>t.habitId==='sw');
+      h.log[addDays(today(),-1)]=1;h.log[addDays(today(),-2)]=1;
+      const mon=monday(today()),inWk=d=>d>=mon;const n=[addDays(today(),-1),addDays(today(),-2)].filter(inWk).length;
+      genHabitTasks();const b=S.tasks.filter(t=>t.habitId==='sw'&&!t.done);
+      return [a.length,a[0]&&a[0].day===today(),n,b.length]}""")
+    assert r[0] == 1 and r[1], r
+    assert r[3] == (0 if r[2] >= 2 else 1), r
+    pg.evaluate("()=>{view='habits';render();hbEdit('sw')}"); tick(pg, 150)
+    assert 'objectif de la semaine' in pg.inner_text('#sheet') and pg.locator('#sheet [data-hbf="est"]').count() == 1
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

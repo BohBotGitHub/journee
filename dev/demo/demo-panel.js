@@ -5,6 +5,7 @@
   ['Nouvelle habitude','« Nouvelle habitude » : nom, à prendre ou à arrêter, fréquence (tous les jours, certains jours, X fois par semaine), catégorie, icône, et « la placer comme une tâche ».','habits'],
   ['Pastilles du jour','En haut d’Aujourd’hui : jusqu’à 6 pastilles ; un clic coche l’habitude du jour.','today'],
   ['Tâche liée','Une habitude « placée dans ma journée » devient une tâche les jours prévus ; cocher la tâche coche l’habitude (et l’inverse).','habits'],
+  ['X fois par semaine','Natation › Modifier : coche « la proposer chaque jour » ; la tâche revient chaque jour tant que l’objectif de la semaine n’est pas atteint.','habits'],
   ['Revue de la semaine','••• › Revoir la semaine : nouvelle étape « Habitudes » avec Garder, Alléger (plus court ou moins souvent) et Pause.','today'],
   ['Statistiques','Statistiques, tout en bas : la force de chaque habitude sur 3 mois.','stats'],
   ['Menu et Braindump','Menu : Aujourd’hui, Semaine, Braindump, Habitudes, Backlog, Projets, Arbre, Statistiques. Sur téléphone, Habitudes est dans « Plus ».','today']];
