@@ -1,6 +1,6 @@
 # Diem : état du travail autonome
 
-mode: veille
+mode: actif
 (« veille » = le propriétaire est absent, les lancements automatiques travaillent ; « actif » = ils s'arrêtent aussitôt. Claude le change quand il dit « mode veille » ou quand il revient.)
 
 ## MISSION EN COURS (26/11, 15 h) : AUDIT COMPLET « BÊTA-TESTEUR » — prioritaire sur toute la file
