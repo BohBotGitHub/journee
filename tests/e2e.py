@@ -1564,11 +1564,11 @@ def _(c):
         assert st(pg, "view") == 'tree'
         assert not errs, errs; ctx.close()
 
-@test('Structure : menu (Vide-tête en 2e, Statistiques), en-têtes homogènes jour / semaine / grand agenda')
+@test('Structure : menu (Braindump, Habitudes, Statistiques), en-têtes homogènes jour / semaine / grand agenda')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
     order = pg.evaluate("()=>[...document.querySelectorAll('#nav button[data-view]')].map(b=>b.dataset.view)")
-    assert order[:4] == ['today', 'dump', 'week', 'backlog'] and not any(v.startswith('rit-') for v in order), order
+    assert order[:5] == ['today', 'week', 'dump', 'habits', 'backlog'] and not any(v.startswith('rit-') for v in order), order
     pg.click('#nav [data-view="week"]'); tick(pg, 150)
     assert pg.locator('#main .dline [data-act="prevw"]').count() == 1
     pg.click('#main [data-act="nextw"]'); tick(pg, 150)
@@ -1650,6 +1650,54 @@ def _(c):
     tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
     pg.evaluate(f"()=>startTimer('{tid}')"); tick(pg, 100)
     assert st(pg, "S.su.running") > 0 and 'running' in st(pg, "Object.keys(JSON.parse(JSON.stringify(S)))")
+    assert not errs, errs; ctx.close()
+
+@test('Habitudes : création, pastille du jour, série et force, tâche liée, revue de la semaine, menu')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    order = pg.evaluate("()=>[...document.querySelectorAll('#nav button[data-view]')].map(b=>b.dataset.view).slice(0,8)")
+    assert order == ['today', 'week', 'dump', 'habits', 'backlog', 'projects', 'tree', 'stats'], order
+    assert 'Braindump' in pg.inner_text('#nav')
+    pg.click('#nav [data-view="habits"]'); tick(pg, 150)
+    pg.click('#main [data-act="hbnew"]'); tick(pg, 150)
+    pg.fill('[data-hbf="name"]', 'Piano'); pg.click('#sheet [data-act="hbset"][data-k="icon"][data-v="piano"]'); tick(pg, 100)
+    pg.check('[data-hbf="toDay"]'); tick(pg, 100)
+    pg.click('#sheet [data-act="hbsave"]'); tick(pg, 200)
+    h = st(pg, "S.habits.find(h=>h.name==='Piano')"); assert h and h['toDay'] and h['est'] == 15, h
+    t = st(pg, "S.tasks.find(t=>t.habitId&&t.day===today())"); assert t and t['title'] == 'Piano', t
+    # cocher la tâche coche l'habitude, et la pastille
+    pg.evaluate("()=>{view='today';render()}"); tick(pg, 150)
+    assert pg.locator('#main .hbpill:has-text("Piano")').count() == 1
+    pg.evaluate("async()=>{await toggleDone(S.tasks.find(t=>t.habitId&&t.day===today()).id)}"); tick(pg, 150)
+    assert st(pg, "!!S.habits.find(h=>h.name==='Piano').log[today()]")
+    assert pg.locator('#main .hbpill.on:has-text("Piano")').count() == 1
+    pg.click('#main .hbpill:has-text("Piano")'); tick(pg, 150)
+    assert st(pg, "!S.habits.find(h=>h.name==='Piano').log[today()]") and st(pg, "S.tasks.find(t=>t.habitId&&t.day===today()).done") is False
+    # série et force
+    r = pg.evaluate("""()=>{const h={id:'x',name:'X',freq:'daily',log:{},created:Date.now()-10*864e5};for(let i=1;i<=5;i++)h.log[addDays(today(),-i)]=1;
+      const w={id:'w',name:'W',freq:'week',n:2,log:{},created:Date.now()-30*864e5};for(let k=1;k<=3;k++){const m=addDays(monday(today()),-7*k);w.log[m]=1;w.log[addDays(m,2)]=1}
+      return [hbStreak(h),hbForce(h)>20,hbStreak(w)]}""")
+    assert r[0] == 5 and r[1] and r[2] == 3, r
+    # revue de la semaine : étape Habitudes, alléger
+    pg.evaluate("()=>{startRitual('weekreview',today());ritual.step=1;renderRitual()}"); tick(pg, 150)
+    assert pg.locator('#sheet .hbrrow').count() >= 1
+    pg.click('#sheet .hbrrow [data-act="hblight"]'); tick(pg, 150)
+    assert st(pg, "S.habits.find(h=>h.name==='Piano').est") == 10
+    assert not errs, errs; ctx.close()
+
+@test('Habitudes X fois par semaine : proposée chaque jour jusqu’à l’objectif')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    r = pg.evaluate("""()=>{const h={id:'sw',name:'Natation',freq:'week',n:2,toDay:true,est:45,log:{},skip:[],created:Date.now()};S.habits.push(h);genHabitTasks();
+      const a=S.tasks.filter(t=>t.habitId==='sw');
+      h.log[addDays(today(),-1)]=1;h.log[addDays(today(),-2)]=1;
+      const mon=monday(today()),inWk=d=>d>=mon;const n=[addDays(today(),-1),addDays(today(),-2)].filter(inWk).length;
+      genHabitTasks();const b=S.tasks.filter(t=>t.habitId==='sw'&&!t.done);
+      return [a.length,a[0]&&a[0].day===today(),n,b.length]}""")
+    assert r[0] == 1 and r[1], r
+    assert r[3] == (0 if r[2] >= 2 else 1), r
+    pg.evaluate("()=>{view='habits';render();hbEdit('sw')}"); tick(pg, 150)
+    assert 'objectif de la semaine' in pg.inner_text('#sheet') and pg.locator('#sheet [data-hbf="est"]').count() == 1
     assert not errs, errs; ctx.close()
 
 def main():

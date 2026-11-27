@@ -1,4 +1,4 @@
-// Diem — vues (Aujourd’hui, Semaine, Idées, Backlog, Revue, Réglages, agendas)
+// Diem — vues (Aujourd’hui, Semaine, Braindump, Backlog, Revue, Réglages, agendas)
 /* ---------- rendu : morceaux communs ---------- */
 let subOpen=new Set((()=>{try{return JSON.parse(localStorage.getItem('journee.subopen')||'[]')}catch(e){return[]}})());
 // une sous-tâche ajoutée déplie sa tâche pour qu'on la voie
@@ -103,7 +103,7 @@ function viewToday(){
  const hz=isT?(()=>{const h=dayHours(d),b=+parseYmd(d),p=Math.max(0,Math.min(1,(Date.now()-(b+h.s*3600e3))/((h.e-h.s)*3600e3))),hr=new Date().getHours();const sky=hr<5||hr>=21?'night':hr<9?'dawn':hr<17?'day':'dusk';return `<div class="horizon sky-${sky}" style="--p:${p.toFixed(3)}" title="Ta journée : ${Math.round(p*100)} % du temps écoulé" aria-hidden="true"><i class="hsun${hr>=20||hr<6?' moon':''}"></i></div>`})():'<div class="horizon hzoff" aria-hidden="true"></div>';
  return `${hz}<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub kicker dline"><span class="dnav"><button data-act="prev" aria-label="Jour précédent" title="Jour précédent (←)">‹</button><button data-act="next" aria-label="Jour suivant" title="Jour suivant (→)">›</button></span><span class="dtxt">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</span>${isT?'':'<button class="dtoday" data-act="gotoday">Revenir à aujourd’hui</button>'}</div></div>
  <div class="acts">${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
- ${summaryHtml(d,isT)}
+ ${summaryHtml(d,isT)}${d>=today()&&typeof hbPills==='function'?hbPills(d):''}
 
  <button class="addopen" data-act="addopen" data-d="${d}" aria-label="Ajouter une tâche (touche N)">${ico('plus')}<span>Ajouter une tâche</span><kbd>N</kbd></button>
  ${isT?nowNext(d):''}
@@ -157,24 +157,24 @@ let dumpAI=null,rec=null;
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 function viewDump(){
  const inbox=S.tasks.filter(t=>t.inbox&&!t.done);
- return `<div class="head"><div><h1>Idées</h1><div class="sub">Écris tout ce qui t’encombre l’esprit, une idée par ligne. Tu trieras après.</div></div></div>
+ return `<div class="head"><div><h1>Braindump</h1><div class="sub">Écris tout ce qui t’encombre l’esprit, une idée par ligne. Tu trieras après.</div></div></div>
  <textarea class="dump" data-dump rows="10" placeholder="Rappeler le garagiste&#10;Idée cadeau pour Raf&#10;Préparer le devis lundi 45m #villette&#10;Acheter des ampoules demain…">${esc(S.dump||'')}</textarea>
  <div class="row" style="flex-wrap:wrap;margin:10px 0 4px">${SR?`<button data-act="dictate">${rec?'■ Arrêter la dictée':'🎙 Dicter'}</button>`:''}<span class="sp"></span><button data-act="dumptasks">En tâches</button>${aiOn()?'<button class="pri" data-act="dumpai">Trier avec le Génie</button>':''}</div>
  <p class="mute" style="font-size:13px;margin:4px 0 0">Astuce : « demain », « lundi », « 12/12 », « 30m », « 1h », « #catégorie » sont compris. Touche <kbd>D</kbd> pour revenir ici de n’importe où.</p>
- ${dumpAI?`<div class="aibox">${dumpAI.loading?'<span class="mute">Le Génie trie tes idées…</span>':dumpAI.error?`<span class="mute">Génie : ${esc(dumpAI.error)}</span>`:`<b>Génie</b>${dumpAI.text?`<p>${esc(dumpAI.text)}</p>`:''}${propItems(dumpAI.prop).map(it=>`<div class="pitem${(dumpAI.applied||{})[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${(dumpAI.applied||{})[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="dumpapply" data-k="${it.k}">Ajouter</button>`}</div>`).join('')}<div class="row">${propItems(dumpAI.prop).some(it=>!(dumpAI.applied||{})[it.k])?'<button class="sm pri" data-act="dumpapplyall">Tout ajouter</button>':''}<span class="sp"></span><button class="sm ghost" data-act="dumpaiclose">Fermer</button></div>`}</div>`:''}
+ ${dumpAI?`<div class="aibox">${dumpAI.loading?'<span class="mute">Le Génie trie ton braindump…</span>':dumpAI.error?`<span class="mute">Génie : ${esc(dumpAI.error)}</span>`:`<b>Génie</b>${dumpAI.text?`<p>${esc(dumpAI.text)}</p>`:''}${propItems(dumpAI.prop).map(it=>`<div class="pitem${(dumpAI.applied||{})[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${(dumpAI.applied||{})[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="dumpapply" data-k="${it.k}">Ajouter</button>`}</div>`).join('')}<div class="row">${propItems(dumpAI.prop).some(it=>!(dumpAI.applied||{})[it.k])?'<button class="sm pri" data-act="dumpapplyall">Tout ajouter</button>':''}<span class="sp"></span><button class="sm ghost" data-act="dumpaiclose">Fermer</button></div>`}</div>`:''}
  <h2 style="font-size:18px;margin:26px 0 8px">À trier (${inbox.length})</h2>
  <div class="list">${inbox.length?inbox.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm" data-act="inbox" data-id="${t.id}" data-to="${today()}">Aujourd’hui</button><button class="sm ghost" data-act="inbox" data-id="${t.id}" data-to="${addDays(today(),1)}">Demain</button><button class="sm ghost" data-act="inbox" data-id="${t.id}" data-to="backlog">Backlog</button>`)).join(''):'<div class="empty">Rien à trier. Les idées sans date atterrissent ici.</div>'}</div>`;
 }
 function dumpToTasks(){
- const lines=(S.dump||'').split('\n').map(l=>l.replace(/^[-*•\d.)\s]+/,'').trim()).filter(Boolean);if(!lines.length){toast('Rien dans tes idées pour l’instant');return}
+ const lines=(S.dump||'').split('\n').map(l=>l.replace(/^[-*•\d.)\s]+/,'').trim()).filter(Boolean);if(!lines.length){toast('Ton braindump est vide pour l’instant');return}
  let n=0;for(const l of lines){const q=parseQuick(l);if(!q.title)continue;const day=q.day||null;S.tasks.push(mk({title:q.title,est:q.est,channel:q.channel,day,due:q.due||null,inbox:!day&&!q.due,order:nextOrder(day)}));n++}
  S.dump='';save();render();toast(n+' tâche'+(n>1?'s':'')+' créée'+(n>1?'s':''));
  S.tasks.filter(t=>t.inbox&&!t.est).slice(-n).forEach(aiWatch);
 }
 async function dumpSort(){
- const txt=(S.dump||'').trim();if(!txt){toast('Rien dans tes idées pour l’instant');return}
+ const txt=(S.dump||'').trim();if(!txt){toast('Ton braindump est vide pour l’instant');return}
  dumpAI={loading:true};render();
- try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nVoici mes idées (une par ligne, en vrac) :\n<vide_tete>\n${txt}\n</vide_tete>\nTransforme-le en tâches claires et actionnables (new_tasks) : reformule brièvement si besoin, fusionne les doublons, découpe ce qui contient plusieurs actions, attribue une catégorie existante, une durée réaliste et un jour (day = YYYY-MM-DD si c'est daté ou urgent, sinon "backlog"). Ce qui n'est pas une tâche (idée, note, souci) : mentionne-le dans le message, en une phrase. Message court.`}],true);dumpAI={text:r.text,prop:r.prop,applied:{}}}
+ try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nVoici mon braindump (une idée par ligne, en vrac) :\n<vide_tete>\n${txt}\n</vide_tete>\nTransforme-le en tâches claires et actionnables (new_tasks) : reformule brièvement si besoin, fusionne les doublons, découpe ce qui contient plusieurs actions, attribue une catégorie existante, une durée réaliste et un jour (day = YYYY-MM-DD si c'est daté ou urgent, sinon "backlog"). Ce qui n'est pas une tâche (idée, note, souci) : mentionne-le dans le message, en une phrase. Message court.`}],true);dumpAI={text:r.text,prop:r.prop,applied:{}}}
  catch(e){dumpAI={error:e.message}}
  render();
 }
@@ -277,7 +277,7 @@ function viewStats(){
  <div class="kpis"><div><b>${fh(last30.reduce((a,x)=>a+x.a,0))}</b><small>temps suivi (30 j)</small></div><div><b>${last30.length}</b><small>tâches terminées (30 j)</small></div><div><b>${ratio?pct(ratio):'—'}</b><small>réel / estimé ${ratio?(ratio>1.15?'· tu sous-estimes':ratio<0.85?'· tu surestimes':'· estimations justes'):''}</small></div><div><b>${streak} j</b><small>série de jours avec au moins une tâche faite</small></div></div>
  <section class="stsec"><h2>Temps suivi par semaine</h2><div class="wkbars">${wk.map(x=>`<div class="wkb" title="${fh(x.sec)} · ${x.n} tâches"><i style="height:${Math.max(2,x.sec/maxW*100)}%"></i><small>${fmtDay(x.w,{day:'numeric',month:'short'})}</small><b>${x.sec?fh(x.sec):''}</b></div>`).join('')}</div></section>
  ${hasTree()?(()=>{const pp={};for(const x of last30){const p=pillarOf(x.c);if(p)pp[p.id]=(pp[p.id]||0)+x.a}const tot=Object.values(pp).reduce((a,v)=>a+v,0);return tot?`<section class="stsec"><h2>Par pilier (30 jours)</h2><div class="pilbar">${pillars().filter(p=>pp[p.id]).map(p=>`<i style="--c:${esc(p.color)};flex:${pp[p.id]}" title="${esc(p.name)} · ${fh(pp[p.id])}"><span>${esc(p.name)} ${Math.round(pp[p.id]/tot*100)} %</span></i>`).join('')}</div></section>`:''})():''}<section class="stsec"><h2>${hasTree()?'Par domaine':'Par catégorie'} (30 jours)</h2>${perL.length?`<div class="bars">${perL.map(x=>`<div class="brow"><span>${esc(x.c?(x.c.lvl===1?pillarOf(x.c.id).name+' › '+x.c.name:x.c.name):'Sans catégorie')}</span><div class="bt" style="--c:${esc(x.c?x.c.color:'#8a8f98')}"><i style="width:${x.sec/maxC*100}%"></i></div><span>${fh(x.sec)}${x.e?' · '+pct(x.ea/x.e):''}</span></div>`).join('')}</div><p class="mute" style="font-size:13px">Le pourcentage compare le temps réel au temps estimé.</p>`:'<p class="mute">Pas encore de temps suivi ce mois-ci.</p>'}</section>
- <section class="stsec"><h2>Là où passe ton temps (depuis le début)</h2><p class="mute" style="margin:0 0 8px">${fh(total)} suivies au total sur ${all.length} tâches (les chronos oubliés de plus de 12 h sont ignorés).</p><div class="bars">${topL.map(x=>`<div class="brow"><span title="${esc(x.t)}">${esc(x.t)}</span><div class="bt" style="--c:var(--acc)"><i style="width:${x.sec/Math.max(1,topL[0].sec)*100}%"></i></div><span>${fh(x.sec)} · ${x.n}×</span></div>`).join('')}</div></section>`;
+ <section class="stsec"><h2>Là où passe ton temps (depuis le début)</h2><p class="mute" style="margin:0 0 8px">${fh(total)} suivies au total sur ${all.length} tâches (les chronos oubliés de plus de 12 h sont ignorés).</p><div class="bars">${topL.map(x=>`<div class="brow"><span title="${esc(x.t)}">${esc(x.t)}</span><div class="bt" style="--c:var(--acc)"><i style="width:${x.sec/Math.max(1,topL[0].sec)*100}%"></i></div><span>${fh(x.sec)} · ${x.n}×</span></div>`).join('')}</div></section>${typeof hbStatsHtml==='function'?hbStatsHtml():''}`;
 }
 
 function viewReview(){
@@ -336,7 +336,7 @@ function viewSettings(){
  <section><h2>Adresse de redirection</h2><p>À coller à l’identique dans la console Google et dans Azure.</p><div class="row"><code>${esc(REDIRECT)}</code><button class="sm" data-act="copyuri">Copier</button></div></section>
  <section><h2>Importer depuis Sunsama</h2><p>Dans Sunsama : Settings → Account Management → export. Les tâches terminées de plus de 30 jours vont dans l’historique (utilisé par le Génie pour estimer tes durées) ; les rituels Sunsama ne sont pas importés. Tu peux réimporter sans créer de doublons.</p><input type="file" accept=".csv,text/csv" data-sunsama aria-label="Fichier d’export Sunsama">${S.archive&&S.archive.length?`<p style="margin-top:8px">Historique : ${S.archive.length} tâches archivées.</p>`:''}</section>
  <section><h2>Sauvegarde</h2><p>Export et import au format JSON.</p><div class="row"><button data-act="export">Exporter</button><label class="sm" style="flex-direction:row"><input type="file" accept="application/json" data-import style="max-width:260px"></label></div></section>
- <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Idées</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Semaine et projets</span><kbd>Espace</kbd><span>Focus : pause / reprise</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
+ <section><h2>Raccourcis clavier</h2><div class="keys"><kbd>N</kbd><span>Nouvelle tâche</span><kbd>P</kbd><span>Planifier la journée</span><kbd>S</kbd><span>Clôturer la journée</span><kbd>F</kbd><span>Focus</span><kbd>T</kbd> <span>Aujourd’hui</span><kbd>C</kbd><span>Inverser liste et grand agenda</span><kbd>D</kbd><span>Braindump</span><kbd>W</kbd><span>Semaine</span><kbd>B</kbd><span>Backlog</span><kbd>O</kbd><span>Semaine et projets</span><kbd>Espace</kbd><span>Focus : pause / reprise</span><kbd>← →</kbd><span>Jour / semaine précédent·e, suivant·e</span><kbd>Échap</kbd><span>Fermer</span></div></section>
  </div></details>
  <p class="mute about" style="font-size:13px;margin:14px 2px 0"><a href="about.html" target="_blank" rel="noopener">À propos de Diem et de tes données</a> · projet personnel, sans serveur ni publicité.</p>
  </div>`;
@@ -480,6 +480,7 @@ function moreMenu(){
   ${it('data-act="morego"','data-v="rit-plan"','sunrise','Planifier ma journée')}
   ${it('data-act="morego"','data-v="rit-shutdown"','moon','Clôturer la journée')}
   ${it('data-act="morego"','data-v="rit-week"','cal','Ma semaine (planifier ou revoir)')}
+  ${it('data-act="morego"','data-v="habits"','hb-spark','Habitudes')}
   ${it('data-act="morego"','data-v="stats"','target','Statistiques')}
   ${it('data-act="morego"','data-v="projects"','folder','Projets & Routines')}
   ${it('data-act="morego"','data-v="tree"','tree','Arbre')}

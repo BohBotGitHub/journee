@@ -1,6 +1,6 @@
 // Service worker : l'appli s'ouvre même hors ligne. Les appels aux API Google/Microsoft ne passent jamais par le cache.
-const CACHE = 'mydaybot-v84';
-const ASSETS = ["./", "./index.html", "./manifest.json", "./diem-icon.svg", "./diem-192.png", "./diem-512.png", "./css/app.css", "./js/ai.js", "./js/mail.js", "./js/auth.js", "./js/core.js", "./js/events.js", "./js/flow.js", "./js/google.js", "./js/import.js", "./js/main.js", "./js/microsoft.js", "./js/render.js", "./js/sync.js", "./js/tree.js", "./js/treeview.js", "./js/quotes.js", "./js/icons.js", "./js/views.js"];
+const CACHE = 'mydaybot-v85';
+const ASSETS = ["./", "./index.html", "./manifest.json", "./diem-icon.svg", "./diem-192.png", "./diem-512.png", "./css/app.css", "./js/ai.js", "./js/mail.js", "./js/auth.js", "./js/core.js", "./js/events.js", "./js/flow.js", "./js/google.js", "./js/import.js", "./js/main.js", "./js/microsoft.js", "./js/render.js", "./js/sync.js", "./js/tree.js", "./js/treeview.js", "./js/quotes.js", "./js/icons.js", "./js/views.js", "./js/habits.js"];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))));
