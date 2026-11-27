@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="diem-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=74">
+<link rel="stylesheet" href="css/app.css?v=76">
 </head>
 <body>
 <noscript><p style="padding:24px;font:16px system-ui">Diem est un planificateur de journée personnel qui fonctionne dans le navigateur (JavaScript requis). <a href="about.html">À propos de Diem et de tes données</a>.</p></noscript>
@@ -33,13 +33,13 @@
   <div id="runchip"></div>
   <button class="navrefresh" data-act="hardrefresh" title="Actualiser : dernière version de l’appli et dernières données" aria-label="Actualiser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span class="ll">Actualiser</span><span class="sl">Actualiser</span></button>
   <button data-view="settings" class="navset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="ll">Réglages</span><span class="sl">Réglages</span></button>
-  <div class="navver" title="v1.9 · 26/11 : gris zen façon Sunsama, volets qui glissent sans que rien ne bouge, menu replié en premier, bouton liste ⇄ agenda dans l’en-tête ; surprises : respiration au focus, ciel du jour, onde de la coche, journée accomplie."><svg class="vlogo" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M10 46c0-6 8-9 20-9 8 0 13 2 16 5l8-6c1.5-1 3 .5 2 2l-7 8z"/><path fill="currentColor" d="M22 46h18l-3 5H25z"/><rect fill="currentColor" x="19" y="51" width="24" height="3" rx="1.5"/><circle fill="currentColor" cx="29" cy="35" r="3"/><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M54 34c-6-3 3-8-2-13s-9-1-8-6"/><circle fill="currentColor" cx="40" cy="13" r="6.5"/><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" d="M49 13h3M44.5 20.8l1.5 2.6M35.5 20.8L34 23.4M31 13h-3M35.5 5.2L34 2.6M44.5 5.2L46 2.6"/></svg><b>v1.9.3 · 26/11</b><span>Bugs corrigés, en-tête allégé, sous-tâches glissables.</span></div>
+  <div class="navver" title="v1.9 · 26/11 : gris zen façon Sunsama, volets qui glissent sans que rien ne bouge, menu replié en premier, bouton liste ⇄ agenda dans l’en-tête ; surprises : respiration au focus, ciel du jour, onde de la coche, journée accomplie."><svg class="vlogo" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M10 46c0-6 8-9 20-9 8 0 13 2 16 5l8-6c1.5-1 3 .5 2 2l-7 8z"/><path fill="currentColor" d="M22 46h18l-3 5H25z"/><rect fill="currentColor" x="19" y="51" width="24" height="3" rx="1.5"/><circle fill="currentColor" cx="29" cy="35" r="3"/><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M54 34c-6-3 3-8-2-13s-9-1-8-6"/><circle fill="currentColor" cx="40" cy="13" r="6.5"/><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" d="M49 13h3M44.5 20.8l1.5 2.6M35.5 20.8L34 23.4M31 13h-3M35.5 5.2L34 2.6M44.5 5.2L46 2.6"/></svg><b>v1.9.4 · 26/11</b><span>Audit : corrections.</span></div>
  </nav>
  <div id="syncbar" class="hidden" role="status"></div>
  <main id="main"></main>
  <aside id="side">
   <div class="sidegrip" title="Glisse pour élargir ou réduire le volet (double-clic : taille normale)" aria-hidden="true"></div>
-  <div class="stabs"><button data-side="cal">Agenda</button><button data-side="todo">To Do</button><button data-side="ai">Claude<span id="aibadge"></span></button><button class="sm ghost mset" data-act="go" data-v="settings">Réglages</button><button class="x closeside" data-act="closeside" aria-label="Fermer le panneau">×</button></div>
+  <div class="stabs"><button data-side="cal">Agenda</button><button data-side="todo">To Do</button><button data-side="ai">Génie<span id="aibadge"></span></button><button class="sm ghost mset" data-act="go" data-v="settings">Réglages</button><button class="x closeside" data-act="closeside" aria-label="Fermer le panneau">×</button></div>
   <div id="sidebody"></div>
  </aside>
 </div>
@@ -47,22 +47,22 @@
 <div id="focus" class="focus hidden"></div>
 <div id="toast" role="status"></div>
 
-<script src="js/core.js?v=74"></script>
-<script src="js/tree.js?v=74"></script>
-<script src="js/icons.js?v=74"></script>
-<script src="js/quotes.js?v=74"></script>
-<script src="js/treeview.js?v=74"></script>
-<script src="js/google.js?v=74"></script>
-<script src="js/flow.js?v=74"></script>
-<script src="js/sync.js?v=74"></script>
-<script src="js/microsoft.js?v=74"></script>
-<script src="js/auth.js?v=74"></script>
-<script src="js/ai.js?v=74"></script>
-<script src="js/mail.js?v=74"></script>
-<script src="js/import.js?v=74"></script>
-<script src="js/views.js?v=74"></script>
-<script src="js/render.js?v=74"></script>
-<script src="js/events.js?v=74"></script>
-<script src="js/main.js?v=74"></script>
+<script src="js/core.js?v=76"></script>
+<script src="js/tree.js?v=76"></script>
+<script src="js/icons.js?v=76"></script>
+<script src="js/quotes.js?v=76"></script>
+<script src="js/treeview.js?v=76"></script>
+<script src="js/google.js?v=76"></script>
+<script src="js/flow.js?v=76"></script>
+<script src="js/sync.js?v=76"></script>
+<script src="js/microsoft.js?v=76"></script>
+<script src="js/auth.js?v=76"></script>
+<script src="js/ai.js?v=76"></script>
+<script src="js/mail.js?v=76"></script>
+<script src="js/import.js?v=76"></script>
+<script src="js/views.js?v=76"></script>
+<script src="js/render.js?v=76"></script>
+<script src="js/events.js?v=76"></script>
+<script src="js/main.js?v=76"></script>
 </body>
 </html>

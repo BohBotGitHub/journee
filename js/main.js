@@ -46,3 +46,5 @@ window.addEventListener('popstate',()=>{if(!$('#modal').classList.contains('hidd
  document.addEventListener('touchmove',e=>{if(y0===null)return;const dy=e.touches[0].clientY-y0;if(dy>0)sh.style.transform=`translateY(${Math.min(dy,240)*.6}px)`},{passive:true});
  document.addEventListener('touchend',e=>{if(y0===null)return;const dy=(e.changedTouches[0]||{}).clientY-y0;sh.style.transform='';y0=null;if(dy>110)closeModal()},{passive:true});
 })();
+// 27/11 : « Exploitation » devient occupée par défaut ; l'ancien réglage « Prestations » (qui était le défaut) est remis au défaut une seule fois
+(function(){try{if(S.settings.jobCalsMig)return;const jc=S.settings.jobCals||{};for(const k in jc)if(jc[k]==='phases')delete jc[k];S.settings.jobCalsMig=1;save()}catch(e){}})();

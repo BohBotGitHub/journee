@@ -112,8 +112,8 @@ function setBlock(t,start,noRender){
 }
 
 // ---------- agendas de boulot : chaque événement dit si tu es au boulot, et comment ----------
-// réglage par agenda : 'phases' (prestations : Exploitation = en veille, autres phases = sans pause) · 'busy' (toujours sans pause) · 'off'
-function jobCalMode(id,name){const m=(S.settings.jobCals||{})[id];if(m)return m;const n=(name||'')+' '+(id||'');if(/diesesoftware|villette/i.test(n))return 'busy';if(/^(travail|boulot|work)$/i.test((name||'').trim()))return 'phases';return 'off'}
+// réglage par agenda : 'busy' (toujours sans pause, par défaut) · 'phases' (au choix : Exploitation = en veille, autres phases = sans pause) · 'off'
+function jobCalMode(id,name){const m=(S.settings.jobCals||{})[id];if(m)return m;const n=(name||'')+' '+(id||'');if(/diesesoftware|villette/i.test(n))return 'busy';if(/^(travail|boulot|work)$/i.test((name||'').trim()))return 'busy';return 'off'} // Exploitation comprise : occupé par défaut ; « Prestations » la met en veille sur demande
 function classifyEv(e){
  if(!e||isMine(e)||!e._cid)return null;const m=jobCalMode(e._cid,e._cal);if(m==='off')return null;
  const t=(e.summary||'').trim();if(/^(autre|vacances|cong[ée]s?)\b/i.test(t))return 'ignore';
