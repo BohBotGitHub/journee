@@ -12,7 +12,7 @@ function render(){applyLook();
  renderSide();renderRun();renderSyncBar();iconize($('#main'));if(typeof kbShow==='function'&&kbSel)kbShow();if(typeof renderMsel==='function'&&msel.size)renderMsel();if(view==='tree'&&typeof fitTree==='function')fitTree();tvPrevView=view;if(view==='backlog'&&blFilter)blApply();
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
  if(layout==='cal'&&(view==='today'||view==='week')){const bd=bigDays();ensureRange(bd[0],bd[bd.length-1])}else if(view==='week'){const w=monday(cur);ensureRange(w,addDays(w,6))}else{ensureRange(cur,addDays(cur,6))}
- {const bc=document.querySelector('.bigcal');if(bc){if(!scrolledBig||bst===null){scrolledBig=true;const n=new Date();bc.scrollTop=Math.max(0,(Math.max(S.settings.dayStart,n.getHours()-1)-S.settings.dayStart)*PX)}else bc.scrollTop=bst}}
+ {const bc=document.querySelector('.bigcal');if(bc){if(!scrolledBig||bst===null){scrolledBig=true;const n=new Date();bc.scrollTop=calFocus(bc,cur===today()||bigDays().includes(today()))}else bc.scrollTop=bst}}
 }
 function renderSide(){
  document.querySelectorAll('.stabs [data-side]').forEach(b=>b.classList.toggle('on',b.dataset.side===sideTab));
@@ -20,7 +20,7 @@ function renderSide(){
  const bigOn=layout==='cal'&&(view==='today'||view==='week');sb.innerHTML=sideTab==='todo'?viewTodo():sideTab==='ai'?viewAI():bigOn?viewSideTasks():viewCal();
  const tb=document.querySelector('.stabs [data-side="cal"]');if(tb)tb.textContent=bigOn?'Tâches':'Agenda';
  if(sideTab==='ai'){aiUnread=0;renderBadge();}
- if(sideTab==='ai'){sb.scrollTop=sb.scrollHeight}else if(sideTab==='cal'&&!bigOn&&scrolledCal!==cur){scrolledCal=cur;const n=new Date(),h=cur===today()?Math.max(S.settings.dayStart,n.getHours()-1):S.settings.workStart;sb.scrollTop=(h-S.settings.dayStart)*PX}else sb.scrollTop=st;
+ if(sideTab==='ai'){sb.scrollTop=sb.scrollHeight}else if(sideTab==='cal'&&!bigOn&&scrolledCal!==cur){scrolledCal=cur;sb.scrollTop=calFocus(sb,cur===today())}else sb.scrollTop=st;
 }
 let focusMin=null;
 function renderMini(){let el=$('#minifocus');if(!el){el=document.createElement('div');el.id='minifocus';document.body.appendChild(el)}
@@ -246,10 +246,13 @@ setInterval(()=>{
  if(t){const el=document.querySelector('[data-live="run"]');if(el)el.textContent=clock(actualSec(t));const mi=document.querySelector('[data-live="mini"]');if(mi)mi.textContent=clock(actualSec(t));
   const f=document.querySelector('[data-live="focus"]');if(f&&focusOn===t.id){f.textContent=clock(actualSec(t));f.classList.toggle('over',!!(t.est&&actualSec(t)>=t.est*60))}
   const c=document.querySelector(`[data-live="t-${t.id}"]`);if(c)c.textContent=fmtMin(actualSec(t)/60)+' / '+(t.est?fmtMin(t.est):'—');}
- document.querySelectorAll('[data-live="now"]').forEach(nl=>{const n=new Date();nl.style.top=((n.getHours()-S.settings.dayStart)*60+n.getMinutes())/60*PX+'px'});
+ document.querySelectorAll('[data-live="now"]').forEach(nl=>{const n=new Date();nl.style.top=((n.getHours()-calGeom().st)*60+n.getMinutes())/60*PX+'px'});
  if(today()!==lastDay){const was=lastDay;lastDay=today();if(cur===was)cur=lastDay;genRecurring();render()}
 },1000);
 
 // une respiration avant de commencer : le cercle grandit (inspire) puis se resserre (expire), puis s'efface ; ne bloque rien
 function breathe(){try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const f=document.getElementById('focus');if(!f||f.classList.contains('hidden'))return;
  const o=document.createElement('div');o.className='breathe';o.setAttribute('aria-hidden','true');o.innerHTML='<i></i><span class="in">Inspire</span><span class="out">Expire</span>';f.appendChild(o);setTimeout(()=>o.remove(),9000)}catch(e){}}
+
+// agenda 0 h – 24 h : s'ouvre sur le moment présent (aujourd'hui) ou sur le début de ta journée (autres jours), placé au tiers haut
+function calFocus(sc,isToday){const n=new Date(),h=isToday?n.getHours()+n.getMinutes()/60:Math.max(0,(S.settings.workStart||9)-0.5);return Math.max(0,h*PX-sc.clientHeight/3)}

@@ -140,7 +140,7 @@ document.addEventListener('click',async e=>{
   case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();const to=nextFreeDay(t);moveTask(id,to,true);putFront([id],T(id).day);save();render();toast(to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
   case'rolldrop':deleteTask(id);closeModal();render();toast('Tâche supprimée');break;
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
-  case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();if(ritual)renderRitual();break}
+  case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();queueFlow();if(ritual)renderRitual();break}
   case'setwhere':{const t=T(id);if(t){t.where=b.dataset.v||'';save();render();openTask(id)}break}
   case'addposcycle':{const o=['bottom','top','auto'],k=o[(o.indexOf(S.settings.addPos||'bottom')+1)%3];S.settings.addPos=k;save();if(ad){adKeep();renderAdd()}else dayMenu();break}
   case'navtog':paneTog('nav');break;
@@ -177,7 +177,7 @@ document.addEventListener('click',async e=>{
   case'ritapply':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){applyItem(a,b.dataset.k);saveRit();renderRitual()}break}
   case'ritapplyall':{const a=ritual&&ritual.ai&&ritual.ai[ritual.step];if(a){propItems(a.prop).forEach(it=>applyItem(a,it.k));saveRit();renderRitual();toast('Suggestions appliquées')}break}
   case'ev2task':{const pre=undoSnap(),t=evToTask(b.dataset.eid);if(t){undoCommit(pre,'ev2task');toast('« '+t.title+' » ajouté comme tâche, à son heure · ⌘/Ctrl Z pour annuler')}else toast('Rendez-vous introuvable : actualise l’agenda');break}
-  case'evtoggle':{if(e.target.closest('a'))break;const k=b.dataset.k;S.evMode=S.evMode||{};const ev=Object.values(gEvents).flat().find(x=>evKey(x)===k);const cur0=ev?evFree(ev):false;S.evMode[k]=cur0?'busy':'free';save();render();toast(cur0?'Marqué occupé':'Tu peux travailler pendant ce rendez-vous');break}
+  case'evtoggle':{if(e.target.closest('a'))break;const k=b.dataset.k;S.evMode=S.evMode||{};const ev=Object.values(gEvents).flat().find(x=>evKey(x)===k);const cur0=ev?evFree(ev):false;S.evMode[k]=cur0?'busy':'free';save();render();queueFlow();toast(cur0?'Marqué occupé':'Disponible : les tâches du jour viennent s’y placer');break}
   case'aisplit':{const t=T(id);if(t)aiSplit(t);break}
   case'modalapply':{if(modalAI){applyItem(modalAI,b.dataset.k);openTask(modalTask)}break}
   case'modalapplyall':{if(modalAI){propItems(modalAI.prop).forEach(it=>applyItem(modalAI,it.k));openTask(modalTask)}break}
@@ -264,7 +264,7 @@ document.addEventListener('change',async e=>{
 });
 
 /* ---------- glisser-déposer ---------- */
-function calMinute(z,y){const r=z.getBoundingClientRect();let m=S.settings.dayStart*60+(y-r.top)/PX*60;m=Math.round(m/15)*15;return Math.max(S.settings.dayStart*60,Math.min(24*60-15,m))}
+function calMinute(z,y){const r=z.getBoundingClientRect();let m=calGeom().st*60+(y-r.top)/PX*60;m=Math.round(m/15)*15;return Math.max(calGeom().st*60,Math.min(24*60-15,m))}
 document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]');if(!c)return;drag=c.dataset.drag;try{e.dataTransfer.setData('text/plain',drag);e.dataTransfer.effectAllowed='move'}catch(err){}
  // la tuile reste bien visible sous la souris : copie nette (pas l'original estompé) comme image de glissement
  try{const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragimg');{const id=(c.dataset.drag||'').split('|')[1];if(msel.size>1&&msel.has(id)){g.classList.add('dragmulti');g.setAttribute('data-n',msel.size)}}g.style.width=r.width+'px';document.body.appendChild(g);e.dataTransfer.setDragImage(g,Math.min(e.clientX-r.left,r.width-10),Math.min(e.clientY-r.top,r.height-6));setTimeout(()=>g.remove(),0)}catch(err){}
@@ -370,9 +370,14 @@ document.addEventListener('mouseover',e=>{
  if(!el)return;const id=el.dataset.id;document.querySelectorAll(`.card[data-id="${id}"],.blk[data-id="${id}"]`).forEach(x=>{if(x!==el)x.classList.add('hl')});
 });
 let adz=null;
-document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-adrz]');if(!h)return;e.preventDefault();e.stopPropagation();const el=h.closest('.ev.allday'),d=h.dataset.day,sg=(jobSegs(d).find(x=>x.allday))||{s:8,e:18};adz={el,d,w:h.dataset.adrz,y:e.clientY,top:el.offsetTop,h:el.offsetHeight,s:sg.s,e:sg.e};h.setPointerCapture&&h.setPointerCapture(e.pointerId)});
-document.addEventListener('pointermove',e=>{if(!adz)return;const dh=Math.round((e.clientY-adz.y)/PX*4)/4;let s=adz.s,en=adz.e;if(adz.w==='s')s=Math.max(0,Math.min(en-.5,adz.s+dh));else en=Math.min(24,Math.max(s+.5,adz.e+dh));adz.ns=s;adz.ne=en;const top=adz.top+(s-adz.s)*PX,hh=(en-s)*PX;adz.el.style.top=top+'px';adz.el.style.height=hh+'px';const sm=adz.el.querySelector('small');if(sm)sm.textContent='journée entière · '+hShort(s)+'–'+hShort(en)});
-document.addEventListener('pointerup',()=>{if(!adz)return;const a=adz;adz=null;if(a.ns==null){return}const pre=undoSnap();S.days[a.d]=Object.assign(S.days[a.d]||{},{ad:{s:a.ns,e:a.ne}});undoCommit(pre,'adjob');save();render();toast('Journée entière : '+hShort(a.ns)+'–'+hShort(a.ne)+' ce jour-là · ⌘/Ctrl Z pour annuler')});
+document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-adrz]');
+ // le créneau entier se glisse aussi (comme une tâche) ; les poignées en haut et en bas changent le début et la fin
+ const body=!h&&e.button===0&&!e.target.closest('a,button')?e.target.closest('.ev.allday[data-adday]'):null;if(!h&&!body)return;
+ const el=h?h.closest('.ev.allday'):body,d=h?h.dataset.day:body.dataset.adday,sg=(jobSegs(d).find(x=>x.allday))||{s:8,e:18};
+ if(h){e.preventDefault();e.stopPropagation()}
+ adz={el,d,w:h?h.dataset.adrz:'m',y:e.clientY,top:el.offsetTop,h:el.offsetHeight,s:sg.s,e:sg.e};(h||body).setPointerCapture&&(h||body).setPointerCapture(e.pointerId)});
+document.addEventListener('pointermove',e=>{if(!adz)return;if(adz.w==='m'&&adz.ns==null&&Math.abs(e.clientY-adz.y)<5)return;const dh=Math.round((e.clientY-adz.y)/PX*4)/4;let s=adz.s,en=adz.e;if(adz.w==='m'){const len=adz.e-adz.s;s=Math.max(0,Math.min(24-len,adz.s+dh));en=s+len;adz.el.classList.add('moving')}else if(adz.w==='s')s=Math.max(0,Math.min(en-.5,adz.s+dh));else en=Math.min(24,Math.max(s+.5,adz.e+dh));adz.ns=s;adz.ne=en;const top=adz.top+(s-adz.s)*PX,hh=(en-s)*PX;adz.el.style.top=top+'px';adz.el.style.height=hh+'px';const sm=adz.el.querySelector('small');if(sm)sm.textContent='journée entière · '+hShort(s)+'–'+hShort(en)});
+document.addEventListener('pointerup',()=>{if(!adz)return;const a=adz;adz=null;a.el.classList.remove('moving');if(a.ns==null||(a.ns===a.s&&a.ne===a.e)){return}const pre=undoSnap();S.days[a.d]=Object.assign(S.days[a.d]||{},{ad:{s:a.ns,e:a.ne}});undoCommit(pre,'adjob');save();render();queueFlow();toast('Journée entière : '+hShort(a.ns)+'–'+hShort(a.ne)+' ce jour-là · ⌘/Ctrl Z pour annuler')});
 document.addEventListener('dblclick',e=>{const b=e.target.closest('.ev.allday[data-adday]');if(!b)return;const d=b.dataset.adday;if(S.days[d]&&S.days[d].ad){const pre=undoSnap();delete S.days[d].ad;undoCommit(pre,'adjob');save();render();toast('Horaires par défaut rétablis')}});
 let rz=null;
 document.addEventListener('pointerdown',e=>{
@@ -599,3 +604,4 @@ function fitTitle(el){el.style.height='auto';el.style.height=el.scrollHeight+'px
 document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('textarea.mtitle'))fitTitle(e.target)});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('textarea.mtitle')){e.preventDefault();e.target.blur()}});
 new MutationObserver(()=>{const t=document.querySelector('#sheet textarea.mtitle');if(t&&!t.dataset.fit){t.dataset.fit=1;requestAnimationFrame(()=>fitTitle(t))}}).observe(document.getElementById('sheet'),{childList:true,subtree:true});
+document.addEventListener('pointercancel',()=>{if(adz){adz.el.classList.remove('moving');adz=null;render()}});

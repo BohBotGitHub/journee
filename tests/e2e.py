@@ -1129,6 +1129,12 @@ def _(c):
     assert '16 h' in pg.inner_text('#side .ev.allday')
     pg.dblclick('#side .ev.allday b'); tick(pg, 150)
     assert st(pg, "!S.days[today()].ad")
+    # le créneau entier se glisse (8–18 → 9–19)
+    pg.evaluate("()=>document.querySelector('#side .ev.allday b').scrollIntoView({block:'center'})"); tick(pg, 100)
+    bb = pg.locator('#side .ev.allday b').bounding_box(); pg.mouse.move(bb['x'] + 10, bb['y'] + 5); pg.mouse.down(); pg.mouse.move(bb['x'] + 10, bb['y'] + 5 + 76, steps=6); pg.mouse.up(); tick(pg, 200)
+    assert st(pg, "[S.days[today()].ad.s,S.days[today()].ad.e]") == [9, 19], st(pg, "S.days[today()].ad")
+    # agenda 0 h – 24 h, ouvert sur l'heure en cours
+    assert st(pg, "calGeom().st") == 0 and st(pg, "calGeom().en") == 24
     # arbre zoomable
     pg.evaluate("()=>{view='tree';treeMode='map';render()}"); tick(pg, 200)
     if pg.locator('.tvzoom').count():
@@ -1567,6 +1573,24 @@ def _(c):
     assert pg.locator('#main .dline [data-act="prevw"]').count() == 1
     pg.click('#main [data-act="nextw"]'); tick(pg, 150)
     assert pg.locator('#main .dtoday').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('v2.1 : un rendez-vous passé en disponible se remplit ; échéance lointaine non déplacée')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    pg.evaluate("""()=>{const d=today();S.tasks=S.tasks.filter(t=>t.day!==d);S.days[d]={hs:9,he:20};
+      const at=h=>{const x=parseYmd(d);x.setMinutes(h*60);return x.toISOString()};
+      gEvents[d]=[{id:'r1',summary:'Réunion',start:{dateTime:at(9)},end:{dateTime:at(12)}}];
+      S.tasks.push(mk({id:'f1',title:'Écrire',day:d,est:30,order:1}));save();runFlow();render()}""")
+    tick(pg, 300)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") >= 12
+    pg.evaluate("()=>{sideTab='cal';render()}"); tick(pg, 150)
+    pg.click('#side .ev:has-text("Réunion") b'); tick(pg, 400)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") == 9, st(pg, "T('f1').block")
+    pg.evaluate("()=>{S.tasks.push(mk({id:'due1',title:'Plus tard',day:null,est:20,due:addDays(today(),5)}));save();runFlow()}"); tick(pg, 200)
+    assert st(pg, "T('due1').day") is None
+    pg.evaluate("()=>{S.tasks.push(mk({id:'due2',title:'Urgent',day:null,est:20,due:today()}));save();runFlow()}"); tick(pg, 200)
+    assert st(pg, "T('due2').day") == st(pg, "today()")
     assert not errs, errs; ctx.close()
 
 def main():
