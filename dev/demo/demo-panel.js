@@ -3,7 +3,7 @@
  const ITEMS=[
   ['Agenda 0 h – 24 h','L’agenda de droite commence à minuit et s’ouvre sur l’heure en cours (au tiers haut). Les autres jours s’ouvrent sur le début de ta journée.','today'],
   ['Créneau « journée entière » déplaçable','Dans l’agenda, attrape le créneau Mvision (journée entière) par le milieu et glisse-le : il se déplace en entier ; les poignées haut et bas changent début et fin.','today'],
-  ['Créneau libéré = rempli','Clique un rendez-vous de l’agenda pour le passer en « disponible » : les tâches du jour viennent s’y placer.','today'],
+  ['Créneau libéré = rempli','Clique un rendez-vous de l’agenda (même « Exploitation ») pour le passer en « disponible », ou « Libérer » sur une journée entière : les tâches du jour viennent s’y placer.','today'],
   ['Échéances sobres','Une tâche à échéance n’est plus posée d’office sur un jour : seulement si l’échéance est aujourd’hui ou dépassée.','backlog'],
   ['Fiche tâche compacte','Ouvre une tâche : une barre (durée, jour, heure, échéance, priorité), la catégorie, puis « Plus » replié (projet, répétition, lieu, temps passé).','today'],
   ['Semaine lisible','Vue Semaine : 7 jours visibles, tuiles réduites au titre. Sur téléphone, un jour par écran, ouvert sur aujourd’hui.','week'],

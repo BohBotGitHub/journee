@@ -42,6 +42,7 @@ document.addEventListener('click',async e=>{
   case'ritunblock':{const t=T(id);if(t)clearBlock(t);renderRitual();break}
   case'autobox':{const n=autoBox(cur);toast(n?n+' tâche'+(n>1?'s':'')+' placée'+(n>1?'s':''):'Rien à placer, ou pas de créneau libre');break}
   case'close':closeModal();break;
+  case'adfree':{const dd=b.dataset.day,pre=undoSnap();S.days[dd]=S.days[dd]||{};S.days[dd].adFree=!S.days[dd].adFree;if(!S.days[dd].adFree)delete S.days[dd].adFree;undoCommit(pre,'adfree');save();render();queueFlow();toast(S.days[dd]&&S.days[dd].adFree?'Disponible : les tâches du jour viennent s’y placer':'Journée entière repassée en occupé');break}
   case'moreside':closeModal();document.body.classList.add('side-open');break;
   case'morego':closeModal();go(b.dataset.v);break;
   case'closeside':document.body.classList.remove('side-open');break;
@@ -373,7 +374,7 @@ let adz=null;
 document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-adrz]');
  // le créneau entier se glisse aussi (comme une tâche) ; les poignées en haut et en bas changent le début et la fin
  const body=!h&&e.button===0&&!e.target.closest('a,button')?e.target.closest('.ev.allday[data-adday]'):null;if(!h&&!body)return;
- const el=h?h.closest('.ev.allday'):body,d=h?h.dataset.day:body.dataset.adday,sg=(jobSegs(d).find(x=>x.allday))||{s:8,e:18};
+ const el=h?h.closest('.ev.allday'):body,d=h?h.dataset.day:body.dataset.adday,sg=(jobSegs(d,true).find(x=>x.allday))||{s:8,e:18};
  if(h){e.preventDefault();e.stopPropagation()}
  adz={el,d,w:h?h.dataset.adrz:'m',y:e.clientY,top:el.offsetTop,h:el.offsetHeight,s:sg.s,e:sg.e};(h||body).setPointerCapture&&(h||body).setPointerCapture(e.pointerId)});
 document.addEventListener('pointermove',e=>{if(!adz)return;if(adz.w==='m'&&adz.ns==null&&Math.abs(e.clientY-adz.y)<5)return;const dh=Math.round((e.clientY-adz.y)/PX*4)/4;let s=adz.s,en=adz.e;if(adz.w==='m'){const len=adz.e-adz.s;s=Math.max(0,Math.min(24-len,adz.s+dh));en=s+len;adz.el.classList.add('moving')}else if(adz.w==='s')s=Math.max(0,Math.min(en-.5,adz.s+dh));else en=Math.min(24,Math.max(s+.5,adz.e+dh));adz.ns=s;adz.ne=en;const top=adz.top+(s-adz.s)*PX,hh=(en-s)*PX;adz.el.style.top=top+'px';adz.el.style.height=hh+'px';const sm=adz.el.querySelector('small');if(sm)sm.textContent='journée entière · '+hShort(s)+'–'+hShort(en)});

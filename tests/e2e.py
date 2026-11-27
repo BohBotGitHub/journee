@@ -1587,6 +1587,14 @@ def _(c):
     pg.evaluate("()=>{sideTab='cal';render()}"); tick(pg, 150)
     pg.click('#side .ev:has-text("Réunion") b'); tick(pg, 400)
     assert st(pg, "new Date(T('f1').block.start).getHours()") == 9, st(pg, "T('f1').block")
+    # journée entière libérable
+    pg.evaluate("""()=>{const d=today();gEvents[d]=[{id:'mv',summary:'Mvision',start:{date:d},end:{date:addDays(d,1)},_cid:'travail-id',_cal:'Travail'}];S.evMode={};save();runFlow();render()}"""); tick(pg, 300)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") >= 18, st(pg, "T('f1').block")
+    pg.click('#side .ev.allday [data-act="adfree"]'); tick(pg, 400)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") == 9, st(pg, "T('f1').block")
+    assert pg.locator('#side .ev.allday.free').count() == 1
+    pg.click('#side .ev.allday [data-act="adfree"]'); tick(pg, 400)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") >= 18
     pg.evaluate("()=>{S.tasks.push(mk({id:'due1',title:'Plus tard',day:null,est:20,due:addDays(today(),5)}));save();runFlow()}"); tick(pg, 200)
     assert st(pg, "T('due1').day") is None
     # même chose avec un créneau de boulot (agenda Travail)
