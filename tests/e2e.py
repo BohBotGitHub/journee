@@ -859,8 +859,10 @@ def _(c):
       const at=h=>{const x=new Date(f.parseYmd?f.parseYmd(d):new Date(d+'T00:00'));x.setMinutes(h*60);return x.toISOString()};
       const ev=(id,t,a,b)=>({id,summary:t,start:{dateTime:at(a)},end:{dateTime:at(b)},_cid:'travail-id',_cal:'Travail'});
       gEvents[d]=[ev('e1','AXA France / Montage',8,10),ev('e2','AXA France / Exploitation',10,15),ev('e3','Autre / Indisponible sur la phase',16,18)];
+      window.__def=classifyEv(gEvents[d][1]);S.settings.jobCals={'travail-id':'phases'};
       [['A','any'],['B','home'],['C','any']].forEach(([n,w],i)=>S.tasks.push({id:'g'+n,title:'T'+n,day:d,order:i+1,est:30,prio:'high',done:false,subtasks:[],where:w}));window.journee.save()}""")
     plan = lambda: st(pg, "Object.fromEntries(simFlow(today()).map(([t,s])=>[t.id,new Date(s).getHours()+':'+String(new Date(s).getMinutes()).padStart(2,'0')]))")
+    assert st(pg, "window.__def") == 'busy', 'Exploitation occupée par défaut'
     j = st(pg, "jobOf(today())"); assert j['auto'] and j['s'] == 8 and j['e'] == 15 and len(j['segs']) == 2, j
     p = plan(); assert p['gA'] == '10:00' and p['gC'] == '10:30' and p['gB'] == '16:00', p
     assert 'agenda' in st(pg, "jobLabel(today())")
