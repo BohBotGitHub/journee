@@ -160,14 +160,14 @@ function dueLabel(t){
  return `<span class="due${cls}" title="Échéance : ${fmtDay(t.due)}">⏰ ${txt}</span>`;
 }
 function scheduleDue(){
- // place chaque tâche à échéance sur le jour le moins chargé avant sa date limite
+ // une tâche dont l'échéance est aujourd'hui (ou passée) et qui n'est sur aucun jour à temps vient sur aujourd'hui
  const t0=today();let n=0,msgs=[];
  for(const t of S.tasks){
   if(t.done||!t.due)continue;
   if(t.day&&t.day<=t.due&&t.day>=t0)continue;
   if(t.day&&t.day<t0)continue; // en retard : géré par le report
-  const last=t.due<t0?t0:t.due;let best=null,bl=1e9;
-  for(let d=t0;d<=last;d=addDays(d,1)){const L=loadInfo(d),over=L.task+L.meet+(t.est||30)-L.cap,score=(over>0?1e5+over:0)+L.task;if(score<bl){bl=score;best=d}}
+  // seulement si c'est urgent : échéance aujourd'hui ou dépassée → aujourd'hui ; sinon la tâche reste où tu l'as mise
+  if(t.due>t0)continue;const best=t0;
   if(best&&best!==t.day){if(t.block&&ymd(new Date(t.block.start))!==best)clearBlock(t,true);t.day=best;t.inbox=false;t.order=nextOrder(best);n++;msgs.push(t.title+' → '+fmtDay(best,{weekday:'short',day:'numeric'}))}
  }
  if(n)toast((n>1?n+' tâches planifiées':'Planifiée')+' avant l’échéance : '+msgs.slice(0,2).join(', '));

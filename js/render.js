@@ -8,11 +8,13 @@ function render(){applyLook();
  const m=$('#main'),st=m.scrollTop,bc0=document.querySelector('.bigcal'),bst=bc0?bc0.scrollTop:null;
  m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='projects'?viewProjects():view==='settings'?viewSettings():view==='tree'?viewTree():viewToday();
  m.scrollTop=st;
+ // semaine sur téléphone : s'ouvre sur aujourd'hui
+ if(view==='week'&&innerWidth<=760){const w=document.querySelector('#main .week'),c=w&&w.querySelector('.wcol.today');if(w&&c&&window.__wk!==cur){window.__wk=cur;w.scrollLeft=c.offsetLeft-w.offsetLeft}else if(w&&window.__wkL!=null)w.scrollLeft=window.__wkL;if(w)w.onscroll=()=>{window.__wkL=w.scrollLeft}}
  {const sv=m.querySelector('.tvsvg');if(sv){try{const bb=sv.getBBox(),p=14;sv.setAttribute('viewBox',`${bb.x-p} ${bb.y-p} ${bb.width+2*p} ${bb.height+2*p}`)}catch(e){}}}
  renderSide();renderRun();renderSyncBar();iconize($('#main'));if(typeof kbShow==='function'&&kbSel)kbShow();if(typeof renderMsel==='function'&&msel.size)renderMsel();if(view==='tree'&&typeof fitTree==='function')fitTree();tvPrevView=view;if(view==='backlog'&&blFilter)blApply();
  if(keep){const n=document.querySelector(`[data-keep="${keep}"]`);if(n){n.focus();if(val&&!n.value)n.value=val}}
  if(layout==='cal'&&(view==='today'||view==='week')){const bd=bigDays();ensureRange(bd[0],bd[bd.length-1])}else if(view==='week'){const w=monday(cur);ensureRange(w,addDays(w,6))}else{ensureRange(cur,addDays(cur,6))}
- {const bc=document.querySelector('.bigcal');if(bc){if(!scrolledBig||bst===null){scrolledBig=true;const n=new Date();bc.scrollTop=Math.max(0,(Math.max(S.settings.dayStart,n.getHours()-1)-S.settings.dayStart)*PX)}else bc.scrollTop=bst}}
+ {const bc=document.querySelector('.bigcal');if(bc){if(!scrolledBig||bst===null){scrolledBig=true;const n=new Date();bc.scrollTop=calFocus(bc,cur===today()||bigDays().includes(today()))}else bc.scrollTop=bst}}
 }
 function renderSide(){
  document.querySelectorAll('.stabs [data-side]').forEach(b=>b.classList.toggle('on',b.dataset.side===sideTab));
@@ -20,7 +22,7 @@ function renderSide(){
  const bigOn=layout==='cal'&&(view==='today'||view==='week');sb.innerHTML=sideTab==='todo'?viewTodo():sideTab==='ai'?viewAI():bigOn?viewSideTasks():viewCal();
  const tb=document.querySelector('.stabs [data-side="cal"]');if(tb)tb.textContent=bigOn?'Tâches':'Agenda';
  if(sideTab==='ai'){aiUnread=0;renderBadge();}
- if(sideTab==='ai'){sb.scrollTop=sb.scrollHeight}else if(sideTab==='cal'&&!bigOn&&scrolledCal!==cur){scrolledCal=cur;const n=new Date(),h=cur===today()?Math.max(S.settings.dayStart,n.getHours()-1):S.settings.workStart;sb.scrollTop=(h-S.settings.dayStart)*PX}else sb.scrollTop=st;
+ if(sideTab==='ai'){sb.scrollTop=sb.scrollHeight}else if(sideTab==='cal'&&!bigOn&&scrolledCal!==cur){scrolledCal=cur;sb.scrollTop=calFocus(sb,cur===today())}else sb.scrollTop=st;
 }
 let focusMin=null;
 function renderMini(){let el=$('#minifocus');if(!el){el=document.createElement('div');el.id='minifocus';document.body.appendChild(el)}
@@ -54,22 +56,27 @@ function closeModal(fromBack){if(typeof ad!=='undefined')ad=null;if(typeof sheet
  $('#modal').classList.add('hidden');modalTask=null;ritual=null;render();
 }
 let focusEdit=null;
-function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':''}${focusOn===t.id&&focusSub===s.id?' cur':''}" draggable="true" data-drag="sub|${t.id}|${s.id}"><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${s.id}" aria-label="Cocher">${s.d?'✓':''}</button><span>${esc(s.t)}</span>${s.d?'':`<button class="play" data-act="focussub" data-tid="${t.id}" data-s="${s.id}" aria-label="Focus sur cette sous-tâche">▶</button>`}<button class="x" data-act="subd" data-tid="${t.id}" data-s="${s.id}" aria-label="Supprimer">×</button></div>`).join('')}
+function subsHtml(t){return (t.subtasks||[]).map(s=>`<div class="sub${s.d?' d':''}${focusOn===t.id&&focusSub===s.id?' cur':''}" draggable="true" data-drag="sub|${t.id}|${s.id}"><span class="tgrip sgrip" data-tgrip aria-hidden="true" title="Glisse pour déplacer"><svg viewBox="0 0 12 20" width="10" height="18"><g fill="currentColor"><circle cx="3" cy="4" r="1.6"/><circle cx="9" cy="4" r="1.6"/><circle cx="3" cy="10" r="1.6"/><circle cx="9" cy="10" r="1.6"/><circle cx="3" cy="16" r="1.6"/><circle cx="9" cy="16" r="1.6"/></g></svg></span><button class="chk" data-act="subt" data-tid="${t.id}" data-s="${s.id}" aria-label="Cocher">${s.d?'✓':''}</button><span>${esc(s.t)}</span>${s.d?'':`<button class="play" data-act="focussub" data-tid="${t.id}" data-s="${s.id}" aria-label="Focus sur cette sous-tâche">▶</button>`}<button class="x" data-act="subd" data-tid="${t.id}" data-s="${s.id}" aria-label="Supprimer">×</button></div>`).join('')}
 function openTask(id){
  const t=T(id);if(!t)return;if(modalAI&&modalAI.tid!==id)modalAI=null;modalTask=id;ritual=null;
  const objs=weekObjs(monday(t.day||today())),r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
  const ests=[0,...durOpts(t.est)];
  showModal(`<div class="mhead"><textarea class="mtitle" data-f="title" rows="1" aria-label="Titre">${esc(t.title)}</textarea><button class="x" data-act="close" aria-label="Fermer">×</button></div>
- <div class="grid2">
- <label>Catégorie<button type="button" class="catbtn" data-act="pickcatm" data-id="${t.id}" style="--c:${esc(ch(t.channel)?ch(t.channel).color:'var(--line)')}">${ch(t.channel)?`<span class="chip">${esc(nodeLabel(t.channel))}</span>`:'<span class="mute">Choisir une catégorie…</span>'}<span class="mute">Changer</span></button></label><label>Projet<select data-f="proj"><option value="">Aucun</option>${(S.projects||[]).filter(p=>!p.done||p.id===t.proj).map(p=>`<option value="${esc(p.id)}" ${p.id===t.proj?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
- <label>Durée estimée<select data-f="est">${ests.map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${v?fmtMin(v):'—'}</option>`).join('')}</select></label>
- <label>Jour<span class="dayrow"><input type="date" data-f="day" value="${t.day||''}">${t.day?`<button type="button" class="sm" data-act="tobacklog" data-id="${t.id}">Backlog</button>`:'<span class="mute" style="font-size:13px">Dans le backlog</span>'}</span></label>
- <label>Créneau dans l’agenda<span class="row"><input type="time" step="900" data-f="time" value="${t.block?hm(new Date(t.block.start)):''}">${t.block&&t.pinned?'<button class="sm ghost" data-act="unpin">Libérer l’heure</button>':''}${t.block&&!flowOn()?'<button class="sm ghost" data-act="unblock">Retirer</button>':''}</span></label>
- <label>Échéance<span class="row"><input type="date" data-f="due" value="${t.due||''}">${t.due?'<button class="sm ghost" data-act="nodue">Aucune</button>':''}</span></label>
- <label>Répéter<select data-f="recur"><option value="">Jamais</option>${Object.entries(RULES).map(([k,v])=>`<option value="${k}" ${r&&r.rule===k?'selected':''}>${v}</option>`).join('')}</select></label>
- <label>Priorité<span class="prow" role="radiogroup" aria-label="Priorité">${PRIOS.map(([v,l])=>`<button type="button" class="pbtn${(t.prio||'')===v?' on':''}" role="radio" aria-checked="${(t.prio||'')===v}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="${l}" title="${l}">${flagSvg(v)}</button>`).join('')}</span></label><label>Lieu<span class="prow" role="radiogroup" aria-label="Lieu">${WHERES.map(([v,l])=>`<button type="button" class="pbtn${(t.where||'')===v?' on':''}" role="radio" aria-checked="${(t.where||'')===v}" data-act="setwhere" data-id="${t.id}" data-v="${v}" aria-label="${v?l:'Auto'}" title="${v?l:'Auto : selon la catégorie'}">${ico({'':'auto',any:'laptop',home:'home',out:'walk'}[v])}</button>`).join('')}<small class="mute wnow">${t.where?WHERES.find(x=>x[0]===t.where)[1]:'Auto · '+WHERES.find(x=>x[0]===catWhere(t.channel))[1].toLowerCase()}</small></span></label>
- <label>Temps passé (min)<input type="number" min="0" data-f="actual" value="${Math.round(actualSec(t)/60)}"></label>
+ <!-- fiche compacte (v2.1, façon Sunsama) : une barre de méta-données, le reste replié -->
+ <div class="mbar">
+  <label class="mpill" title="Durée estimée">${ico('clock')}<select data-f="est">${ests.map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${v?fmtMin(v):'—'}</option>`).join('')}</select></label>
+  <label class="mpill" title="Jour">${ico('cal')}<input type="date" data-f="day" value="${t.day||''}">${t.day?`<button type="button" class="sm" data-act="tobacklog" data-id="${t.id}">Backlog</button>`:'<span class="mute" style="font-size:13px">Dans le backlog</span>'}</label>
+  <label class="mpill" title="Heure dans l’agenda">${ico('calendar')}<input type="time" step="900" data-f="time" value="${t.block?hm(new Date(t.block.start)):''}">${t.block&&t.pinned?'<button class="sm ghost" data-act="unpin">Libérer l’heure</button>':''}${t.block&&!flowOn()?'<button class="sm ghost" data-act="unblock">Retirer</button>':''}</label>
+  <label class="mpill" title="Échéance">${ico('bell')}<input type="date" data-f="due" value="${t.due||''}">${t.due?'<button class="sm ghost" data-act="nodue">Aucune</button>':''}</label>
+  <span class="mpill" title="Priorité"><span class="prow" role="radiogroup" aria-label="Priorité">${PRIOS.map(([v,l])=>`<button type="button" class="pbtn${(t.prio||'')===v?' on':''}" role="radio" aria-checked="${(t.prio||'')===v}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="${l}" title="${l}">${flagSvg(v)}</button>`).join('')}</span></span>
  </div>
+ <div class="mcat"><button type="button" class="catbtn" data-act="pickcatm" data-id="${t.id}" style="--c:${esc(ch(t.channel)?ch(t.channel).color:'var(--line)')}">${ch(t.channel)?`<span class="chip">${esc(nodeLabel(t.channel))}</span>`:'<span class="mute">Choisir une catégorie…</span>'}<span class="mute">Changer</span></button></div>
+ <details class="mmore"${t.proj||r||t.where||actualSec(t)?' open':''}><summary>Plus : projet, répétition, lieu, temps passé</summary><div class="grid2">
+ <label>Projet<select data-f="proj"><option value="">Aucun</option>${(S.projects||[]).filter(p=>!p.done||p.id===t.proj).map(p=>`<option value="${esc(p.id)}" ${p.id===t.proj?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
+ <label>Répéter<select data-f="recur"><option value="">Jamais</option>${Object.entries(RULES).map(([k,v])=>`<option value="${k}" ${r&&r.rule===k?'selected':''}>${v}</option>`).join('')}</select></label>
+ <label>Lieu<span class="prow" role="radiogroup" aria-label="Lieu">${WHERES.map(([v,l])=>`<button type="button" class="pbtn${(t.where||'')===v?' on':''}" role="radio" aria-checked="${(t.where||'')===v}" data-act="setwhere" data-id="${t.id}" data-v="${v}" aria-label="${v?l:'Auto'}" title="${v?l:'Auto : selon la catégorie'}">${ico({'':'auto',any:'laptop',home:'home',out:'walk'}[v])}</button>`).join('')}<small class="mute wnow">${t.where?WHERES.find(x=>x[0]===t.where)[1]:'Auto · '+WHERES.find(x=>x[0]===catWhere(t.channel))[1].toLowerCase()}</small></span></label>
+ <label>Temps passé (min)<input type="number" min="0" data-f="actual" value="${Math.round(actualSec(t)/60)}"></label>
+ </div></details>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="sub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form>${aiOn()?modalAIHtml(t):''}</div>
  <label class="full">Notes<textarea data-f="notes" rows="4">${esc(t.notes)}</textarea></label>
  <div class="mfoot"><button class="danger" data-act="del" data-id="${t.id}">Supprimer</button>${t.src?'<span class="src">Liée à Microsoft To Do</span>':msOn()?`<button class="ghost sm" data-act="pushtodo" data-id="${t.id}">Créer dans To Do</button>`:''}<span class="sp"></span><button class="ghost" data-act="play" data-id="${t.id}">Focus</button><button class="pri" data-act="close">OK</button></div>`);
@@ -246,10 +253,13 @@ setInterval(()=>{
  if(t){const el=document.querySelector('[data-live="run"]');if(el)el.textContent=clock(actualSec(t));const mi=document.querySelector('[data-live="mini"]');if(mi)mi.textContent=clock(actualSec(t));
   const f=document.querySelector('[data-live="focus"]');if(f&&focusOn===t.id){f.textContent=clock(actualSec(t));f.classList.toggle('over',!!(t.est&&actualSec(t)>=t.est*60))}
   const c=document.querySelector(`[data-live="t-${t.id}"]`);if(c)c.textContent=fmtMin(actualSec(t)/60)+' / '+(t.est?fmtMin(t.est):'—');}
- document.querySelectorAll('[data-live="now"]').forEach(nl=>{const n=new Date();nl.style.top=((n.getHours()-S.settings.dayStart)*60+n.getMinutes())/60*PX+'px'});
+ document.querySelectorAll('[data-live="now"]').forEach(nl=>{const n=new Date();nl.style.top=((n.getHours()-calGeom().st)*60+n.getMinutes())/60*PX+'px'});
  if(today()!==lastDay){const was=lastDay;lastDay=today();if(cur===was)cur=lastDay;genRecurring();render()}
 },1000);
 
 // une respiration avant de commencer : le cercle grandit (inspire) puis se resserre (expire), puis s'efface ; ne bloque rien
 function breathe(){try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const f=document.getElementById('focus');if(!f||f.classList.contains('hidden'))return;
  const o=document.createElement('div');o.className='breathe';o.setAttribute('aria-hidden','true');o.innerHTML='<i></i><span class="in">Inspire</span><span class="out">Expire</span>';f.appendChild(o);setTimeout(()=>o.remove(),9000)}catch(e){}}
+
+// agenda 0 h – 24 h : s'ouvre sur le moment présent (aujourd'hui) ou sur le début de ta journée (autres jours), placé au tiers haut
+function calFocus(sc,isToday){const n=new Date(),h=isToday?n.getHours()+n.getMinutes()/60:Math.max(0,(S.settings.workStart||9)-0.5);return Math.max(0,h*PX-sc.clientHeight/3)}

@@ -214,10 +214,10 @@ def _(c):
 @test('Épingler en glissant dans l’agenda, libérer en revenant à la liste')
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
-    pg.locator('#main .card').first.drag_to(pg.locator('.tlin'), target_position={'x': 80, 'y': 76 * 9 + 4}); tick(pg)
+    pg.locator('#main .card').first.drag_to(pg.locator('.tlin'), target_position={'x': 80, 'y': 76 * 16 + 4}); tick(pg)
     assert st(pg, 'S.tasks.filter(t=>t.pinned).length') == 1
     h = st(pg, "new Date(S.tasks.find(t=>t.pinned).block.start).getHours()")
-    assert h == 16, h
+    assert h == 16, h  # l'agenda commence à minuit
     pg.locator('.blk').filter(has_text='📌').drag_to(pg.locator('#main .list'), target_position={'x': 300, 'y': 3}); tick(pg)
     assert st(pg, 'S.tasks.filter(t=>t.pinned).length') == 0
     assert not errs, errs; ctx.close()
@@ -1129,6 +1129,12 @@ def _(c):
     assert '16 h' in pg.inner_text('#side .ev.allday')
     pg.dblclick('#side .ev.allday b'); tick(pg, 150)
     assert st(pg, "!S.days[today()].ad")
+    # le créneau entier se glisse (8–18 → 9–19)
+    pg.evaluate("()=>document.querySelector('#side .ev.allday b').scrollIntoView({block:'center'})"); tick(pg, 100)
+    bb = pg.locator('#side .ev.allday b').bounding_box(); pg.mouse.move(bb['x'] + 10, bb['y'] + 5); pg.mouse.down(); pg.mouse.move(bb['x'] + 10, bb['y'] + 5 + 76, steps=6); pg.mouse.up(); tick(pg, 200)
+    assert st(pg, "[S.days[today()].ad.s,S.days[today()].ad.e]") == [9, 19], st(pg, "S.days[today()].ad")
+    # agenda 0 h – 24 h, ouvert sur l'heure en cours
+    assert st(pg, "calGeom().st") == 0 and st(pg, "calGeom().en") == 24
     # arbre zoomable
     pg.evaluate("()=>{view='tree';treeMode='map';render()}"); tick(pg, 200)
     if pg.locator('.tvzoom').count():
@@ -1567,6 +1573,52 @@ def _(c):
     assert pg.locator('#main .dline [data-act="prevw"]').count() == 1
     pg.click('#main [data-act="nextw"]'); tick(pg, 150)
     assert pg.locator('#main .dtoday').count() == 1
+    assert not errs, errs; ctx.close()
+
+@test('v2.1 : un rendez-vous passé en disponible se remplit ; échéance lointaine non déplacée')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 0))
+    pg.evaluate("""()=>{const d=today();S.tasks=S.tasks.filter(t=>t.day!==d);S.days[d]={hs:9,he:20};
+      const at=h=>{const x=parseYmd(d);x.setMinutes(h*60);return x.toISOString()};
+      gEvents[d]=[{id:'r1',summary:'Réunion',start:{dateTime:at(9)},end:{dateTime:at(12)}}];
+      S.tasks.push(mk({id:'f1',title:'Écrire',day:d,est:30,order:1}));save();runFlow();render()}""")
+    tick(pg, 300)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") >= 12
+    pg.evaluate("()=>{sideTab='cal';render()}"); tick(pg, 150)
+    pg.click('#side .ev:has-text("Réunion") b'); tick(pg, 400)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") == 9, st(pg, "T('f1').block")
+    # journée entière libérable
+    pg.evaluate("""()=>{const d=today();gEvents[d]=[{id:'mv',summary:'Mvision',start:{date:d},end:{date:addDays(d,1)},_cid:'travail-id',_cal:'Travail'}];S.evMode={};save();runFlow();render()}"""); tick(pg, 300)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") >= 18, st(pg, "T('f1').block")
+    pg.click('#side .ev.allday [data-act="adfree"]'); tick(pg, 400)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") == 9, st(pg, "T('f1').block")
+    assert pg.locator('#side .ev.allday.free').count() == 1
+    pg.click('#side .ev.allday [data-act="adfree"]'); tick(pg, 400)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") >= 18
+    pg.evaluate("()=>{S.tasks.push(mk({id:'due1',title:'Plus tard',day:null,est:20,due:addDays(today(),5)}));save();runFlow()}"); tick(pg, 200)
+    assert st(pg, "T('due1').day") is None
+    # même chose avec un créneau de boulot (agenda Travail)
+    pg.evaluate("""()=>{const d=today();const at=h=>{const x=parseYmd(d);x.setMinutes(h*60);return x.toISOString()};
+      gEvents[d]=[{id:'w1',summary:'Salon / Exploitation',start:{dateTime:at(9)},end:{dateTime:at(13)},_cid:'travail-id',_cal:'Travail'}];S.evMode={};save();runFlow();render()}"""); tick(pg, 300)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") >= 13, st(pg, "T('f1').block")
+    pg.click('#side .ev:has-text("Exploitation") b'); tick(pg, 400)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") == 9, st(pg, "T('f1').block")
+    pg.evaluate("()=>{S.tasks.push(mk({id:'due2',title:'Urgent',day:null,est:20,due:today()}));save();runFlow()}"); tick(pg, 200)
+    assert st(pg, "T('due2').day") == st(pg, "today()")
+    assert not errs, errs; ctx.close()
+
+@test('v2.1 : fiche compacte, semaine compacte, catégorie inconnue signalée')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    tid = st(pg, "dayTasks(today()).find(t=>!t.done).id")
+    pg.evaluate(f"()=>openTask('{tid}')"); tick(pg, 150)
+    assert pg.locator('#sheet .mbar .mpill').count() == 5 and pg.locator('#sheet details.mmore').count() == 1
+    pg.select_option('#sheet .mpill select[data-f="est"]', '45'); tick(pg, 150)
+    assert st(pg, f"T('{tid}').est") == 45
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    assert 'inconnue' in st(pg, "quickPreview('Courses #zzz')")
+    pg.evaluate("()=>{view='week';render()}"); tick(pg, 150)
+    assert pg.evaluate("()=>getComputedStyle(document.querySelector('.wcol .card .cmeta')||document.body).display") in ('none', 'block')
     assert not errs, errs; ctx.close()
 
 def main():

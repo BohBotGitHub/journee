@@ -123,8 +123,9 @@ function classifyEv(e){
  const ph=t.includes(' / ')?t.split(' / ').pop():'';return /exploitation/i.test(ph)?'watch':'busy';
 }
 // segments de boulot d'un jour (heures décimales), déduits de l'agenda
-function jobSegs(d){const base=+parseYmd(d),out=[];
+function jobSegs(d,all){const base=+parseYmd(d),out=[],adFree=!!(S.days[d]&&S.days[d].adFree);
  for(const e of (gEvents[d]||[])){const k=classifyEv(e);if(!k||k==='ignore')continue;
-  if(k==='allday'){const o=(S.days[d]&&S.days[d].ad)||{};out.push({s:o.s??S.settings.allDayStart??8,e:o.e??S.settings.allDayEnd??18,mode:'busy',t:e.summary||'',allday:true,col:e._col,custom:o.s!=null});continue}
+  if(e.start.dateTime&&typeof evFree==='function'&&evFree(e))continue; // passé en « disponible » : ce n'est plus du boulot ce jour-là
+  if(k==='allday'){if(adFree&&!all)continue;const o=(S.days[d]&&S.days[d].ad)||{};out.push({free:adFree,s:o.s??S.settings.allDayStart??8,e:o.e??S.settings.allDayEnd??18,mode:'busy',t:e.summary||'',allday:true,col:e._col,custom:o.s!=null});continue}
   const s=(new Date(e.start.dateTime)-base)/3600e3,en=Math.min(24,(new Date(e.end.dateTime)-base)/3600e3);if(en>s)out.push({s,e:en,mode:k,t:e.summary||''})}
  return out.sort((a,b)=>a.s-b.s)}

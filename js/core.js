@@ -113,11 +113,11 @@ function dateWord(w){
  return null;
 }
 function parseQuick(txt){
- let est=0,channel=null,pj=null,prio='',where='',at=null;
+ let est=0,channel=null,pj=null,prio='',where='',at=null,badCat=null;
  // « à 14h », « 9h30 » : une heure de la journée ; « 1h », « 2h30 » : une durée (au-delà de 4 h, c'est une heure)
  txt=(' '+txt+' ').replace(/\s(?:à\s)?(\d{1,2})\s?h\s?(\d{2})?(?=\s)/i,(m,h,mm)=>{h=+h;mm=+mm||0;if(/^\sà\s/i.test(m)||h>=5){if(h<24&&mm<60){at=h*60+mm;return ' '}return m}est=h*60+mm;return ' '})
   .replace(/\s~?(\d{1,3})\s?(?:m|min|mn)(?=\s)/i,(m,n)=>{est=+n;return ' '})
-  .replace(/\s#(\S+)/,(m,n)=>{const c=findNode(n);if(c){channel=c.id;return ' '}return m})
+  .replace(/\s#(\S+)/,(m,n)=>{const c=findNode(n);if(c){channel=c.id;return ' '}badCat=n;return m})
   .replace(/\s\+(\S+)/,(m,n)=>{const p=findProject(n);if(p){pj=p.id;return ' '}return m})
   .replace(/\s!{1,3}(?=\s)/,()=>{prio='high';return ' '}).replace(/\s(?:!bas|↓)(?=\s)/i,()=>{prio='low';return ' '})
   .replace(/\s@(maison|chez-?moi|home)(?=\s)/i,()=>{where='home';return ' '}).replace(/\s@(dehors|ext|out)(?=\s)/i,()=>{where='out';return ' '}).replace(/\s@(partout|ordi|boulot|any)(?=\s)/i,()=>{where='any';return ' '});
@@ -128,7 +128,7 @@ function parseQuick(txt){
   .replace(/\s(demain)(?=\s)/i,()=>{day=addDays(t0,1);return ' '})
   .replace(/\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)(?=\s)/i,(m,w)=>{const k=WD.indexOf(w.toLowerCase()),c=parseYmd(t0).getDay();day=addDays(t0,((k-c+7)%7)||7);return ' '})
   .replace(/\s(\d{1,2})\/(\d{1,2})(?=\s)/,(m,dd,mm)=>{const y=new Date().getFullYear();let d=ymd(new Date(y,+mm-1,+dd));if(d<t0)d=ymd(new Date(y+1,+mm-1,+dd));day=d;return ' '});
- return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due,proj:pj,prio,where,at};
+ return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due,proj:pj,prio,where,at,badCat};
 }
 // catégorie déjà donnée à une tâche du même nom (routines, modèles, récurrences)
 function catGuess(title){const n=(title||'').trim().toLowerCase();if(!n)return null;const x=S.tasks.find(t=>t.channel&&(t.title||'').trim().toLowerCase()===n);if(x)return x.channel;const a=(S.archive||[]).find(a=>a.c&&(a.t||'').trim().toLowerCase()===n);if(a)return a.c;return typeof hasTree==='function'&&hasTree()?ruleFor(title)||null:null}
@@ -262,7 +262,7 @@ function learnedEst(title){const k=norm(title).replace(/[^a-z0-9]+/g,' ').trim()
  if(!xs.length)return 0;const m=xs[Math.floor(xs.length/2)];return Math.max(5,Math.round(m/5)*5)}
 // aperçu de ce que la saisie rapide a compris
 function quickPreview(txt){const q=parseQuick(txt||'');if(!q.title)return '';const out=[];
- if(q.day)out.push(q.day===today()?'aujourd’hui':fmtDay(q.day,{weekday:'long',day:'numeric'}));if(q.at!=null)out.push('à '+hhmm(q.at/60));if(q.due)out.push('échéance '+fmtDay(q.due,{day:'numeric',month:'short'}));
+ if(q.day)out.push(q.day===today()?'aujourd’hui':fmtDay(q.day,{weekday:'long',day:'numeric'}));if(q.at!=null)out.push('à '+hhmm(q.at/60));if(q.badCat)out.push('⚠ catégorie « '+q.badCat+' » inconnue (Arbre pour la créer)');if(q.due)out.push('échéance '+fmtDay(q.due,{day:'numeric',month:'short'}));
  const le=q.est?0:learnedEst(q.title);if(q.est)out.push(fmtMin(q.est));else if(le)out.push('≈ '+fmtMin(le)+' (d’habitude)');
  if(q.prio)out.push(q.prio==='high'?'priorité haute':'priorité basse');if(q.where)out.push({home:'chez moi',out:'dehors',any:'n’importe où'}[q.where]);
  if(q.channel)out.push(nodeLabel(q.channel));if(q.proj){const p=proj(q.proj);if(p)out.push('+'+p.name)}
