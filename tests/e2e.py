@@ -1589,6 +1589,12 @@ def _(c):
     assert st(pg, "new Date(T('f1').block.start).getHours()") == 9, st(pg, "T('f1').block")
     pg.evaluate("()=>{S.tasks.push(mk({id:'due1',title:'Plus tard',day:null,est:20,due:addDays(today(),5)}));save();runFlow()}"); tick(pg, 200)
     assert st(pg, "T('due1').day") is None
+    # même chose avec un créneau de boulot (agenda Travail)
+    pg.evaluate("""()=>{const d=today();const at=h=>{const x=parseYmd(d);x.setMinutes(h*60);return x.toISOString()};
+      gEvents[d]=[{id:'w1',summary:'Salon / Exploitation',start:{dateTime:at(9)},end:{dateTime:at(13)},_cid:'travail-id',_cal:'Travail'}];S.evMode={};save();runFlow();render()}"""); tick(pg, 300)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") >= 13, st(pg, "T('f1').block")
+    pg.click('#side .ev:has-text("Exploitation") b'); tick(pg, 400)
+    assert st(pg, "new Date(T('f1').block.start).getHours()") == 9, st(pg, "T('f1').block")
     pg.evaluate("()=>{S.tasks.push(mk({id:'due2',title:'Urgent',day:null,est:20,due:today()}));save();runFlow()}"); tick(pg, 200)
     assert st(pg, "T('due2').day") == st(pg, "today()")
     assert not errs, errs; ctx.close()
