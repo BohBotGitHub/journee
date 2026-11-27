@@ -97,3 +97,10 @@ function inboxSettingsHtml(){
   <div class="connrow"><b>Google Drive</b><span class="mute">Lecture seule</span><span class="sp"></span><span class="status${ok?' on':''}">${ok?'Relié':'Non relié'}</span>${ok?'<button class="sm" data-act="inboxnow">Vérifier</button><button class="sm ghost" data-act="inboxstop">Arrêter</button>':`<button class="sm" data-act="inboxallow" ${S.settings.googleClientId?'':'disabled'}>Autoriser</button>`}</div>
   ${ok?`<p class="mute" style="font-size:13px;margin:6px 0 0" data-live="inbox">${esc(inboxState||'Vérifiée à chaque synchro.')}</p>`:''}
   <p class="mute" style="font-size:13px;margin:8px 0 0">Avant d’autoriser : ajoute l’accès <code>drive.readonly</code> à Diem dans la console Google Cloud, sinon Google refusera.</p></section>`}
+
+/* ---------- rituel du matin : section « Le Génie propose » (suggestions tirées de tes conversations) ---------- */
+function cxPending(){return (S.chat||[]).map((m,mi)=>({m,mi})).filter(({m})=>m.from==='claude'&&m.prop&&m.prop.cx&&!m.cxDismiss&&propItems(m.prop).some(it=>!(m.applied||{})[it.k])).slice(-3)}
+function cxRitualHtml(){
+ const P=cxPending();if(!P.length)return '';
+ return `<div class="rsec gtag">${LAMP_SVG}Le Génie propose</div><p class="mute" style="font-size:13px;margin:0 0 8px">D’après tes conversations Claude. Ce que tu acceptes est ajouté tout de suite.</p>
+ <div class="rlist">${P.map(({m,mi})=>{const ap=m.applied||{};return propItems(m.prop).filter(it=>!ap[it.k]).map(it=>`<div class="rrow"><div><b>${esc(it.label)}</b>${it.reason?`<small>${esc(it.reason)}</small>`:''}</div><div class="btns"><button class="sm" data-act="cxapply" data-m="${mi}" data-k="${it.k}">Accepter</button></div></div>`).join('')+`<div class="row" style="justify-content:flex-end;margin:2px 0 6px"><button class="sm ghost" data-act="cxdismiss" data-m="${mi}">Ignorer ces suggestions</button></div>`}).join('')}</div>`}

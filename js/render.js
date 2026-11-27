@@ -153,6 +153,7 @@ function renderRitual(){
    const pc={};if(hasTree())for(const t of ts){const p=pillarOf(t.channel);if(p)pc[p.id]=(pc[p.id]||0)+1}
    const miss=hasTree()?pillars().filter(p=>!pc[p.id]):[],idea=miss.map(p=>bl.find(t=>pillarOf(t.channel)&&pillarOf(t.channel).id===p.id)).filter(Boolean)[0];
    h=shell(`<h2>Qu’est-ce qui compte ${d===today()?'aujourd’hui':'ce jour-là'} ?</h2><p class="lead">Choisis ce que tu veux vraiment faire.</p>${objChips(monday(d))}
+   ${typeof cxRitualHtml==='function'?cxRitualHtml():''}
    ${hasTree()?`<div class="pilrow">${pillars().map(p=>`<span class="pilc${pc[p.id]?'':' off'}" style="--c:${esc(p.color)}">${esc(p.name)} ${pc[p.id]||0}</span>`).join('')}</div>${idea?`<p class="pilidea">${esc(pillarOf(idea.channel).name)} est absent aujourd’hui. Idée : <b>${esc(idea.title)}</b> <button class="sm" data-act="mv" data-id="${idea.id}" data-to="${d}">Ajouter</button></p>`:''}`:''}
    ${(()=>{const L=loadInfo(d);return L.over>0?`<div class="overalert" role="alert"><b>${fmtMin(L.over)} de trop</b> pour ta journée.</div>`:''})()}
    ${addForm(d,'Ajouter une tâche… (ex. « Relire le devis 20m »)','rit-add')}

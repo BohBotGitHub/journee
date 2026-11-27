@@ -1762,6 +1762,12 @@ def _(c):
     assert 'Tu veux reprendre le piano' in pg.inner_text('#side')
     pg.locator('[data-act="aiapply"]').first.click(); pg.wait_for_timeout(150)
     assert st(pg, "S.habits.some(h=>h.name==='Piano 5 min')") and not st(pg, "S.tasks.some(t=>t.title==='Acheter un pupitre')")
+    # rituel du matin, étape « Choisir » : section « Le Génie propose »
+    pg.evaluate("()=>{startRitual('plan',today());ritual.step=2;renderRitual()}"); pg.wait_for_timeout(200)
+    assert 'Le Génie propose' in pg.inner_text('#sheet') and 'Acheter un pupitre' in pg.inner_text('#sheet')
+    pg.click('#sheet [data-act="cxapply"]'); pg.wait_for_timeout(150)
+    assert st(pg, "S.tasks.some(t=>t.title==='Acheter un pupitre'&&t.day===today())") and 'Le Génie propose' not in pg.inner_text('#sheet')
+    pg.evaluate("()=>{ritual=null;closeModal()}")
     # réglages : section visible, reliée
     pg.evaluate("()=>go('settings')"); pg.wait_for_timeout(200)
     assert 'Claude : tes conversations' in pg.inner_text('#main') and 'Relié' in pg.inner_text('#main')
