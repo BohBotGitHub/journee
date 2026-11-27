@@ -42,7 +42,7 @@ function rollOver(){
  if(!syncTried&&(gTok()||gWas()))return 0;
  const t0=today();let n=0;const moved=[];
  for(const t of pastUndone()){
-  if(t.recurId){deleteTask(t.id);n++;continue}
+  if(t.recurId||t.habitId){deleteTask(t.id);n++;continue}
   if(t.evId&&t.block){t.done=true;t.doneAt=+new Date(t.block.end);continue} // rendez-vous passé : compté comme fait, il ne revient pas
   if(t.block)clearBlock(t,true);
   t.rf=t.u||0;t.rfAt=Date.now();t.roll=(t.roll||0)+1;t.pinned=false;t.day=t0;t.order=nextOrder(t0);moved.push(t.id);n++;

@@ -6,7 +6,7 @@ function render(){applyLook();
  {const nb=document.querySelector('#nav [data-view="dump"]'),n=S.tasks.filter(t=>t.inbox&&!t.done).length;if(nb){const o=nb.querySelector('.badge');if(o)o.remove();if(n)nb.insertAdjacentHTML('beforeend',`<span class="badge">${n}</span>`)}}
  document.body.classList.toggle('wideview',view==='tree');document.body.classList.toggle('treemap',view==='tree'&&hasTree()&&(treeMode||'map')==='map');
  const m=$('#main'),st=m.scrollTop,bc0=document.querySelector('.bigcal'),bst=bc0?bc0.scrollTop:null;
- m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='projects'?viewProjects():view==='settings'?viewSettings():view==='tree'?viewTree():viewToday();
+ m.innerHTML=layout==='cal'&&(view==='today'||view==='week')?viewBigCal():view==='week'?viewWeek():view==='backlog'?viewBacklog():view==='dump'?viewDump():view==='habits'?viewHabits():view==='stats'||view==='objectives'||view==='review'?viewReview():view==='objectives'?viewObjectives():view==='projects'?viewProjects():view==='settings'?viewSettings():view==='tree'?viewTree():viewToday();
  m.scrollTop=st;
  // semaine sur téléphone : s'ouvre sur aujourd'hui
  if(view==='week'&&innerWidth<=760){const w=document.querySelector('#main .week'),c=w&&w.querySelector('.wcol.today');if(w&&c&&window.__wk!==cur){window.__wk=cur;w.scrollLeft=c.offsetLeft-w.offsetLeft}else if(w&&window.__wkL!=null)w.scrollLeft=window.__wkL;if(w)w.onscroll=()=>{window.__wkL=w.scrollLeft}}
@@ -127,7 +127,7 @@ function aiBox(){
  const items=propItems(a.prop),ap=a.applied||{};
  return `<div class="aibox"><b>Génie</b>${a.text?`<p>${esc(a.text)}</p>`:''}${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="ritapply" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?'<button class="sm" data-act="ritapplyall">Tout appliquer</button>':''}<div class="row"><span class="sp"></span><button class="sm ghost" data-act="ritai">Nouvelle proposition</button></div></div>`;
 }
-const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Boulot','Projets','Aperçu'],weekreview:['Chiffres','Réflexion']};
+const RIT={plan:['Heures','Revenues','Choisir','Phare','Estimer','Planifier','Valider'],shutdown:['Bilan','Ce qui reste','Note','Citation'],weekplan:['Boulot','Projets','Aperçu'],weekreview:['Chiffres','Habitudes','Réflexion']};
 function startRitual(type,day){modalTask=null;const sv=savedRit();ritual=sv&&sv.type===type&&sv.day===(day||cur)?Object.assign(sv,{step:0}):{type,step:0,day:day||cur,picked:{},ai:{}};if(type==='plan'&&todo.listId&&msOn())loadTodoTasks(todo.listId);renderRitual()}
 function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div class="rit"><div class="rsteps">${st.map((s,k)=>`<button type="button" class="rtab ${k===i?'on':k<i?'past':''}" data-act="ritgo" data-i="${k}" ${k===i?'aria-current="step"':''}>${esc(s)}</button>`).join('')}<span class="sp" style="background:none"></span></div><div class="ritbody">${body}${aiBox()}</div><div class="mfoot">${i>0?'<button class="ghost" data-act="ritback">Retour</button>':''}<button class="ghost" data-act="close">Plus tard</button><span class="sp"></span><button class="pri" data-act="ritnext">${next||'Continuer'}</button></div></div>`}
 const durBtns=t=>`<div class="durs">${durSelect(t)}</div>`;
@@ -200,6 +200,7 @@ function renderRitual(){
   const w=monday(d);
   if(i===0)h=shell(`<h2>Revue de la semaine</h2><p class="lead">Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</p>${statsHtml(w)}
    <div class="rsec">Projets</div>${projListHtml(w)}`);
+  else if(i===1)h=shell(`<h2>Tes habitudes</h2><p class="lead">Pour chacune : la garder, l’alléger (moins souvent ou plus court) ou la mettre en pause. Rendre plus facile, ce n’est pas abandonner.</p>${typeof hbReviewHtml==='function'?hbReviewHtml(w):''}`);
   else h=shell(`<h2>Ce que tu retiens</h2><p class="lead">Ce qui a marché, ce qui a coincé, ce que tu ajustes la semaine prochaine.</p>
    <textarea data-review rows="7">${esc((S.weeks[w]||{}).review||'')}</textarea>`,'Terminer la revue');
  }
@@ -211,7 +212,7 @@ function renderRitual(){
 function ritKeep(){const d=ritual.day,sh=$('#sheet');
  if(ritual.type==='plan'&&ritual.step===0){const g=k=>{const x=sh.querySelector(`[data-rh="${k}"]`),[a,b]=(x&&x.value||'').split(':').map(Number);return isNaN(a)?null:a+(b||0)/60};const hs=g('s'),he=g('e');if(hs===null||he===null||he<=hs){toast('L’heure de fin doit être après le début');return false}S.days[d]=Object.assign(S.days[d]||{},{hs,he})}
  if(ritual.type==='shutdown'&&ritual.step===2){const v=sh.querySelector('[data-note]');S.days[d]=Object.assign(S.days[d]||{},{note:v?v.value.trim():''})}
- if(ritual.type==='weekreview'&&ritual.step===1){const w=monday(d),v=sh.querySelector('[data-review]');S.weeks[w]=Object.assign(S.weeks[w]||{},{review:v?v.value.trim():''})}
+ if(ritual.type==='weekreview'&&ritual.step===2){const w=monday(d),v=sh.querySelector('[data-review]');S.weeks[w]=Object.assign(S.weeks[w]||{},{review:v?v.value.trim():''})}
  return true}
 // aller directement à une étape en cliquant sur son onglet
 function ritGo(i){if(!ritual||i===ritual.step)return;if(!ritKeep())return;save();ritual.step=Math.max(0,Math.min(RIT[ritual.type].length-1,i));saveRit();renderRitual()}

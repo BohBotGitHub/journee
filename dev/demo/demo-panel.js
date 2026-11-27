@@ -1,9 +1,14 @@
 // Démo Diem : panneau « à tester » (n'existe pas dans la vraie appli)
 (function(){
  const ITEMS=[
-  ['Focus partagé','Lance un focus sur l’ordinateur : ton téléphone l’affiche en moins de 15 s (puce en haut du menu) et peut l’arrêter ; l’inverse aussi. Ici, démo sur un seul appareil : lance ▶ et regarde la puce du focus.','today'],
-  ['Gmail : « Arrêter » marche','Réglages › Réglages avancés › Trier mes mails : « Arrêter » retire vraiment l’accès de Google, puis te reconnecte pour garder l’agenda (pas dans la démo : il faut Google).','settings']];
- const K='journee.demo60.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+  ['Page Habitudes','Menu › Habitudes : une carte par habitude avec la grille du mois (clique un jour pour le cocher), la série et la force (0–100 %).','habits'],
+  ['Nouvelle habitude','« Nouvelle habitude » : nom, à prendre ou à arrêter, fréquence (tous les jours, certains jours, X fois par semaine), catégorie, icône, et « la placer comme une tâche ».','habits'],
+  ['Pastilles du jour','En haut d’Aujourd’hui : jusqu’à 6 pastilles ; un clic coche l’habitude du jour.','today'],
+  ['Tâche liée','Une habitude « placée dans ma journée » devient une tâche les jours prévus ; cocher la tâche coche l’habitude (et l’inverse).','habits'],
+  ['Revue de la semaine','••• › Revoir la semaine : nouvelle étape « Habitudes » avec Garder, Alléger (plus court ou moins souvent) et Pause.','today'],
+  ['Statistiques','Statistiques, tout en bas : la force de chaque habitude sur 3 mois.','stats'],
+  ['Menu et Braindump','Menu : Aujourd’hui, Semaine, Braindump, Habitudes, Backlog, Projets, Arbre, Statistiques. Sur téléphone, Habitudes est dans « Plus ».','today']];
+ const K='journee.demo61.checks';let st={};try{st=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
  const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const box=document.createElement('div');box.id='demopanel';document.body.appendChild(box);
  const css=document.createElement('style');css.textContent=`body:has(#mselbar:not(.hidden)) #demopanel{bottom:190px}#demopanel{position:fixed;right:12px;bottom:12px;z-index:90;width:min(360px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel);color:var(--ink);border:2px solid #c2410c;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.2);font-size:14px}
@@ -18,6 +23,7 @@
  @media (max-width:760px){#demopanel{bottom:70px}}`;document.head.appendChild(css);
  let min=window.innerWidth<760;
  function show(k){
+  if(['habits','stats','week','settings','dump'].includes(k)){if(typeof go==='function')go(k);return}
   if(k==='today'){window.journee&&location.hash!=='#today'&&(location.hash='#today');document.querySelector('#nav [data-view="today"]').click()}
   if(k==='future'){document.querySelector('#nav [data-view="today"]').click()}
   if(k==='mvision'){document.querySelector('#nav [data-view="today"]').click();setTimeout(()=>{cur=addDays(today(),3);render()},120)}
@@ -46,6 +52,6 @@
   if(d==='tog'){min=!min;draw()}
   if(d==='show')show(b.dataset.k);
   if(d==='ok'||d==='ko'){const i=b.dataset.i;st[i]=st[i]===d?undefined:d;save();draw()}
-  if(d==='reset'){['journee.v1','journee.demo','journee.demo60.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
+  if(d==='reset'){['journee.v1','journee.demo','journee.demo61.checks'].forEach(k=>localStorage.removeItem(k));location.reload()}});
  draw();
 })();

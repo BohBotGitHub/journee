@@ -23,7 +23,7 @@ const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 
 /* ---------- données ---------- */
 const KEY='journee.v1';
-const defaults=()=>({tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
+const defaults=()=>({habits:[],tasks:[],recurring:[],objectives:[],days:{},weeks:{},running:null,seeded:false,
  channels:[],projects:[],
  settings:{googleClientId:'',msClientId:'',calendarId:'primary',todoList:'',dayStart:7,dayEnd:21,workStart:9,workEnd:18,jobStart:9,jobEnd:18,travel:60,allDayStart:8,allDayEnd:18,aiKey:'',aiModel:'claude-haiku-5-5',aiAuto:true,aiBudget:3,notif:false},chat:[],archive:[],templates:[]});
 let S;
@@ -34,7 +34,7 @@ if(!S.settings.googleClientId)S.settings.googleClientId=CONFIG.googleClientId;
 if(!S.settings.msClientId)S.settings.msClientId=CONFIG.msClientId;
 let pushT=null,snap=null,syncTried=false;
 /* ---------- horodatage par élément (base de la synchro par fusion) ---------- */
-const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage','merged','running']; // running : le focus en cours, partagé entre appareils
+const COLL=['tasks','objectives','templates','recurring','channels','projects','habits'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage','merged','running']; // running : le focus en cours, partagé entre appareils
 function scalJson(k){return JSON.stringify(S[k]===undefined?null:S[k])}
 const AUTOF=['block','order','roll','rf','rfAt','pinned','inbox'];
 function stamp(){
@@ -96,7 +96,7 @@ if(!S.seeded){
 }
 
 /* ---------- état d'interface ---------- */
-const VIEWS=['today','week','dump','backlog','review','objectives','stats','projects','settings','tree'];
+const VIEWS=['today','week','dump','habits','backlog','review','objectives','stats','projects','settings','tree'];
 let view='today',cur=today(),sideTab='cal',modalTask=null,ritual=null,focusOn=null,focusSub=null,drag=null,scrolledCal='',lastDay=today();
 let gEvents={},gLoading={};
 const todo={lists:null,listId:S.settings.todoList||null,tasks:{},loading:false,tLoading:false};
@@ -151,6 +151,7 @@ async function toggleDone(id){
  const t=T(id);if(!t)return;
  if(S.running&&S.running.taskId===id)stopTimer();
  t.done=!t.done;t.doneAt=t.done?Date.now():null;if(t.done&&!t.day)t.day=today();
+ if(t.habitId&&typeof H==='function'){const h=H(t.habitId);if(h&&t.day){h.log=Object.assign({},h.log||{});if(t.done)h.log[t.day]=1;else delete h.log[t.day]}}
  // faite maintenant alors qu'elle était prévue plus tard (ou un autre jour) : on la range dans l'agenda juste avant l'heure actuelle
  if(t.done){const now=Date.now(),later=t.day!==today()||(t.block&&+new Date(t.block.start)>now);
   if(later&&typeof setRange==='function'){const mins=t.actual>=60?Math.round(t.actual/60):(t.est||15);t.pinned=true;setRange(t,new Date(now-mins*60000),new Date(now),true)}else finishBlock(t)}
@@ -181,6 +182,7 @@ function deleteTask(id){
  const t=T(id);if(!t)return;
  if(S.running&&S.running.taskId===id)S.running=null;
  if(t.recurId){const r=S.recurring.find(x=>x.id===t.recurId);if(r&&t.day){r.skip=r.skip||[];r.skip.push(t.day)}}
+ if(t.habitId&&typeof H==='function'){const h=H(t.habitId);if(h&&t.day){h.skip=(h.skip||[]).concat(t.day)}}
  if(t.block)clearBlock(t,true);
  S.tasks=S.tasks.filter(x=>x!==t);save();
 }
@@ -205,6 +207,7 @@ function genRecurring(){
    if(!r.channel)r.channel=catGuess(r.title);
    S.tasks.push(mk({title:r.title,channel:r.channel,est:r.est,notes:r.notes||'',day,recurId:r.id,order:nextOrder(day),subtasks:(r.subs||[]).map(x=>({id:uid(),t:x,d:false}))}));changed=true;
   }}
+ if(typeof genHabitTasks==='function'&&genHabitTasks())changed=true;
  if(changed)save();
 }
 function setRecur(t,rule){

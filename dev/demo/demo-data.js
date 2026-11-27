@@ -1,6 +1,6 @@
 // Démo MyDayBot : données fictives, rien n'est envoyé nulle part (pas de Google, pas de synchro)
 (function(){
- const KEY='journee.v1',VER='demo-lotB-1';
+ const KEY='journee.v1',VER='demo-hab-1';
  try{if(localStorage.getItem('journee.demo')===VER)return}catch(e){return}
  const d=new Date(),ymd=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
  const t0=ymd(d),y=ymd(new Date(d.getTime()-864e5)),id=()=>Math.random().toString(36).slice(2,10);
@@ -20,7 +20,14 @@
   mk('Monter le meuble de l’entrée','c-bricolage',60,{day:null}),
  ];
  tasks.forEach((t,i)=>t.order=i+1);
- localStorage.setItem(KEY,JSON.stringify({seeded:true,tasks,settings:{dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiAuto:false},channels:[],projects:[{id:'pr-dem',name:'Déménagement',end:null,done:false}]}));
+ // habitudes fictives, avec un historique sur 2 mois
+ const back=n=>ymd(new Date(d.getTime()-n*864e5)),lg=(p)=>{const o={};for(let i=1;i<62;i++)if(p(i))o[back(i)]=1;return o};
+ const habits=[
+  {id:'h1',name:'5 min de piano',kind:'build',freq:'daily',channel:'c-piano',icon:'piano',est:5,toDay:false,log:lg(i=>i%5!==0&&i<40),created:d.getTime()-62*864e5,order:1},
+  {id:'h2',name:'Lecture',kind:'build',freq:'days',days:[1,3,5],channel:null,icon:'book',log:lg(i=>i%2===0),created:d.getTime()-62*864e5,order:2},
+  {id:'h3',name:'Natation',kind:'build',freq:'week',n:2,channel:'c-natation',icon:'swim',log:lg(i=>i%4===1),created:d.getTime()-62*864e5,order:3},
+  {id:'h4',name:'Pas d’écran après 23 h',kind:'quit',freq:'daily',icon:'nophone',log:lg(i=>i%3!==0),created:d.getTime()-62*864e5,order:4}];
+ localStorage.setItem(KEY,JSON.stringify({seeded:true,habits,tasks,settings:{dayStart:7,dayEnd:21,workStart:9,workEnd:18,aiKey:'',aiAuto:false},channels:[],projects:[{id:'pr-dem',name:'Déménagement',end:null,done:false}]}));
  localStorage.setItem('journee.sync.hide',t0);localStorage.removeItem('journee.ritauto');localStorage.removeItem('journee.rit');
  localStorage.setItem('journee.demo',VER);
 })();
