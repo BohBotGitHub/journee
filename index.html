@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="diem-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=89">
+<link rel="stylesheet" href="css/app.css?v=90">
 </head>
 <body>
 <noscript><p style="padding:24px;font:16px system-ui">Diem est un planificateur de journée personnel qui fonctionne dans le navigateur (JavaScript requis). <a href="about.html">À propos de Diem et de tes données</a>.</p></noscript>
@@ -34,7 +34,7 @@
   <div id="runchip"></div>
   <button class="navrefresh" data-act="hardrefresh" title="Actualiser : dernière version de l’appli et dernières données" aria-label="Actualiser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span class="ll">Actualiser</span><span class="sl">Actualiser</span></button>
   <button data-view="settings" class="navset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="ll">Réglages</span><span class="sl">Réglages</span></button>
-  <div class="navver" title="v1.9 · 26/11 : gris zen façon Sunsama, volets qui glissent sans que rien ne bouge, menu replié en premier, bouton liste ⇄ agenda dans l’en-tête ; surprises : respiration au focus, ciel du jour, onde de la coche, journée accomplie."><svg class="vlogo" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(-24 -19.8) scale(.4)"><path class="ls" d="M196 92c-7-5 5-11-2-18s-12-2-10-9"/><circle class="lh" cx="78" cy="138" r="13"/><path class="la" d="M168 142C180 136 190 122 200 116c6-4 12 2 8 8-8 14-22 32-42 36z"/><ellipse class="la" cx="126" cy="146" rx="48" ry="30"/><path class="ll" d="M96 126a30 22 0 0 1 60 0z"/><circle class="ll" cx="126" cy="100" r="6"/><rect class="lt" x="106" y="172" width="40" height="8" rx="4"/><circle class="le" cx="112" cy="150" r="3.4"/><circle class="le" cx="140" cy="150" r="3.4"/><path class="lm" d="M118 158q8 6 16 0"/><circle class="lf" cx="206" cy="104" r="7.5"/></g></svg><b>v2.4.2 · 27/11</b><span>Focus Lampe.</span></div>
+  <div class="navver" title="v1.9 · 26/11 : gris zen façon Sunsama, volets qui glissent sans que rien ne bouge, menu replié en premier, bouton liste ⇄ agenda dans l’en-tête ; surprises : respiration au focus, ciel du jour, onde de la coche, journée accomplie."><svg class="vlogo" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(-24 -19.8) scale(.4)"><path class="ls" d="M196 92c-7-5 5-11-2-18s-12-2-10-9"/><circle class="lh" cx="78" cy="138" r="13"/><path class="la" d="M168 142C180 136 190 122 200 116c6-4 12 2 8 8-8 14-22 32-42 36z"/><ellipse class="la" cx="126" cy="146" rx="48" ry="30"/><path class="ll" d="M96 126a30 22 0 0 1 60 0z"/><circle class="ll" cx="126" cy="100" r="6"/><rect class="lt" x="106" y="172" width="40" height="8" rx="4"/><circle class="le" cx="112" cy="150" r="3.4"/><circle class="le" cx="140" cy="150" r="3.4"/><path class="lm" d="M118 158q8 6 16 0"/><circle class="lf" cx="206" cy="104" r="7.5"/></g></svg><b>v2.5 · 27/11</b><span>Relié à Claude.</span></div>
  </nav>
  <div id="syncbar" class="hidden" role="status"></div>
  <main id="main"></main>
@@ -48,23 +48,24 @@
 <div id="focus" class="focus hidden"></div>
 <div id="toast" role="status"></div>
 
-<script src="js/core.js?v=89"></script>
-<script src="js/tree.js?v=89"></script>
-<script src="js/icons.js?v=89"></script>
-<script src="js/quotes.js?v=89"></script>
-<script src="js/treeview.js?v=89"></script>
-<script src="js/google.js?v=89"></script>
-<script src="js/flow.js?v=89"></script>
-<script src="js/sync.js?v=89"></script>
-<script src="js/microsoft.js?v=89"></script>
-<script src="js/auth.js?v=89"></script>
-<script src="js/ai.js?v=89"></script>
-<script src="js/mail.js?v=89"></script>
-<script src="js/import.js?v=89"></script>
-<script src="js/views.js?v=89"></script>
-<script src="js/habits.js?v=89"></script>
-<script src="js/render.js?v=89"></script>
-<script src="js/events.js?v=89"></script>
-<script src="js/main.js?v=89"></script>
+<script src="js/core.js?v=90"></script>
+<script src="js/tree.js?v=90"></script>
+<script src="js/icons.js?v=90"></script>
+<script src="js/quotes.js?v=90"></script>
+<script src="js/treeview.js?v=90"></script>
+<script src="js/google.js?v=90"></script>
+<script src="js/flow.js?v=90"></script>
+<script src="js/sync.js?v=90"></script>
+<script src="js/microsoft.js?v=90"></script>
+<script src="js/auth.js?v=90"></script>
+<script src="js/ai.js?v=90"></script>
+<script src="js/mail.js?v=90"></script>
+<script src="js/inbox.js?v=90"></script>
+<script src="js/import.js?v=90"></script>
+<script src="js/views.js?v=90"></script>
+<script src="js/habits.js?v=90"></script>
+<script src="js/render.js?v=90"></script>
+<script src="js/events.js?v=90"></script>
+<script src="js/main.js?v=90"></script>
 </body>
 </html>

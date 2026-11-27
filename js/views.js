@@ -321,6 +321,7 @@ function viewSettings(){
   <div class="grid2"><label>Plafond mensuel ($, 0 = aucun)<input type="number" min="0" step="0.5" data-set="aiBudget" value="${esc(s.aiBudget)}"></label></div>
   <p style="margin:10px 0 0"><b data-live="aicost">${costTxt()}</b> — estimation d’après les jetons consommés ; le montant exact est sur console.anthropic.com.</p>
   <div class="row" style="margin-top:12px"><span class="status${aiOn()?' on':''}">${aiOn()?'Clé enregistrée':'Pas de clé'}</span><span class="sp"></span><button class="ghost sm" data-act="aiclear">Effacer</button></div></section>
+ ${inboxSettingsHtml()}
  <details class="adv"${advOpen?' open':''} data-adv><summary>Réglages avancés</summary><div class="set">
  ${mailSettingsHtml()}
  <section><h2>Google : identifiants et agendas affichés</h2><p>Affiche tes rendez-vous et crée un événement pour chaque tâche que tu places dans l’agenda. Voir le README pour obtenir l’identifiant.</p>

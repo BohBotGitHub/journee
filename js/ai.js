@@ -80,6 +80,7 @@ function propItems(p){
  if(p.intent)out.push({k:'i',label:'Intention : '+p.intent});
  (p.objectives||[]).forEach((o,i)=>{if(o)out.push({k:'o'+i,label:'Objectif : '+o})});
  (p.new_projects||[]).forEach((n,i)=>{if(n.name)out.push({k:'j'+i,label:'Nouveau projet : '+n.name+(n.end?' (fin '+fmtDay(n.end,{day:'numeric',month:'short'})+')':'')+(n.tasks&&n.tasks.length?' · '+n.tasks.length+' tâche'+(n.tasks.length>1?'s':''):'')})});
+ (p.cx||[]).forEach((it,i)=>out.push({k:'x'+i,label:ixLabel(it),reason:it.reason}));
  (p.new_tasks||[]).forEach((n,i)=>{if(n.title)out.push({k:'n'+i,label:'Nouvelle tâche : '+n.title+(n.est?' ('+fmtMin(n.est)+')':''),reason:n.reason})});
  return out;
 }
@@ -94,6 +95,7 @@ function applyItem(m,k){
  else if(k[0]==='u'&&p.updates[+k.slice(1)]&&p.updates[+k.slice(1)].drop){const t=T(p.updates[+k.slice(1)].id);if(t)deleteTask(t.id)}
  else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){if(u.subtasks)u.subtasks.forEach(x=>t.subtasks.push({id:uid(),t:x,d:false}));subShow(t.id);const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}t.aiSug=null}}
  else if(k[0]==='j'){const n=p.new_projects[+k.slice(1)];if(n){S.projects=S.projects||[];const pj={id:uid(),name:n.name,end:/^\d{4}-\d{2}-\d{2}$/.test(n.end||'')?n.end:null,done:false};S.projects.push(pj);(n.tasks||[]).forEach(tt=>{if(tt)S.tasks.push(mk({title:tt,est:0,day:null,order:nextOrder(null),proj:pj.id}))})}}
+ else if(k[0]==='x'){const it=p.cx[+k.slice(1)];if(it){ixApplyOne(it,(p.cxBase||'cx')+'-'+k.slice(1));genRecurring()}}
  else if(k[0]==='n'){const n=p.new_tasks[+k.slice(1)];if(n){const day=n.day==='backlog'?null:(n.day||cur);const c=chByName(n.channel);S.tasks.push(mk({title:n.title,est:n.est||0,channel:c?c.id:null,day,order:nextOrder(day)}))}}
  m.applied[k]=true;save();render();
 }
@@ -134,7 +136,7 @@ function aiMorning(){
  setTimeout(()=>aiAsk('Bonjour ! Regarde ma journée : propose un ordre, complète les catégories et durées manquantes, signale si je suis surchargé, et suggère au besoin 1 à 3 tâches utiles.',true),gTok()?2500:500);
 }
 function viewAI(){
- if(!aiOn())return `<div class="sinfo"><b>Le Génie, ton assistant de planification (propulsé par Claude)</b><span>Il propose l’ordre de tes tâches, leur catégorie et leur durée, repère quand tu es surchargé et suggère des tâches utiles. Tu valides chaque proposition.</span><span>Il faut une clé API Anthropic (payée à l’usage, quelques euros par mois). Crée-la sur console.anthropic.com, puis colle-la dans Réglages.</span><button class="pri" data-act="goset">Ouvrir les réglages</button></div>`;
+ if(!aiOn()&&!(S.chat||[]).some(m=>m.from==='claude'))return `<div class="sinfo"><b>Le Génie, ton assistant de planification (propulsé par Claude)</b><span>Il propose l’ordre de tes tâches, leur catégorie et leur durée, repère quand tu es surchargé et suggère des tâches utiles. Tu valides chaque proposition.</span><span>Il faut une clé API Anthropic (payée à l’usage, quelques euros par mois). Crée-la sur console.anthropic.com, puis colle-la dans Réglages.</span><button class="pri" data-act="goset">Ouvrir les réglages</button></div>`;
  const msgs=S.chat.map((m,mi)=>{const items=m.role==='assistant'?propItems(m.prop):[];const ap=m.applied||{};
   return `<div class="msg ${m.role==='user'?'u':'a'}">${esc(m.text)}${items.length?`<div class="prop">${items.map(it=>`<div class="pitem${ap[it.k]?' ok':''}"><div>${esc(it.label)}${it.reason?`<small class="mute">${esc(it.reason)}</small>`:''}</div>${ap[it.k]?'<small>Fait</small>':`<button class="sm pri" data-act="aiapply" data-m="${mi}" data-k="${it.k}">Appliquer</button>`}</div>`).join('')}${items.filter(it=>!ap[it.k]).length>1?`<button class="sm" data-act="aiapplyall" data-m="${mi}">Tout appliquer</button>`:''}</div>`:''}</div>`}).join('');
  return `<div class="chat">${msgs||'<div class="sinfo" style="padding:0"><span>Demande-moi d’organiser ta journée, ou pose une question.</span></div>'}</div>
