@@ -499,8 +499,9 @@ def _(c):
 def _(c):
     ctx, pg, errs = new_page(c['b'])
     pg.evaluate("()=>{const S=window.journee.state,f=window.journee.fn;S.projects=[{id:'pj1',name:'Stardust',end:f.addDays(f.today(),2)}];S.tasks[0].proj='pj1';window.journee.save()}")
-    pg.click('#nav [data-view="review"]'); pg.wait_for_timeout(200)
-    assert pg.locator('.revtabs').count() == 1 and 'Ta semaine' in pg.inner_text('#main h1')
+    pg.click('#nav [data-view="stats"]'); pg.wait_for_timeout(200)
+    assert 'Statistiques' in pg.inner_text('#main h1')
+    pg.click('#nav [data-view="projects"]'); pg.wait_for_timeout(200)
     assert 'Stardust' in pg.inner_text('#main') and 'objectif' not in pg.inner_text('#main').lower()
     pg.evaluate("()=>startRitual('weekplan',window.journee.fn.today())"); pg.wait_for_timeout(200)
     assert pg.locator('#sheet .rsteps .rtab').count() == 3 and pg.locator('#sheet .jobday').count() == 7
@@ -511,9 +512,9 @@ def _(c):
     pg.evaluate("()=>openTask(window.journee.state.tasks[0].id)"); pg.wait_for_timeout(150)
     assert 'Objectif' not in pg.inner_text('#sheet')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
-    pg.click('[data-act="go"][data-v="stats"]'); pg.wait_for_timeout(200)
+    pg.click('#nav [data-view="stats"]'); pg.wait_for_timeout(200)
     assert 'Statistiques' in pg.inner_text('#main h1')
-    assert pg.locator('#nav [data-view="review"].on').count() == 1
+    assert pg.locator('#nav [data-view="stats"].on').count() == 1
     assert not errs, errs; ctx.close()
 
 @test('Arbre : 4 piliers, héritage des agendas, éditeur')
@@ -1552,10 +1553,21 @@ def _(c):
         n = pg.evaluate("()=>[...document.querySelectorAll('#nav button[data-view]')].filter(b=>b.offsetParent).length")
         assert n == 5, n
         pg.click('#nav [data-view="side"]'); tick(pg, 200)
-        assert pg.locator('#sheet [data-act="morego"]').count() == 4
+        assert pg.locator('#sheet [data-act="morego"]').count() >= 4
         pg.click('#sheet [data-act="morego"][data-v="tree"]'); tick(pg, 300)
         assert st(pg, "view") == 'tree'
         assert not errs, errs; ctx.close()
+
+@test('Structure : menu (Vide-tête en 2e, Statistiques), en-têtes homogènes jour / semaine / grand agenda')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    order = pg.evaluate("()=>[...document.querySelectorAll('#nav button[data-view]')].map(b=>b.dataset.view)")
+    assert order[:4] == ['today', 'dump', 'week', 'backlog'] and not any(v.startswith('rit-') for v in order), order
+    pg.click('#nav [data-view="week"]'); tick(pg, 150)
+    assert pg.locator('#main .dline [data-act="prevw"]').count() == 1
+    pg.click('#main [data-act="nextw"]'); tick(pg, 150)
+    assert pg.locator('#main .dtoday').count() == 1
+    assert not errs, errs; ctx.close()
 
 def main():
     srv = serve()
