@@ -36,10 +36,16 @@ let pushT=null,snap=null,syncTried=false;
 /* ---------- horodatage par élément (base de la synchro par fusion) ---------- */
 const COLL=['tasks','objectives','templates','recurring','channels','projects'],MAPS=['days','weeks'],SCAL=['dump','evMode','settings','chat','aiUsage','merged'];
 function scalJson(k){return JSON.stringify(S[k]===undefined?null:S[k])}
+const AUTOF=['block','order','roll','rf','rfAt','pinned','inbox'];
 function stamp(){
  const now=Date.now(),prev=snap,next={};S.deleted=S.deleted||{};S.su=S.su||{};
  const mark=(k,x)=>{if(x.rfAt&&now-x.rfAt>3000&&prev&&prev[k]!==undefined){const {u:_u,rf:_a,rfAt:_b,...o}=x,{rf:_c,rfAt:_d,...p}=JSON.parse(prev[k]);if(JSON.stringify(o)!==JSON.stringify(p)){delete x.rf;delete x.rfAt}}
-  const {u,...r}=x,j=JSON.stringify(r);next[k]=j;if(prev?prev[k]!==j:!x.u)x.u=now};
+  const {u,uu,...r}=x,j=JSON.stringify(r);next[k]=j;
+  if(prev?prev[k]!==j:!x.u){x.u=now;
+   // uu = dernier changement fait par toi (pas par le placement automatique) : c'est lui qui compte face à une suppression
+   let auto=false;if(prev&&prev[k]!==undefined){try{const p=JSON.parse(prev[k]),strip=o=>{const c=Object.assign({},o);for(const f of AUTOF)delete c[f];return JSON.stringify(c)};auto=strip(p)===strip(r)}catch(e){}}
+   if(x.rfAt&&now-x.rfAt<3000)auto=true; // report automatique du matin
+   if(!auto)x.uu=now}};
  for(const c of COLL)for(const x of S[c]||[])mark(c+':'+x.id,x);
  for(const c of MAPS)for(const [key,v] of Object.entries(S[c]||{}))if(v&&typeof v==='object')mark(c+':'+key,v);
  for(const k of SCAL){const j=scalJson(k);next['s:'+k]=j;if(prev&&prev['s:'+k]!==j)S.su[k]=now}
@@ -53,7 +59,7 @@ function mergeState(L,R){
  // fusion élément par élément : pour chaque tâche, objectif, jour… la version la plus récente gagne ; les suppressions sont respectées
  const out=Object.assign({},L),del=Object.assign({},L.deleted||{});
  for(const [k,v] of Object.entries(R.deleted||{}))del[k]=Math.max(del[k]||0,v);
- for(const c of COLL){const m=new Map();for(const x of R[c]||[])m.set(x.id,x);for(const x of L[c]||[]){const r=m.get(x.id);if(!r)m.set(x.id,x);else{const lw=(x.u||0)>=(r.u||0),stale=lw?(x.rf!==undefined&&(r.u||0)>x.rf&&!r.rf):(r.rf!==undefined&&(x.u||0)>r.rf&&!x.rf);if(lw!==stale)m.set(x.id,x)}}out[c]=[...m.values()].filter(x=>!((del[c+':'+x.id]||0)>(x.u||0)))}
+ for(const c of COLL){const m=new Map();for(const x of R[c]||[])m.set(x.id,x);for(const x of L[c]||[]){const r=m.get(x.id);if(!r)m.set(x.id,x);else{const lw=(x.u||0)>=(r.u||0),stale=lw?(x.rf!==undefined&&(r.u||0)>x.rf&&!r.rf):(r.rf!==undefined&&(x.u||0)>r.rf&&!x.rf);if(lw!==stale)m.set(x.id,x)}}out[c]=[...m.values()].filter(x=>!((del[c+':'+x.id]||0)>(x.uu||x.u||0)))}
  for(const c of MAPS){out[c]=Object.assign({},R[c]||{});for(const [k,v] of Object.entries(L[c]||{})){const r=out[c][k];if(!r||((v&&v.u)||0)>=((r&&r.u)||0))out[c][k]=v}}
  const ids=new Set((L.archive||[]).map(a=>a.id));out.archive=[...(L.archive||[]),...(R.archive||[]).filter(a=>!ids.has(a.id))];
  out.su=Object.assign({},L.su||{});

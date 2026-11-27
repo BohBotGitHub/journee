@@ -12,7 +12,7 @@
   history.replaceState(null,'',REDIRECT+'#'+view);
  }
  const q=new URLSearchParams(location.search);
- if(q.has('share')||q.has('text')||q.has('url')){const txt=[q.get('title'),q.get('text'),q.get('url')].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' — ');if(txt){S.dump=(S.dump?S.dump.replace(/\s*$/,'')+'\n':'')+txt;lsSet(KEY,JSON.stringify(S));setTimeout(()=>toast('Ajouté au vide-tête'),400)}view='dump';history.replaceState(null,'',REDIRECT+'#dump')}
+ if(q.has('share')||q.has('text')||q.has('url')){const txt=[q.get('title'),q.get('text'),q.get('url')].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' — ');if(txt){S.dump=(S.dump?S.dump.replace(/\s*$/,'')+'\n':'')+txt;lsSet(KEY,JSON.stringify(S));setTimeout(()=>toast('Ajouté aux idées'),400)}view='dump';history.replaceState(null,'',REDIRECT+'#dump')}
  if(q.get('state')==='m'){
   history.replaceState(null,'',REDIRECT);
   if(q.get('code'))msToken({grant_type:'authorization_code',code:q.get('code'),redirect_uri:REDIRECT,code_verifier:lsGet('journee.m.v')||''})
