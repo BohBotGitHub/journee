@@ -1,6 +1,7 @@
 // Démo Diem : panneau « à tester » (n'existe pas dans la vraie appli)
 (function(){
  const ITEMS=[
+  ['Focus Lampe','Lance le focus sur une tâche (▶) : la lampe du Génie, l’anneau doré se remplit avec le temps prévu, une volute de fumée par sous-tâche faite.','today'],
   ['Page Habitudes','Menu › Habitudes : une carte par habitude avec la grille du mois (clique un jour pour le cocher), la série et la force (0–100 %).','habits'],
   ['Nouvelle habitude','« Nouvelle habitude » : nom, à prendre ou à arrêter, fréquence (tous les jours, certains jours, X fois par semaine), catégorie, icône, et « la placer comme une tâche ».','habits'],
   ['Pastilles du jour','En haut d’Aujourd’hui : jusqu’à 6 pastilles ; un clic coche l’habitude du jour.','today'],

@@ -234,16 +234,34 @@ function openFocus(id,sub){
  if(!$('#modal').classList.contains('hidden')){$('#modal').classList.add('hidden');modalTask=null;ritual=null}
  focusOn=id;const fs=sub&&t.subtasks.find(x=>x.id===sub)||t.subtasks.find(x=>!x.d);focusSub=fs?fs.id:null;const fresh=!S.running||S.running.taskId!==id;if(fresh){startTimer(id);chime(523)}activate(t);renderFocus();if(fresh)breathe();
 }
+// mode focus « Lampe » : la lampe du Génie ; l'anneau doré se remplit avec le temps prévu, une volute de fumée par sous-tâche faite
+const RING_C=2*Math.PI*104;
+function ringFrac(t){const a=actualSec(t);return t.est?Math.min(1,a/(t.est*60)):(a%3600)/3600}
+function lampSvg(t,run){
+ const f=ringFrac(t),over=!!(t.est&&actualSec(t)>=t.est*60),nd=Math.min(5,(t.subtasks||[]).filter(x=>x.d).length);
+ const wisps=[...Array(nd)].map((_,i)=>`<path class="fwisp" style="--i:${i}" d="M${150+i*3} 132c-9-6 6-14-3-23s-15-3-13-11c1-8 9-10 6-19"/>`).join('');
+ return `<svg class="flampsvg${run?' run':''}${over?' over':''}" viewBox="0 0 260 260" aria-hidden="true">
+ <circle cx="130" cy="130" r="104" class="frtrack"/>
+ <circle cx="130" cy="130" r="104" class="frbar" data-live="ring" stroke-dasharray="${(f*RING_C).toFixed(1)} ${RING_C.toFixed(1)}" transform="rotate(-90 130 130)"/>
+ <g class="frdots"><circle cx="234" cy="130" r="2"/><circle cx="130" cy="234" r="2"/><circle cx="26" cy="130" r="2"/><circle cx="130" cy="26" r="2"/></g>
+ <g transform="translate(130 136) scale(1.3) translate(-115 -130)"><g class="fwisps">${wisps}</g>
+ <g class="fsparks"><circle cx="146" cy="104" r="2.6"/><circle cx="158" cy="92" r="1.8"/><circle cx="140" cy="86" r="1.4"/></g>
+ <g class="fbody"><path d="M76 156c0-9 13-14 34-14 13 0 21 3 26 8l14-9c2.5-1.6 5 .8 3.3 3.2l-12 13z"/><path d="M96 156h31l-5 8h-21z"/><rect x="91" y="164" width="41" height="5" rx="2.5"/><circle cx="111" cy="138" r="3.4"/></g></g>
+ </svg>`}
 function renderFocus(){
  const el=$('#focus');
  if(!focusOn){el.classList.add('hidden');return}
  const t=T(focusOn);if(!t){focusOn=null;el.classList.add('hidden');return}
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
- el.classList.remove('hidden');
+ el.classList.remove('hidden');el.classList.add('lamp');
+ const sb=focusSub&&t.subtasks.find(x=>x.id===focusSub),nd=(t.subtasks||[]).filter(x=>x.d).length;
  el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<span class="ftopacts"><button class="sm ghost" data-act="focusmin" title="Réduire (Échap) : le minuteur continue, une pastille permet de revenir">${ico('minimize')}Réduire</button><button class="sm ghost" data-act="focusclose" title="Quitter le focus">Quitter</button></span></div>
- ${(()=>{const sb=focusSub&&t.subtasks.find(x=>x.id===focusSub);return sb?`<div class="fsub">${esc(t.title)} · sous-tâche ${t.subtasks.indexOf(sb)+1}/${t.subtasks.length}</div><h1 class="ftitle">${esc(sb.t)}</h1>`:`<h1 class="ftitle">${esc(t.title)}</h1>`})()}
- <div><div class="fclockrow">${focusEdit===t.id?`<input class="fclock fedit" data-fedit="${t.id}" value="${Math.floor(actualSec(t)/60)}" inputmode="numeric" aria-label="Temps passé en minutes (ou 1h20)" title="Minutes, ou 1h20">`:`<button class="fclock${t.est&&actualSec(t)>=t.est*60?' over':''}" data-live="focus" data-act="timeredit" data-id="${t.id}" title="Cliquer pour corriger le temps">${clock(actualSec(t))}</button>`}<div class="fadj"><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="-5" aria-label="Retirer 5 minutes">−5 min</button><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="5" aria-label="Ajouter 5 minutes">+5 min</button></div><button class="freset" data-act="timerreset" data-id="${t.id}" aria-label="Remettre à zéro (met en pause)" title="Remettre à zéro (met en pause)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></div><div class="fsub">${t.est?'Estimé : '+fmtMin(t.est):'Pas d’estimation'}${run?'':' · en pause'}${t.block?' · créneau '+hm(new Date(t.block.start))+'–'+hm(new Date(t.block.end)):''}${(()=>{const nx=dayTasks(today()).filter(x=>!x.done&&x!==t&&x.block).sort((a,b)=>new Date(a.block.start)-new Date(b.block.start))[0];return nx?' · ensuite : '+esc(nx.title)+' à '+hm(new Date(nx.block.start)):''})()}</div></div>
+ <div class="fhero"><div class="flamp">${lampSvg(t,run)}</div><div class="finfo">
+ ${sb?`<div class="fsub">${esc(t.title)} · sous-tâche ${t.subtasks.indexOf(sb)+1}/${t.subtasks.length}</div><h1 class="ftitle">${esc(sb.t)}</h1>`:`<h1 class="ftitle">${esc(t.title)}</h1>`}
+ <div class="fclockrow">${focusEdit===t.id?`<input class="fclock fedit" data-fedit="${t.id}" value="${Math.floor(actualSec(t)/60)}" inputmode="numeric" aria-label="Temps passé en minutes (ou 1h20)" title="Minutes, ou 1h20">`:`<button class="fclock${t.est&&actualSec(t)>=t.est*60?' over':''}" data-live="focus" data-act="timeredit" data-id="${t.id}" title="Cliquer pour corriger le temps">${clock(actualSec(t))}</button>`}<div class="fadj"><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="-5" aria-label="Retirer 5 minutes">−5 min</button><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="5" aria-label="Ajouter 5 minutes">+5 min</button></div><button class="freset" data-act="timerreset" data-id="${t.id}" aria-label="Remettre à zéro (met en pause)" title="Remettre à zéro (met en pause)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></div>
+ <div class="fmeta">${t.est?'sur '+fmtMin(t.est):'pas de durée prévue · un tour = 1 h'}${(t.subtasks||[]).length?` · ${nd}/${t.subtasks.length} sous-tâche${t.subtasks.length>1?'s':''}`:''}</div>
  <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button>${focusSub?`<button class="ok big" data-act="focussubdone">Sous-tâche faite</button><button class="ghost big" data-act="focusdone" data-id="${t.id}">Tout terminer</button>`:`<button class="ok big" data-act="focusdone" data-id="${t.id}">Terminer</button>`}</div>
+ </div></div>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="fsub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form></div>
  <textarea class="fnotes" data-fnotes="${t.id}" placeholder="Notes…">${esc(t.notes)}</textarea></div>`;
 }
@@ -252,7 +270,7 @@ function renderFocus(){
 setInterval(()=>{
  const r=S.running,t=r&&T(r.taskId);
  if(t){const el=document.querySelector('[data-live="run"]');if(el)el.textContent=clock(actualSec(t));const mi=document.querySelector('[data-live="mini"]');if(mi)mi.textContent=clock(actualSec(t));
-  const f=document.querySelector('[data-live="focus"]');if(f&&focusOn===t.id){f.textContent=clock(actualSec(t));f.classList.toggle('over',!!(t.est&&actualSec(t)>=t.est*60))}
+  const f=document.querySelector('[data-live="focus"]');if(f&&focusOn===t.id){f.textContent=clock(actualSec(t));f.classList.toggle('over',!!(t.est&&actualSec(t)>=t.est*60));const rg=document.querySelector('[data-live="ring"]');if(rg){rg.setAttribute('stroke-dasharray',(ringFrac(t)*RING_C).toFixed(1)+' '+RING_C.toFixed(1));rg.closest('svg').classList.toggle('over',!!(t.est&&actualSec(t)>=t.est*60))}}
   const c=document.querySelector(`[data-live="t-${t.id}"]`);if(c)c.textContent=fmtMin(actualSec(t)/60)+' / '+(t.est?fmtMin(t.est):'—');}
  document.querySelectorAll('[data-live="now"]').forEach(nl=>{const n=new Date();nl.style.top=((n.getHours()-calGeom().st)*60+n.getMinutes())/60*PX+'px'});
  if(today()!==lastDay){const was=lastDay;lastDay=today();if(cur===was)cur=lastDay;genRecurring();render()}
