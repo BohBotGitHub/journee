@@ -46,17 +46,17 @@ function usageNow(){let u=S.aiUsage||{};if(u.m!==monthKey())u={m:monthKey(),usd:
 function trackUsage(us,model){if(!us)return;const u=usageNow(),[pi,po]=PRICES[model]||PRICES['claude-haiku-5-5'];const inT=(us.input_tokens||0)+(us.cache_creation_input_tokens||0)+(us.cache_read_input_tokens||0);u.inT+=inT;u.outT+=us.output_tokens||0;u.calls++;u.usd+=inT/1e6*pi+(us.output_tokens||0)/1e6*po;S.aiUsage=u;save();const el=document.querySelector('[data-live="aicost"]');if(el)el.textContent=costTxt()}
 const usd=v=>v<0.01?'< 0,01 $':v.toFixed(2).replace('.',',')+' $';
 function costTxt(){const u=usageNow(),b=+S.settings.aiBudget||0;return `Ce mois-ci : ${usd(u.usd)}${b?' sur '+usd(b):''} · ${u.calls} requête${u.calls>1?'s':''}`}
-async function callClaude(messages,force){
+async function callClaude(messages,force,big){
  {const b=+S.settings.aiBudget||0;if(b&&usageNow().usd>=b)throw new Error(`plafond mensuel atteint (${usd(b)}) — modifiable dans Réglages`)}
  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':S.settings.aiKey.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-  body:JSON.stringify({model:S.settings.aiModel||'claude-haiku-5-5',max_tokens:1600,system:AI_SYS+(force?'\n\nPour cette demande, réponds obligatoirement en appelant l’outil « proposer ».':''),tools:[AI_TOOL],tool_choice:{type:'auto'},messages})});
+  body:JSON.stringify({model:S.settings.aiModel||'claude-haiku-5-5',max_tokens:big?6000:3000,system:AI_SYS+(force?'\n\nPour cette demande, réponds obligatoirement en appelant l’outil « proposer ».':''),tools:[AI_TOOL],tool_choice:{type:'auto'},messages})});
  const j=await r.json().catch(()=>({}));
  if(!r.ok)throw new Error(r.status===401?'clé API refusée':(j.error&&j.error.message)||('erreur '+r.status));
  trackUsage(j.usage,S.settings.aiModel||'claude-haiku-5-5');
  let text='',prop=null;
  for(const b of j.content||[]){if(b.type==='text')text+=b.text;if(b.type==='tool_use'&&b.name==='proposer')prop=b.input}
  if(prop&&prop.message){text=(text?text+'\n':'')+prop.message}
- return{text:text.trim(),prop};
+ return{text:text.trim(),prop,cut:j.stop_reason==='max_tokens'};
 }
 // réponse JSON libre (sans outil), pour les traitements en lot
 async function claudeJSON(prompt){
@@ -102,11 +102,18 @@ async function aiAsk(text,force){
  if(aiBusy)return;aiBusy=true;
  if(text)S.chat.push({role:'user',text,at:Date.now()});
  S.chat=S.chat.slice(-30);save();renderSide();
- const hist=S.chat.slice(-10).map(m=>({role:m.role,content:m.text||'(propositions)'}));
+ // l'historique renvoyé au Génie : ses propositions résumées, jamais une réponse vide (sinon il finit par l'imiter)
+ const hist=S.chat.slice(-10).filter(m=>!m.empty&&!(m.role==='assistant'&&/^Voici mes propositions\.?$/.test(m.text||'')&&!propItems(m.prop).length)).map(m=>{if(m.role!=='assistant')return{role:m.role,content:m.text};const it=propItems(m.prop).map(x=>'- '+x.label).join('\n');return{role:'assistant',content:[m.text,it].filter(Boolean).join('\n')}}).filter(m=>m.content&&m.content.trim());
  while(hist.length&&hist[0].role!=='user')hist.shift();
  const last=hist[hist.length-1];if(!last||last.role!=='user')hist.push({role:'user',content:'Regarde ma journée et propose-moi une organisation.'});
  hist[hist.length-1]={role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\n${hist[hist.length-1].content}`};
- try{const r=await callClaude(hist,force);S.chat.push({role:'assistant',text:r.text||'Voici mes propositions.',prop:r.prop,at:Date.now()});if(sideTab!=='ai'||document.body.classList.contains('side-open')===false&&innerWidth<=1100){aiUnread++}}
+ try{let r=await callClaude(hist,force);
+  // réponse coupée ou vide : on réessaie une fois, avec plus de place et l'outil obligatoire
+  if(r.cut||(!r.text&&!propItems(r.prop).length))r=await callClaude(hist,true,true);
+  const items=propItems(r.prop);
+  if(!r.text&&!items.length)S.chat.push({role:'assistant',empty:true,text:r.cut?'Ma réponse était trop longue et a été coupée. Demande-moi une partie à la fois (par exemple seulement l’ordre de la journée).':'Je n’ai rien trouvé d’utile à te proposer cette fois. Reformule ta demande ou précise ce que tu veux changer.',at:Date.now()});
+  else S.chat.push({role:'assistant',text:r.text||(items.length>1?'Voici '+items.length+' propositions.':'Voici une proposition.'),prop:r.prop,at:Date.now()});
+  if(sideTab!=='ai'||document.body.classList.contains('side-open')===false&&innerWidth<=1100){aiUnread++}}
  catch(e){S.chat.push({role:'assistant',text:'Je n’ai pas pu répondre : '+e.message,at:Date.now()})}
  finally{aiBusy=false;S.chat=S.chat.slice(-30);save();renderSide();renderBadge()}
 }

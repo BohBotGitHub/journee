@@ -1700,6 +1700,28 @@ def _(c):
     assert 'objectif de la semaine' in pg.inner_text('#sheet') and pg.locator('#sheet [data-hbf="est"]').count() == 1
     assert not errs, errs; ctx.close()
 
+@test('Génie : réponse vide ou coupée, nouvel essai, jamais « Voici mes propositions. » vide')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], storage="localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:false},chat:[{role:'user',text:'a'},{role:'assistant',text:'Voici mes propositions.'}]}))")
+    calls = []
+    def route(r):
+        body = json.loads(r.request.post_data); calls.append(body)
+        mode = pg.evaluate("()=>window.__m||'empty'")
+        if mode == 'retry' and len(calls) % 2 == 0:
+            return claude_route(r)
+        r.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'tool_use', 'name': 'proposer', 'id': 't', 'input': {}}], 'stop_reason': 'max_tokens' if mode == 'cut' else 'end_turn', 'usage': {'input_tokens': 10, 'output_tokens': 10}}))
+    pg.route('https://api.anthropic.com/**', route)
+    pg.click('.stabs [data-side="ai"]'); pg.fill('[data-keep="ai"]', 'Organise'); pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
+    assert len(calls) == 2 and calls[1]['max_tokens'] > calls[0]['max_tokens'], [x['max_tokens'] for x in calls]
+    assert all('Voici mes propositions' not in json.dumps(x['messages']) for x in calls)
+    last = pg.locator('.msg.a').last.inner_text(); assert 'Voici' not in last and 'Reformule' in last, last
+    pg.evaluate("()=>{window.__m='cut'}"); pg.fill('[data-keep="ai"]', 'Encore'); pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
+    assert 'coupée' in pg.locator('.msg.a').last.inner_text()
+    assert all('Reformule' not in json.dumps(x['messages']) for x in calls[2:])
+    pg.evaluate("()=>{window.__m='retry'}"); pg.fill('[data-keep="ai"]', 'Et là'); pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
+    assert pg.locator('[data-act="aiapply"]').count() >= 1
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')
