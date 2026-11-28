@@ -55,10 +55,12 @@ function ixTask(it,proj,uidp){
  const pj=proj||(it.project&&findProject(it.project))||null;
  const t=mk({id,title:it.title&&it.quick?it.title:q.title,est:+it.est||q.est||0,channel:ixCat(it.cat||it.category)||q.channel||(hasTree()?ruleFor(q.title):null),day,order:nextOrder(day),
   due:ixDay(it.due)||q.due||null,proj:pj?(pj.id||pj):q.proj||null,prio:it.prio==='high'||it.prio==='low'?it.prio:q.prio||'',where:it.where||q.where||'',notes:it.notes||'',
-  subtasks:(it.subtasks||[]).filter(Boolean).map(s=>({id:uid(),t:String(s),d:false})),from:'claude'});
+  subtasks:[...(it.subtasks||[]),...(q.subtasks||[])].filter(Boolean).map(s=>({id:uid(),t:String(s),d:false})),from:'claude'});
+ if(q.notes&&!it.notes)t.notes=q.notes;
  S.tasks.push(t);
  const at=it.at||(q.at!=null?String(Math.floor(q.at/60)).padStart(2,'0')+':'+String(q.at%60).padStart(2,'0'):null);
  if(at&&t.day&&/^\d{1,2}:\d{2}$/.test(at)&&typeof setBlock==='function'){const[hh,mm]=at.split(':').map(Number),dt=parseYmd(t.day);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true)}
+ if(q.repeat&&t.day&&!it.noRepeat)setRecur(t,q.repeat);
  return t}
 function ixApplyOne(it,key){
  const ty=it.type||'task';

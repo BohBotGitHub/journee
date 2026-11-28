@@ -71,16 +71,21 @@ function hbMonthGrid(h,m0){
  return `<div class="hbgrid">${['L','M','M','J','V','S','D'].map(x=>`<b>${x}</b>`).join('')}${cells}</div>`}
 function hbCard(h){
  const f=hbForce(h),wk=h.freq==='week'?`<span class="hbwk">${hbWeekCount(h,today())}/${h.n||1} cette semaine</span>`:'';
- return `<div class="hbcard${h.paused?' paused':''}" style="--hc:${esc(hbColor(h))}" data-hb="${h.id}">
+ return `<div class="hbcard${h.paused?' paused':''}" style="--hc:${esc(hbColor(h))}" data-hb="${h.id}" data-sid="${h.id}">${SGRIP}
   <div class="hbtop">${hbIcon(h.icon)}<div class="hbname"><b>${esc(h.name)}</b><small>${h.kind==='quit'?'À arrêter · ':''}${hbFreqLabel(h)}${h.channel?' · '+esc(nodeLabel(h.channel)):''}${h.toDay&&h.est?' · '+fmtMin(h.est)+' dans ta journée':''}${h.paused?' · en pause':''}</small></div>
   <button class="sm ghost" data-act="hbedit" data-h="${h.id}">Modifier</button></div>
   <div class="hbstats"><span><b>${hbStreakLabel(h)}</b> de série</span><span class="hbforce"><b>${f} %</b> de force<i style="--f:${f}%"></i></span>${wk}</div>
   ${hbMonthGrid(h)}</div>`}
 function viewHabits(){
  const hs=habits();
- return `<div class="head"><div><h1>Habitudes</h1><div class="sub">De toutes petites étapes, un jour après l’autre. Un jour manqué ne remet pas tout à zéro.</div></div><div class="acts"><button class="pri" data-act="hbnew">${ico('plus')} Nouvelle habitude</button></div></div>
- ${hs.length?`<div class="hblist">${hs.map(hbCard).join('')}</div>`:`<div class="empty"><p><b>Aucune habitude pour l’instant.</b></p><p class="mute">Commence petit : une seule habitude, facile à tenir. Tu pourras l’alléger ou la mettre en pause pendant la revue de la semaine.</p><button class="pri" data-act="hbnew">Créer ma première habitude</button></div>`}
- ${hs.filter(h=>!h.paused).length>HB_MAX_PILLS?`<p class="mute" style="margin-top:14px">Seules les ${HB_MAX_PILLS} premières s’affichent en haut d’Aujourd’hui.</p>`:''}`}
+ return `<div class="head"><div><h1>Habitudes & routines</h1><div class="sub">De toutes petites étapes, un jour après l’autre. Un jour manqué ne remet pas tout à zéro.</div></div><div class="acts">${(S.habits||[]).length?genieBtn('habits',null,'Ajuster'):''}<button class="pri" data-act="hbnew">${ico('plus')} Nouvelle habitude</button></div></div>
+ ${(()=>{const h=structSugHtml(['habit','routine']);return h?`<div class="sugrow"><span class="mute">Suggestions</span>${h}</div>`:''})()}
+ ${hs.length?`<div class="hblist" data-sort="hab">${hs.map(hbCard).join('')}</div>`:`<div class="empty"><p><b>Aucune habitude pour l’instant.</b></p><p class="mute">Commence petit : une seule habitude, facile à tenir. Tu pourras l’alléger ou la mettre en pause pendant la revue de la semaine.</p><button class="pri" data-act="hbnew">Créer ma première habitude</button></div>`}
+ ${hs.filter(h=>!h.paused).length>HB_MAX_PILLS?`<p class="mute" style="margin-top:14px">Seules les ${HB_MAX_PILLS} premières s’affichent en haut d’Aujourd’hui.</p>`:''}
+ ${recListHtml()}
+ <div style="margin-top:26px">${tplHtml()}</div>`}
+// routines (tâches qui reviennent) : liste, avec leur rythme et leur place dans la journée
+function recListHtml(){const rs=S.recurring||[];if(!rs.length)return '';return `<h2 class="prsec" style="margin-top:28px">Routines</h2><div class="reclist" data-sort="rec">${rs.map(r=>`<div class="recrow" data-sid="${r.id}">${SGRIP}<b>${esc(r.title)}</b><span class="mute">${esc((RULES[r.rule]||'').toLowerCase())}${r.rule==='weekly'?' · '+['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'][r.dow||0]:''}${r.est?' · '+fmtMin(r.est):''} · ${esc((RECPOS[r.pos||'bottom']||'').split(' :')[0].toLowerCase())}</span></div>`).join('')}</div>`}
 
 // pastilles en haut d'Aujourd'hui (6 au plus)
 function hbPills(d){

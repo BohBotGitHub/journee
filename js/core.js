@@ -118,13 +118,59 @@ function dateWord(w){
  if(/^\d{4}-\d\d-\d\d$/.test(w))return w;
  return null;
 }
+// langage naturel → codes de la saisie rapide (v2.8) : « demain à 14h pendant 45 minutes, catégorie natation, urgent, sous-tâches : a, b et c »
+const MOIS=['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
+// tâche existante la plus proche de quelques mots (jour affiché d'abord)
+function findTaskByWords(words){const W=norm(words).replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).filter(w=>w.length>2);if(!W.length)return null;let best=null,bs=0;
+ for(const t of S.tasks){if(t.done)continue;const tw=norm(t.title);let sc=0;for(const w of W)if(tw.includes(w))sc+=w.length;sc=sc/Math.max(8,tw.length)+(t.day===cur?.05:0);if(sc>bs){bs=sc;best=t}}return bs>=.15?best:null}
+function nlPre(txt){
+ const x={subtasks:[],notes:'',repeat:null,dow:null,parent:null};let s=(' '+txt+' ').replace(/([,;.])(?=\s)/g,' $1');
+ // sous-tâches et notes : jusqu'à la fin de la phrase (ou jusqu'au marqueur suivant)
+ s=s.replace(/\s(?:notes?|nb)\s?:\s?(.+?)(?=\s(?:sous[-\s]?t[aâ]ches?|st)\s?:|$)/i,(m,n)=>{x.notes=n.trim().replace(/[,;.\s]+$/,'');return ' '});
+ s=s.replace(/\s(?:sous[-\s]?t[aâ]ches?|st)\s?:\s?(.+?)(?=\s(?:notes?|nb)\s?:|$)/i,(m,l)=>{x.subtasks=l.split(/\s*(?:[,;]|\s>\s|\set\s)\s*/).map(v=>v.trim().replace(/[.\s]+$/,'')).filter(Boolean);return ' '});
+ // « > nom d'une tâche » (comme Sunsama) : la nouvelle tâche devient une sous-tâche de celle-là
+ s=s.replace(/\s>\s?([^>].*)$/,(m,l)=>{x.parent=l.trim();return ' '});
+ s=s.replace(/\s\[([^\]]+)\]/,(m,l)=>{x.subtasks=x.subtasks.concat(l.split(/[,;]/).map(v=>v.trim()).filter(Boolean));return ' '});
+ // répétition → routine
+ const WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+ s=s.replace(/\s(?:tous les jours|chaque jour|quotidien(?:ne)?)(?=[\s,.])/i,()=>{x.repeat='daily';return ' '})
+  .replace(/\s(?:en semaine|les jours de semaine|du lundi au vendredi)(?=[\s,.])/i,()=>{x.repeat='weekdays';return ' '})
+  .replace(/\s(?:chaque|tous les)\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)s?(?=[\s,.])/i,(m,w)=>{x.repeat='weekly';x.dow=WD.indexOf(w.toLowerCase());return ' '+w+' '})
+  .replace(/\s(?:chaque semaine|toutes les semaines|hebdo(?:madaire)?)(?=[\s,.])/i,()=>{x.repeat='weekly';return ' '})
+  .replace(/\s(?:chaque mois|tous les mois|mensuel(?:le)?)(?=[\s,.])/i,()=>{x.repeat='monthly';return ' '});
+ // durée, heure
+ s=s.replace(/\s(?:pendant|durée|duree)\s?:?\s?(\d{1,3})\s?(?:minutes?|min|mn|m)(?=[\s,.])/i,(m,n)=>' '+n+'m ')
+  .replace(/\s(?:pendant\s)?(\d{1,3})\sminutes?(?=[\s,.])/i,(m,n)=>' '+n+'m ')
+  .replace(/\s(?:pendant|durée|duree)\s?:?\s?(\d)\s?(?:heures?|h)(?:\s?(\d{2}))?(?=[\s,.])/i,(m,h,mm)=>' '+h+'h'+(mm||'')+' ')
+  .replace(/\s(?:pendant\s)?(?:une|1)\sheure(?:\s(?:et\s)?demie)?(?=[\s,.])/i,m=>/demie/i.test(m)?' 1h30 ':' 1h ')
+  .replace(/\s(?:pendant\s)?(?:une\s)?demi[-\s]heure(?=[\s,.])/i,()=>' 30m ')
+  .replace(/\s(?:pendant\s)?(\d)\sheures?(?=[\s,.])/i,(m,h)=>/^\spendant/i.test(m)?' '+h+'h ':m)
+  .replace(/\s(?:à|a|vers)\s(\d{1,2})\s?(?:heures?|h)(?:\s?(\d{2}))?(?=[\s,.])/i,(m,h,mm)=>' à '+h+'h'+(mm||'')+' ')
+  .replace(/\s(?:à\s)?(\d{1,2}):(\d{2})(?=[\s,.])/,(m,h,mm)=>' à '+h+'h'+mm+' ');
+ // catégorie, projet, priorité, lieu en toutes lettres
+ s=s.replace(/\s(?:catégorie|categorie|cat)\s?:?\s([^\s,.;]+)/i,(m,c)=>' #'+c+' ')
+  .replace(/\s(?:(?:dans|pour)\s(?:le\s)?projet|projet\s?:)\s?([^\s,.;]+)/i,(m,p)=>' +'+p+' ')
+  .replace(/\s(?:priorité|priorite)\s(?:basse|faible)(?=[\s,.])|\s,\spas\surgent(?=\s)|\spas\surgent\s*$/i,()=>' !bas ')
+  .replace(/\s(?:priorité|priorite)\s(?:haute|forte|élevée|elevee)(?=[\s,.])|\s,\s(?:urgent|important)e?(?=\s)|\s(?:urgent|important)e?\s*$/i,()=>' ! ')
+  .replace(/\s(?:chez moi|à la maison|a la maison)(?=[\s,.])/i,()=>' @maison ').replace(/\s(?:dehors|en extérieur|en exterieur)(?=[\s,.])/i,()=>' @dehors ');
+ s=s.replace(/\s@(aujourd['’]hui|auj|demain|apr[eè]s-demain|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|\d{1,2}\/\d{1,2})(?=[\s,.])/i,(m,w)=>' '+w+' ');
+ // jours en toutes lettres
+ s=s.replace(/\s(?:ce soir|ce matin|cet après-midi|cet apres-midi|ce midi)(?=[\s,.])/i,()=>' auj ')
+  .replace(/\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\sprochain(?=[\s,.])/i,(m,w)=>' '+w+' ')
+  .replace(/\s(?:la\s)?semaine prochaine(?=[\s,.])/i,()=>{const t0=today();x.day=addDays(monday(t0),7);return ' '})
+  .replace(/\sdans\s(\d{1,2})\sjours?(?=[\s,.])/i,(m,n)=>{x.day=addDays(today(),+n);return ' '})
+  .replace(/\s(?:le\s)?(\d{1,2})\s(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)(?=[\s,.])/i,(m,d,mo)=>' '+d+'/'+(MOIS.indexOf(norm(mo))+1)+' ');
+ // virgules orphelines laissées par les morceaux retirés
+ s=s.replace(/\s[,;.]+(?=\s)/g,' ');
+ return {txt:s,x}}
 function parseQuick(txt){
- let est=0,channel=null,pj=null,prio='',where='',at=null,badCat=null;
+ const NL=nlPre(txt||'');txt=NL.txt;
+ let est=0,channel=null,pj=null,prio='',where='',at=null,badCat=null,badProj=null;
  // « à 14h », « 9h30 » : une heure de la journée ; « 1h », « 2h30 » : une durée (au-delà de 4 h, c'est une heure)
  txt=(' '+txt+' ').replace(/\s(?:à\s)?(\d{1,2})\s?h\s?(\d{2})?(?=\s)/i,(m,h,mm)=>{h=+h;mm=+mm||0;if(/^\sà\s/i.test(m)||h>=5){if(h<24&&mm<60){at=h*60+mm;return ' '}return m}est=h*60+mm;return ' '})
   .replace(/\s~?(\d{1,3})\s?(?:m|min|mn)(?=\s)/i,(m,n)=>{est=+n;return ' '})
-  .replace(/\s#(\S+)/,(m,n)=>{const c=findNode(n);if(c){channel=c.id;return ' '}badCat=n;return m})
-  .replace(/\s\+(\S+)/,(m,n)=>{const p=findProject(n);if(p){pj=p.id;return ' '}return m})
+  .replace(/\s#(\S+)/,(m,n)=>{const c=findNode(n);if(c){channel=c.id;return ' '}badCat=n;return ' '})
+  .replace(/\s\+(\S+)/,(m,n)=>{const p=findProject(n);if(p){pj=p.id;return ' '}badProj=n;return ' '})
   .replace(/\s!{1,3}(?=\s)/,()=>{prio='high';return ' '}).replace(/\s(?:!bas|↓)(?=\s)/i,()=>{prio='low';return ' '})
   .replace(/\s@(maison|chez-?moi|home)(?=\s)/i,()=>{where='home';return ' '}).replace(/\s@(dehors|ext|out)(?=\s)/i,()=>{where='out';return ' '}).replace(/\s@(partout|ordi|boulot|any)(?=\s)/i,()=>{where='any';return ' '});
  let day,due;const t0=today(),WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
@@ -134,17 +180,29 @@ function parseQuick(txt){
   .replace(/\s(demain)(?=\s)/i,()=>{day=addDays(t0,1);return ' '})
   .replace(/\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)(?=\s)/i,(m,w)=>{const k=WD.indexOf(w.toLowerCase()),c=parseYmd(t0).getDay();day=addDays(t0,((k-c+7)%7)||7);return ' '})
   .replace(/\s(\d{1,2})\/(\d{1,2})(?=\s)/,(m,dd,mm)=>{const y=new Date().getFullYear();let d=ymd(new Date(y,+mm-1,+dd));if(d<t0)d=ymd(new Date(y+1,+mm-1,+dd));day=d;return ' '});
- return {title:txt.trim().replace(/\s+/g,' '),est,channel,day,due,proj:pj,prio,where,at,badCat};
+ if(NL.x.day&&day===undefined)day=NL.x.day;
+ // routine hebdo « chaque lundi » : le premier jour est ce jour-là
+ return {title:txt.trim().replace(/\s+/g,' ').replace(/^[,;:\-–\s]+|[,;:\-–\s]+$/g,''),est,channel,day,due,proj:pj,prio,where,at,badCat,badProj,subtasks:NL.x.subtasks,notes:NL.x.notes,repeat:NL.x.repeat,parent:NL.x.parent};
 }
 // catégorie déjà donnée à une tâche du même nom (routines, modèles, récurrences)
 function catGuess(title){const n=(title||'').trim().toLowerCase();if(!n)return null;const x=S.tasks.find(t=>t.channel&&(t.title||'').trim().toLowerCase()===n);if(x)return x.channel;const a=(S.archive||[]).find(a=>a.c&&(a.t||'').trim().toLowerCase()===n);if(a)return a.c;return typeof hasTree==='function'&&hasTree()?ruleFor(title)||null:null}
 function addTask(text,day){
  const q=parseQuick(text);if(!q.title)return null;if(q.day!==undefined)day=q.day;
+ if(q.parent){const p=findTaskByWords(q.parent);if(p){p.subtasks=p.subtasks||[];p.subtasks.push({id:uid(),t:q.title,d:false});if(typeof subShow==='function')subShow(p.id);save();render();toast('Sous-tâche de « '+p.title+' »');return {title:q.title,parent:p.id,subOf:true}}}
+ // « nouveau projet Déménagement pour le 20/12, sous-tâches : cartons, box » : un projet et ses premières tâches
+ {const m=q.title.match(/^(?:nouveau\s+projet|projet)\s*:?\s+(.+)$/i);if(m){S.projects=S.projects||[];const pj={id:uid(),name:m[1].trim(),end:q.due||(q.day&&q.day!==today()?q.day:null),done:false,notes:q.notes||''};S.projects.push(pj);
+  (q.subtasks||[]).forEach(x=>{const r=parseQuick(x);if(r.title)S.tasks.push(mk({title:r.title,est:r.est||0,channel:r.channel||(hasTree()?ruleFor(r.title):null),day:r.day||null,order:nextOrder(r.day||null),proj:pj.id,prio:r.prio||''}))});
+  save();render();toast('Projet « '+pj.name+' » créé'+((q.subtasks||[]).length?' avec '+q.subtasks.length+' tâche'+(q.subtasks.length>1?'s':''):''));return pj}}
+ // « nouvelle habitude Lire 10 pages chaque jour » / « habitude : piano en semaine 10m »
+ {const m=q.title.match(/^(?:nouvelle\s+habitude|habitude)\s*:?\s+(.+)$/i);if(m&&typeof genHabitTasks==='function'){S.habits=S.habits||[];const h={id:uid(),name:m[1].trim(),kind:/^(?:arr[eê]ter|ne plus|stop)\b/i.test(m[1])?'quit':'build',freq:q.repeat==='weekdays'?'days':'daily',days:q.repeat==='weekdays'?[1,2,3,4,5]:[1,2,3,4,5,6,0],n:3,channel:q.channel,icon:'spark',est:q.est||0,toDay:!!q.est,paused:false,log:{},skip:[],created:Date.now(),order:Math.max(0,...S.habits.map(x=>x.order||0))+1};
+  S.habits.push(h);genRecurring();save();render();toast('Habitude « '+h.name+' » créée');return h}}
  if(!q.channel&&hasTree())q.channel=ruleFor(q.title);
  const le=q.est?0:learnedEst(q.title);
  const t=mk({title:q.title,est:q.est||le,channel:q.channel,day,order:nextOrder(day),due:q.due||null,proj:q.proj||null,prio:q.prio||'',where:q.where||''});if(le)t.estLearn=1;
+ if(q.subtasks&&q.subtasks.length){t.subtasks=q.subtasks.map(x=>({id:uid(),t:x,d:false}));if(typeof subShow==='function')subShow(t.id)}if(q.notes)t.notes=q.notes;
  S.tasks.push(t);placeNew(t);
- if(q.at!=null&&t.day&&typeof setBlock==='function'){const dt=parseYmd(t.day);dt.setMinutes(q.at);t.pinned=true;setBlock(t,dt,true)}
+ if(q.at!=null&&t.day&&typeof setBlock==='function'){const dt=parseYmd(t.day);dt.setMinutes(q.at);t.pinned=true;setBlock(t,dt,true);if(typeof syncOrder==='function')syncOrder(t.day)}
+ if(q.repeat){if(!t.day)t.day=today();setRecur(t,q.repeat)}
  save();render();aiWatch(t);emit('task:add',{task:t});return t;
 }
 async function toggleDone(id){
@@ -286,7 +344,7 @@ function quickPreview(txt){const q=parseQuick(txt||'');if(!q.title)return '';con
  if(q.day)out.push(q.day===today()?'aujourd’hui':fmtDay(q.day,{weekday:'long',day:'numeric'}));if(q.at!=null)out.push('à '+hhmm(q.at/60));if(q.badCat)out.push('⚠ catégorie « '+q.badCat+' » inconnue (Arbre pour la créer)');if(q.due)out.push('échéance '+fmtDay(q.due,{day:'numeric',month:'short'}));
  const le=q.est?0:learnedEst(q.title);if(q.est)out.push(fmtMin(q.est));else if(le)out.push('≈ '+fmtMin(le)+' (d’habitude)');
  if(q.prio)out.push(q.prio==='high'?'priorité haute':'priorité basse');if(q.where)out.push({home:'chez moi',out:'dehors',any:'n’importe où'}[q.where]);
- if(q.channel)out.push(nodeLabel(q.channel));if(q.proj){const p=proj(q.proj);if(p)out.push('+'+p.name)}
+ if(q.channel)out.push(nodeLabel(q.channel));if(q.proj){const p=proj(q.proj);if(p)out.push('+'+p.name)}if(q.parent){const p=findTaskByWords(q.parent);out.push(p?'sous-tâche de « '+p.title+' »':'⚠ tâche « '+q.parent+' » introuvable')}if(q.badProj)out.push('⚠ projet « '+q.badProj+' » inconnu');if(q.repeat)out.push('↻ '+(RULES[q.repeat]||q.repeat).toLowerCase());if(q.subtasks&&q.subtasks.length)out.push(q.subtasks.length+' sous-tâche'+(q.subtasks.length>1?'s':''));if(q.notes)out.push('note');
  return out.length?out.map(x=>`<span>${esc(x)}</span>`).join(''):''}
 
 // durées proposées : de 5 en 5 min jusqu'à 1 h, de 15 en 15 min jusqu'à 2 h 30, puis de 30 en 30 min jusqu'à 8 h

@@ -13,8 +13,13 @@ setTimeout(()=>{if(!syncTried){syncTried=true;queueFlow()}},12000); // filet : h
 setTimeout(aiMorning,1500);
 // migration vers l'arbre : après la première synchro (un autre appareil l'a peut-être déjà faite)
 if(treePending)setTimeout(()=>{if(ensureTree()&&$('#modal').classList.contains('hidden'))showModal(treeMigrationHtml());else{render()}},gTok()?3500:500);
-{const d0=today(),i0=S.days[d0]||{},h0=new Date().getHours()+new Date().getMinutes()/60;if(!i0.planned&&lsGet('journee.ritauto')!==d0&&h0>=4&&h0<S.settings.workEnd&&!savedRit()){lsSet('journee.ritauto',d0);setTimeout(()=>{if(!ritual&&$('#modal').classList.contains('hidden')&&!navigator.webdriver)startRitual('plan',d0)},900)}}
-{const r=savedRit();if(r&&Date.now()-r.at<3*3600e3&&r.day>=today()){cur=r.day;setTimeout(()=>{if(!ritual&&$('#modal').classList.contains('hidden')){ritual=r;renderRitual()}},400)}}
+// rituel du matin proposé une fois par jour, seulement APRÈS la synchro (s'il a été fait sur un autre appareil, on le sait)
+// un rituel laissé en cours ne se rouvre plus tout seul au rechargement : le bouton « Reprendre » de l'en-tête suffit
+function ritAutoCheck(){const d0=today(),i0=S.days[d0]||{},h0=new Date().getHours()+new Date().getMinutes()/60;
+ if(i0.planned){const r=savedRit();if(r&&r.type==='plan'&&r.day===d0)lsDel(RKEY);return}
+ if(lsGet('journee.ritauto')===d0||h0<4||h0>=S.settings.workEnd||savedRit()||navigator.webdriver)return;
+ lsSet('journee.ritauto',d0);if(!ritual&&$('#modal').classList.contains('hidden'))startRitual('plan',d0)}
+{let waited=0;const w=setInterval(()=>{waited+=500;if(syncTried||waited>=12000){clearInterval(w);setTimeout(ritAutoCheck,300)}},500)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){setTimeout(gSilent,800);liveTick();driveSync();if(msOn())syncTodo();if(gTok()){gEvents={};render()}}});
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 

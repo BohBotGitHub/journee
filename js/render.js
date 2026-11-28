@@ -29,11 +29,11 @@ function renderMini(){let el=$('#minifocus');if(!el){el=document.createElement('
  const id=focusMin||(S.running&&!focusOn?S.running.taskId:null),t=id&&T(id);
  if(!t||t.done||focusOn){el.className='hidden';el.innerHTML='';return}
  const run=S.running&&S.running.taskId===t.id;el.className=run?'on':'';
- el.innerHTML=`<button class="mfexp" data-act="focusmax" data-id="${t.id}" title="Agrandir le focus">${ico('maximize')}<span class="mft">${esc(t.title)}</span><span class="mfc" data-live="mini">${clock(actualSec(t))}</span></button><button class="mfplay" data-act="timer" data-id="${t.id}" aria-label="${run?'Pause':'Reprendre'}" title="${run?'Pause':'Reprendre'}">${run?ico('pause'):ico('play')}</button>`}
+ el.innerHTML=`<button class="chk mfchk" data-act="toggle" data-id="${t.id}" aria-label="Cocher : terminée" title="Cocher : terminée"></button><button class="mfexp" data-act="focusmax" data-id="${t.id}" title="Agrandir le focus">${ico('maximize')}<span class="mft">${esc(t.title)}</span><span class="mfc" data-live="mini">${clock(actualSec(t))}</span></button><button class="mfplay" data-act="timer" data-id="${t.id}" aria-label="${run?'Pause':'Reprendre'}" title="${run?'Pause':'Reprendre'}">${run?ico('pause'):ico('play')}</button>`}
 function renderRun(){
  renderMini();
  const r=S.running,t=r&&T(r.taskId);
- $('#runchip').innerHTML=t?`<div class="runbox" data-act="openfocus" data-id="${t.id}"><span>En cours</span><b>${esc(t.title)}</b><span class="t" data-live="run">${clock(actualSec(t))}</span></div>`:'';
+ $('#runchip').innerHTML=t?`<div class="runbox" data-act="openfocus" data-id="${t.id}"><button class="chk runchk" data-act="toggle" data-id="${t.id}" aria-label="Cocher : terminée" title="Cocher : terminée"></button><span>En cours</span><b>${esc(t.title)}</b><span class="t" data-live="run">${clock(actualSec(t))}</span></div>`:'';
 }
 function go(v){
  if(v&&v.startsWith('rit-')){const d=cur<today()?today():cur,w=new Date().getDay();if(innerWidth<=760)document.body.classList.remove('side-open');if(v==='rit-plan')startRitual('plan',d);else if(v==='rit-shutdown')startRitual('shutdown',d>today()?today():d);else startRitual(w===0||w>=5?'weekreview':'weekplan',d);return}
@@ -52,7 +52,7 @@ function showModal(html){const was=$('#modal').classList.contains('hidden');$('#
  if(was&&!navigator.webdriver){try{history.pushState({m:1},'')}catch(e){}}}
 // le « retour » lancé par closeModal arrive après coup : il ne doit pas refermer la fenêtre ouverte entre-temps
 let popSkip=false;
-function closeModal(fromBack){if(typeof ad!=='undefined')ad=null;if(typeof sheetTid!=='undefined')sheetTid=null;
+function closeModal(fromBack){{const ae=document.activeElement;if(ae&&ae!==document.body&&$('#modal').contains(ae))try{ae.blur()}catch(e){}}if(typeof ad!=='undefined')ad=null;if(typeof sheetTid!=='undefined')sheetTid=null;
  if(!fromBack&&history.state&&history.state.m&&!$('#modal').classList.contains('hidden')){try{popSkip=true;history.back()}catch(e){popSkip=false}}
  if(modalTask){const t=T(modalTask);if(t&&t.block&&t.block.gcalId&&t.block.title!==t.title&&gTok()){t.block.title=t.title;save();gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{})}}
  $('#modal').classList.add('hidden');modalTask=null;ritual=null;render();
@@ -63,7 +63,7 @@ function openTask(id){
  const t=T(id);if(!t)return;if(modalAI&&modalAI.tid!==id)modalAI=null;modalTask=id;ritual=null;
  const objs=weekObjs(monday(t.day||today())),r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
  const ests=[0,...durOpts(t.est)];
- showModal(`<div class="mhead"><textarea class="mtitle" data-f="title" rows="1" aria-label="Titre">${esc(t.title)}</textarea><button class="x" data-act="close" aria-label="Fermer">×</button></div>
+ showModal(`<div class="mhead"><textarea class="mtitle" data-f="title" rows="1" aria-label="Titre">${esc(t.title)}</textarea>${genieBtn('task',t.id,'Préparer')}<button class="x" data-act="close" aria-label="Fermer">×</button></div>
  <!-- fiche compacte (v2.1, façon Sunsama) : une barre de méta-données, le reste replié -->
  <div class="mbar">
   <label class="mpill" title="Durée estimée">${ico('clock')}<select data-f="est">${ests.map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${v?fmtMin(v):'—'}</option>`).join('')}</select></label>
@@ -144,7 +144,7 @@ function renderRitual0(){
  if(ritual.type==='plan'){
   const info=S.days[d]||{},H=dayHours(d),rollRow=(t,opts)=>`<div class="rrow${(t.roll||0)>=4?' hot':''}"><button class="chk" data-act="ritdone" data-id="${t.id}" aria-label="Cocher : faite" title="Faite"></button><div><b>${esc(t.title)}</b><small>${(t.roll||0)>=4?`<span class="rollm">↻ ${t.roll}</span> reportée ${t.roll} fois`:`↻ revenue${t.roll>1?' '+t.roll+' fois':''}`}${t.est?' · '+fmtMin(t.est):''}</small></div><div class="btns">${opts}</div></div>`;
   if(i===0){
-   h=shell(`${quoteHtml(pickQuote('matin',d))}<h2>Ta journée</h2><p class="lead">${cap1(dl)}. Quand commences-tu et quand t’arrêtes-tu ? Ce qui ne tient pas glissera tout seul à demain.</p>
+   h=shell(`${quoteHtml(pickQuote('matin',d))}<div class="row" style="justify-content:space-between;align-items:center"><h2>Ta journée</h2>${aiOn()?genieBtn('day',null,'Le Génie prépare ma journée'):''}</div><p class="lead">${cap1(dl)}. Quand commences-tu et quand t’arrêtes-tu ? Ce qui ne tient pas glissera tout seul à demain.</p>
    <div class="hoursrow"><label>Début<input type="time" step="900" data-rh="s" value="${hhmm(H.s)}"></label><span>→</span><label>Fin<input type="time" step="900" data-rh="e" value="${hhmm(H.e)}"></label></div>
    <div class="rsec">Boulot aujourd’hui</div>${jobPicker(d)}
    <div class="rsec">Ton énergie</div><div class="seg energy">${[['low','Basse','Journée allégée : fin effective 1 h plus tôt'],['','Normale',''],['high','Haute','Tu peux viser un peu plus']].map(([v,l,tt])=>`<button class="sm${(info.energy||'')===v?' on':''}" data-act="energy" data-v="${v}" title="${tt}">${l}</button>`).join('')}</div>
@@ -210,7 +210,7 @@ function renderRitual0(){
  }
  showModal(h);saveRit();
  const R=RIT_AI[ritual.type+ritual.step];
- if(R&&aiOn()&&S.settings.aiAuto&&!(ritual.ai&&ritual.ai[ritual.step])&&R.when(ritual.day))aiRitual();
+ // plus d'appel automatique du Génie dans les rituels : un bouton ✦ au début suffit
 }
 // garde ce qui a été saisi sur l'étape en cours (heures, note, revue) ; false si c'est invalide
 function ritKeep(){const d=ritual.day,sh=$('#sheet');
@@ -240,6 +240,11 @@ function openFocus(id,sub){
 }
 // mode focus « Lampe » : la lampe du Génie ; l'anneau doré se remplit avec le temps prévu, une volute de fumée par sous-tâche faite
 const RING_C=2*Math.PI*104;
+const FCHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+// surprise (v3.0) : en cochant, le Génie sort de la lampe dans une volute d'or, puis s'envole
+function genieWish(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const el=document.createElement('div');el.className='gwish';el.setAttribute('aria-hidden','true');
+ el.innerHTML=`<svg viewBox="0 0 200 220"><path class="gwsmoke" d="M100 200c-30-20 30-40 0-70s-35-45 5-70c25-16 35-30 22-48"/><g class="gwfig"><circle cx="128" cy="20" r="14"/><circle cx="123" cy="18" r="2.2" class="gweye"/><circle cx="133" cy="18" r="2.2" class="gweye"/><path d="M122 25q6 5 12 0" class="gwmouth"/></g>${[...Array(9)].map((_,i)=>`<circle class="gwstar" style="--i:${i}" cx="${100+Math.cos(i*0.7)*70}" cy="${110+Math.sin(i*1.3)*80}" r="${2+i%3}"/>`).join('')}</svg>`;
+ document.body.appendChild(el);setTimeout(()=>el.remove(),1900)}
 function ringFrac(t){const a=actualSec(t);return t.est?Math.min(1,a/(t.est*60)):(a%3600)/3600}
 function lampSvg(t,run){
  const f=ringFrac(t),over=!!(t.est&&actualSec(t)>=t.est*60),nd=Math.min(5,(t.subtasks||[]).filter(x=>x.d).length);
@@ -261,12 +266,12 @@ function renderFocus(){
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
  el.classList.remove('hidden');el.classList.add('lamp');
  const sb=focusSub&&t.subtasks.find(x=>x.id===focusSub),nd=(t.subtasks||[]).filter(x=>x.d).length;
- el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<span class="ftopacts"><button class="sm ghost" data-act="focusmin" title="Réduire (Échap) : le minuteur continue, une pastille permet de revenir">${ico('minimize')}Réduire</button><button class="sm ghost" data-act="focusclose" title="Quitter le focus">Quitter</button></span></div>
+ el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<span class="ftopacts">${genieBtn('focus',t.id,'Je bloque')}<button class="sm ghost" data-act="focusmin" title="Réduire (Échap) : le minuteur continue, une pastille permet de revenir">${ico('minimize')}Réduire</button><button class="sm ghost" data-act="focusclose" title="Quitter le focus">Quitter</button></span></div>
  <div class="fhero"><div class="flamp">${lampSvg(t,run)}</div><div class="finfo">
  ${sb?`<div class="fsub">${esc(t.title)} · sous-tâche ${t.subtasks.indexOf(sb)+1}/${t.subtasks.length}</div><h1 class="ftitle">${esc(sb.t)}</h1>`:`<h1 class="ftitle">${esc(t.title)}</h1>`}
  <div class="fclockrow">${focusEdit===t.id?`<input class="fclock fedit" data-fedit="${t.id}" value="${Math.floor(actualSec(t)/60)}" inputmode="numeric" aria-label="Temps passé en minutes (ou 1h20)" title="Minutes, ou 1h20">`:`<button class="fclock${t.est&&actualSec(t)>=t.est*60?' over':''}" data-live="focus" data-act="timeredit" data-id="${t.id}" title="Cliquer pour corriger le temps">${clock(actualSec(t))}</button>`}<div class="fadj"><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="-5" aria-label="Retirer 5 minutes">−5 min</button><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="5" aria-label="Ajouter 5 minutes">+5 min</button></div><button class="freset" data-act="timerreset" data-id="${t.id}" aria-label="Remettre à zéro (met en pause)" title="Remettre à zéro (met en pause)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></div>
  <div class="fmeta">${t.est?'sur '+fmtMin(t.est):'pas de durée prévue · un tour = 1 h'}${(t.subtasks||[]).length?` · ${nd}/${t.subtasks.length} sous-tâche${t.subtasks.length>1?'s':''}`:''}</div>
- <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button>${focusSub?`<button class="ok big" data-act="focussubdone">Sous-tâche faite</button><button class="ghost big" data-act="focusdone" data-id="${t.id}">Tout terminer</button>`:`<button class="ok big" data-act="focusdone" data-id="${t.id}">Terminer</button>`}</div>
+ <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button>${focusSub?`<button class="fchk" data-act="focussubdone" aria-label="Cocher la sous-tâche" title="Cocher la sous-tâche">${FCHK}</button><span class="fchkl">Sous-tâche faite</span><button class="ghost big" data-act="focusdone" data-id="${t.id}">Tout terminer</button>`:`<button class="fchk" data-act="focusdone" data-id="${t.id}" aria-label="Cocher : tâche terminée" title="Cocher : tâche terminée">${FCHK}</button><span class="fchkl">Terminée</span>`}</div>
  </div></div>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="fsub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form></div>
  <textarea class="fnotes" data-fnotes="${t.id}" placeholder="Notes…">${esc(t.notes)}</textarea></div>`;

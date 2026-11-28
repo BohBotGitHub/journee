@@ -264,9 +264,16 @@ def _(c):
     if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
     pg.click('[data-act="plan"] >> nth=0')
     for _ in range(4): pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(300)
-    pg.wait_for_timeout(400)
+    # v3.0 : plus d'appel automatique du Génie, on le demande à l'étape
+    assert pg.locator('.aibox .pitem').count() == 0
+    pg.click('[data-act="ritai"]'); pg.wait_for_timeout(500)
     assert pg.locator('.aibox .pitem').count() >= 1, 'pas de suggestion Claude'
     pg.reload(); pg.wait_for_timeout(1500)
+    # v3.0.3 : plus de réouverture automatique au rechargement ; « Reprendre » rouvre le rituel (au premier onglet, comme demandé), réponses gardées
+    assert pg.locator('#modal:not(.hidden) .rsteps').count() == 0
+    pg.click('#main .head [data-act="plan"]'); pg.wait_for_timeout(300)
+    assert pg.inner_text('.rsteps .on') == 'Heures'
+    for _ in range(4): pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(250)
     assert pg.inner_text('.rsteps .on') == 'Estimer'
     pg.click('[data-act="ritapplyall"]'); pg.wait_for_timeout(200)
     for _ in range(2): pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(300)
@@ -284,39 +291,34 @@ def _(c):
     assert st(pg, 'S.days[today()].note') == 'Bonne journée'
     assert not errs, errs; ctx.close()
 
-@test('Vide-tête : lignes → tâches datées et à trier')
+@test('v3.0 : zone d’ajout unique (A, ⌘K) : plusieurs lignes, doublons, aller à, Génie')
 def _(c):
-    ctx, pg, errs = new_page(c['b'])
-    pg.keyboard.press('d'); pg.wait_for_timeout(200)
-    pg.fill('[data-dump]', 'Rappeler garagiste\n- Acheter ampoules demain 15m\nOffrir livre avant 12/12')
-    pg.dispatch_event('[data-dump]', 'input'); pg.click('[data-act="dumptasks"]'); pg.wait_for_timeout(300)
-    ts = st(pg, 'S.tasks.slice(-3).map(t=>[t.title,t.day,t.inbox,t.due])')
-    assert ts[0][2] is True and ts[1][1] == d(1) and ts[2][3], ts
-    pg.click('[data-act="inbox"] >> nth=0'); pg.wait_for_timeout(200)
-    assert st(pg, 'S.tasks.filter(t=>t.inbox).length') == 0
-    assert not errs, errs; ctx.close()
-
-@test('Palette Cmd+K : commandes, création, aller à une date, recherche')
-def _(c):
-    ctx, pg, errs = new_page(c['b'])
-    pg.keyboard.press('Control+k'); pg.wait_for_selector('#palq')
-    pg.keyboard.type('semaine'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
-    assert pg.evaluate('location.hash') == '#week'
-    pg.keyboard.press('Control+k'); pg.keyboard.type('Nouvelle idée 20m'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
-    assert st(pg, 'S.tasks.at(-1).title') == 'Nouvelle idée' and st(pg, 'S.tasks.at(-1).est') == 20
-    pg.keyboard.press('Control+k'); pg.keyboard.type('demain'); pg.wait_for_timeout(100)
-    assert 'Aller au' in pg.inner_text('#pallist .palit.on')
-    pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
-    pg.keyboard.press('Control+k'); pg.keyboard.type('courses'); pg.wait_for_timeout(100)
-    assert pg.locator('.palgrp', has_text='Tâches').count() == 1
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
-    assert pg.locator('#pal.hidden').count() == 1
+    ctx, pg, errs = new_page(c['b'], claude=True, storage="localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k'}}))")
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.keyboard.press('a'); pg.wait_for_selector('[data-adtitle]')
+    pg.fill('[data-adtitle]', 'Rappeler garagiste\nAcheter ampoules demain 15m\nOffrir livre avant 12/12'); pg.dispatch_event('[data-adtitle]', 'input')
+    pg.keyboard.press('Enter'); pg.wait_for_timeout(300)
+    ts = st(pg, 'S.tasks.slice(-3).map(t=>[t.title,t.day,t.est,t.due])')
+    assert [x[0] for x in ts] == ['Rappeler garagiste', 'Acheter ampoules', 'Offrir livre'] and ts[1][1] == d(1) and ts[1][2] == 15 and ts[2][3], ts
+    # ⌘K : même zone ; doublons et « aller à »
+    pg.keyboard.press('Control+k'); pg.wait_for_selector('[data-adtitle]')
+    pg.fill('[data-adtitle]', 'garagiste'); pg.dispatch_event('[data-adtitle]', 'input'); pg.wait_for_timeout(500)
+    assert 'Existe déjà : Rappeler garagiste' in pg.inner_text('#modal')
+    pg.fill('[data-adtitle]', 'Sema'); pg.dispatch_event('[data-adtitle]', 'input'); pg.wait_for_timeout(500)
+    pg.click('#modal [data-act="adgo"]'); pg.wait_for_timeout(200)
+    assert pg.evaluate("()=>view") == 'week'
+    # ✦ : le texte part au Génie, avec un libellé court dans la conversation
+    pg.keyboard.press('a'); pg.wait_for_selector('[data-adtitle]')
+    pg.fill('[data-adtitle]', 'plan pour préparer le salon'); pg.dispatch_event('[data-adtitle]', 'input')
+    pg.click('#modal [data-act="adgenie"]'); pg.wait_for_timeout(600)
+    assert st(pg, "S.chat.some(m=>m.role==='user'&&m.text.startsWith('✦ plan pour préparer le salon'))")
+    assert st(pg, "S.chat.some(m=>m.role==='assistant')")
     assert not errs, errs; ctx.close()
 
 @test('Modèles : créer, appliquer, depuis aujourd’hui')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
-    pg.click('#nav [data-view="projects"]'); pg.click('[data-act="tplnew"]')
+    pg.click('#nav [data-view="habits"]'); pg.click('[data-act="tplnew"]')
     pg.fill('[data-tplname]', 'Routine du matin'); pg.fill('[data-tpltext]', 'Méditer 10m\nPréparer le sac 10m\n- Gourde\n- Clés')
     pg.click('[data-act="tplsave"]'); pg.wait_for_timeout(200)
     assert st(pg, 'S.templates.length') == 1 and st(pg, 'S.templates[0].items[1].subs.length') == 2
@@ -337,10 +339,10 @@ def _(c):
     pg.click('[data-act="close"]'); pg.goto(BASE + '#stats'); pg.wait_for_timeout(500)
     txt = pg.inner_text('#main')
     assert 'NaN' not in txt and 'undefined' not in txt and 'Infinity' not in txt, 'valeur invalide dans les stats'
-    pg.click('#nav [data-view="projects"]'); pg.wait_for_timeout(200)
+    pg.click('#nav [data-view="habits"]'); pg.wait_for_timeout(200)
     assert pg.locator('[data-act="tplsug"]').count() >= 1, 'pas de suggestion de routine'
-    pg.keyboard.press('Control+k'); pg.keyboard.type('lessive'); pg.wait_for_timeout(200)
-    assert pg.locator('.palgrp', has_text='Historique').count() == 1
+    pg.keyboard.press('Control+k'); pg.wait_for_selector('[data-adtitle]'); pg.keyboard.type('lessive'); pg.wait_for_timeout(600)
+    assert 'Déjà fait : ' in pg.inner_text('#modal .admatch'), pg.inner_text('#modal')
     pg.keyboard.press('Escape')
     assert not errs, errs; ctx.close()
 
@@ -404,13 +406,13 @@ def _(c):
 @test('Grand agenda (touche C) : 3 jours, semaine, dépôt sur un autre jour')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
-    pg.keyboard.press('c'); pg.wait_for_timeout(300)
+    pg.keyboard.press('j'); pg.wait_for_timeout(300)
     assert pg.locator('.bccol').count() == 3
     pg.locator('#sidebody .card').first.drag_to(pg.locator('.bccol .tlin').nth(2), target_position={'x': 40, 'y': 76 * 5 + 4}); pg.wait_for_timeout(300)
     assert st(pg, "S.tasks.some(t=>t.pinned&&t.day===addDays(today(),2))")
     pg.click('[data-act="span"][data-n="7"]'); pg.wait_for_timeout(200)
     assert pg.locator('.bccol').count() == 7
-    pg.keyboard.press('c')
+    pg.keyboard.press('j')
     assert not errs, errs; ctx.close()
 
 @test('Partager vers Journée : texte et lien reçus dans le vide-tête')
@@ -436,8 +438,8 @@ def _(c):
     pg.keyboard.press('?'); pg.wait_for_timeout(200)
     assert 'Raccourcis clavier' in pg.inner_text('#sheet')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
-    assert order == ['runchip', 'navrefresh', 'navset', 'navver'], order
+    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-5).map(e=>e.id||e.className.split(' ')[0])")
+    assert order == ['runchip', 'navrefresh', 'navkeys', 'navset', 'navver'], order
     ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg', '#nav .navver .vlogo')]
     assert round(pg.locator('#nav .navver b').bounding_box()['x']) == round(pg.locator('#nav .navrefresh .ll').bounding_box()['x'])
     assert len(set(ic)) == 1, ic
@@ -447,7 +449,7 @@ def _(c):
 def _(c):
     for w, h, scheme in [(1440, 900, 'light'), (1100, 800, 'dark'), (1000, 760, 'light'), (390, 844, 'light'), (360, 740, 'dark')]:
         ctx, pg, errs = new_page(c['b'], w, h, scheme=scheme)
-        for v in ['today', 'week', 'dump', 'backlog', 'review', 'stats', 'settings']:
+        for v in ['today', 'week', 'backlog', 'habits', 'projects', 'review', 'stats', 'settings']:
             pg.evaluate(f"()=>{{location.hash='{v}'}}"); pg.goto(BASE + '#' + v); pg.wait_for_timeout(350)
             ow = pg.evaluate("()=>{const m=document.querySelector('#main');return [document.documentElement.scrollWidth-innerWidth,[...m.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>innerWidth+2&&!e.closest('.week,.bigcal,.scroll,.wkbars,.summary')}).slice(0,3).map(e=>e.className||e.tagName)]}")
             assert ow[0] <= 0 and not ow[1], f'{v} {w}px déborde : {ow}'
@@ -933,7 +935,7 @@ def _(c):
 @test('Soirée : Maintenant/Ensuite, temps restant, saisie rapide, durée apprise, clavier, volet redimensionnable')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
-    assert pg.locator('#main .nownext .nowc .nowt').count() == 1
+    assert pg.locator('#main .card.isnow .nowlbl').count() == 1 and pg.locator('#main .card.isnow .chk').count() == 1 and pg.locator('#main .nownext').count() == 0
     assert 'prévues' in pg.inner_text('#main .summary')
     # durée apprise + saisie rapide
     pg.evaluate("()=>{const S=window.journee.state;S.archive=(S.archive||[]).concat([{id:'a1',t:'Tonte barbe',a:14*60,d:'2026-11-01'},{id:'a2',t:'Tonte barbe',a:11*60,d:'2026-11-08'},{id:'a3',t:'tonte  barbe',a:13*60,d:'2026-11-15'}]);window.journee.save()}")
@@ -948,7 +950,7 @@ def _(c):
     pg.click('#main h1'); n0 = st(pg, "dayTasks(today()).filter(t=>t.done).length")
     pg.keyboard.press('ArrowDown'); tick(pg, 80)
     assert pg.locator('#main .card.kbsel').count() == 1
-    pg.keyboard.press('x'); tick(pg, 200)
+    pg.keyboard.press('c'); tick(pg, 200)
     assert st(pg, "dayTasks(today()).filter(t=>t.done).length") == n0 + 1
     assert pg.locator('#main .card.kbsel').count() == 1, 'la sélection passe à la suivante'
     pg.keyboard.press('Control+z'); tick(pg, 200)
@@ -993,8 +995,8 @@ def _(c):
 @test('Fenêtre d’ajout : actions rapides, enchaîner ; boutons des volets')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
-    pg.keyboard.press('n'); tick(pg, 150)
-    assert pg.locator('#sheet [data-adtitle]').count() == 1, 'N ouvre la fenêtre d’ajout'
+    pg.keyboard.press('a'); tick(pg, 150)
+    assert pg.locator('#sheet [data-adtitle]').count() == 1, 'A ouvre la fenêtre d’ajout'
     pg.fill('[data-adtitle]', 'Ranger le bureau')
     pg.select_option('#sheet [data-adest]', '25'); tick(pg, 80)
     assert pg.input_value('[data-adtitle]') == 'Ranger le bureau', 'le titre reste après un réglage'
@@ -1065,7 +1067,7 @@ def _(c):
     assert st(pg, "T('mv').day") == d(2), st(pg, "T('mv').day")
     # clôture lancée depuis demain : porte sur aujourd'hui
     pg.evaluate("()=>{cur=addDays(today(),1);render()}"); tick(pg, 100)
-    pg.keyboard.press('s'); tick(pg, 150)
+    pg.keyboard.press('o'); tick(pg, 150)
     assert st(pg, "ritual.day") == d(); pg.keyboard.press('Escape'); tick(pg, 100)
     pg.evaluate("()=>{cur=today();render()}"); tick(pg, 100)
     # le Génie crée un projet
@@ -1176,9 +1178,8 @@ def _(c):
     pg.keyboard.press('Control+z'); tick(pg, 150)
     assert st(pg, "T('k4').title") == 'Clavier 4'
     # appui long (toucher)
-    pg.evaluate("()=>{const c=document.querySelector('#main .card[data-id=\"k2\"] .ctitle'),r=c.getBoundingClientRect();c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerType:'touch',clientX:r.left+5,clientY:r.top+5}))}")
-    tick(pg, 650)
-    pg.evaluate("()=>document.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerType:'touch'}))")
+    # v3.0.3 : au toucher, l'appui long ouvre le menu ; « Sélectionner plusieurs » y lance la sélection
+    pg.evaluate("()=>taskSheet('k2')"); tick(pg, 100); pg.click('#modal [data-act="sheetsel"]'); tick(pg, 100)
     assert st(pg, "[...msel]") == ['k2'] and st(pg, "lpMode")
     pg.wait_for_timeout(950); pg.click('#main .card[data-id="k3"] .ctitle'); tick(pg, 100)
     assert set(st(pg, "[...msel]")) == {'k2', 'k3'} and pg.locator('#modal:not(.hidden)').count() == 0
@@ -1577,7 +1578,7 @@ def _(c):
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
     order = pg.evaluate("()=>[...document.querySelectorAll('#nav button[data-view]')].map(b=>b.dataset.view)")
-    assert order[:5] == ['today', 'week', 'dump', 'habits', 'backlog'] and not any(v.startswith('rit-') for v in order), order
+    assert order[:5] == ['today', 'week', 'add', 'backlog', 'habits'] and not any(v.startswith('rit-') for v in order), order
     pg.click('#nav [data-view="week"]'); tick(pg, 150)
     assert pg.locator('#main .dline [data-act="prevw"]').count() == 1
     pg.click('#main [data-act="nextw"]'); tick(pg, 150)
@@ -1665,8 +1666,8 @@ def _(c):
 def _(c):
     ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
     order = pg.evaluate("()=>[...document.querySelectorAll('#nav button[data-view]')].map(b=>b.dataset.view).slice(0,8)")
-    assert order == ['today', 'week', 'dump', 'habits', 'backlog', 'projects', 'tree', 'stats'], order
-    assert 'Braindump' in pg.inner_text('#nav')
+    assert order == ['today', 'week', 'add', 'backlog', 'habits', 'projects', 'tree', 'stats'], order
+    assert 'Plus tard' in pg.inner_text('#nav') and 'Braindump' not in pg.inner_text('#nav')
     pg.click('#nav [data-view="habits"]'); tick(pg, 150)
     pg.click('#main [data-act="hbnew"]'); tick(pg, 150)
     pg.fill('[data-hbf="name"]', 'Piano'); pg.click('#sheet [data-act="hbset"][data-k="icon"][data-v="piano"]'); tick(pg, 100)
@@ -1781,7 +1782,7 @@ def _(c):
     src = cards.nth(2).bounding_box(); dst = cards.nth(0).bounding_box()
     pg.mouse.move(src['x'] + 60, src['y'] + 12); pg.mouse.down()
     pg.mouse.move(src['x'] + 60, src['y'] - 20, steps=3)
-    pg.mouse.move(dst['x'] + 30, dst['y'] + 6, steps=8); pg.wait_for_timeout(250)
+    pg.mouse.move(dst['x'] + 30, dst['y'] + 6, steps=8); pg.wait_for_timeout(250); pg.mouse.move(dst['x'] + 31, dst['y'] + 7); pg.wait_for_timeout(80)
     live = pg.evaluate("()=>({live:!!document.querySelector('#main .list.lvlive'),moved:[...document.querySelectorAll('#main .list .card[data-id]')].filter(k=>k.style.transform.includes('translateY')).length,col:!!document.querySelector('.card.lvcol'),mark:document.querySelector('.card.dropbefore')&&document.querySelector('.card.dropbefore').dataset.id})")
     assert live['live'] and live['moved'] >= 1 and live['col'], live
     pg.mouse.up(); tick(pg, 300)
@@ -1864,6 +1865,182 @@ def _(c):
     assert st(pg, "hbDone(S.habits.find(h=>h.id==='hp'),today())")
     assert st(pg, "S.objectives.some(o=>o.title==='Finir le devis')")
     assert st(pg, "dayHours(today()).s") == 10 and st(pg, "dayHours(today()).end") == 19
+    assert not errs, errs; ctx.close()
+
+@test('v2.8 : saisie en langage naturel (durée, heure, catégorie, priorité, sous-tâches, routine, projet, habitude)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    q = lambda t: pg.evaluate("(t)=>parseQuick(t)", t)
+    r = q('Préparer le devis demain à 14h pendant 45 minutes, catégorie menage, urgent, sous-tâches : chiffrer, relire et envoyer')
+    assert r['title'] == 'Préparer le devis' and r['est'] == 45 and r['at'] == 14*60 and r['day'] == d(1) and r['channel'] == 'c-menage' and r['prio'] == 'high' and r['subtasks'] == ['chiffrer', 'relire', 'envoyer'], r
+    r = q('Courrier chaque lundi 10 minutes'); assert r['title'] == 'Courrier' and r['repeat'] == 'weekly' and r['est'] == 10 and datetime.date.fromisoformat(r['day']).weekday() == 0, r
+    r = q('Appeler Léa #inconnue'); assert r['title'] == 'Appeler Léa' and r['badCat'] == 'inconnue', r
+    r = q('Lire une heure et demie ce soir, note : chapitre 3'); assert r['title'] == 'Lire' and r['est'] == 90 and r['day'] == d(0) and r['notes'] == 'chapitre 3', r
+    r = q('Ranger [cuisine, salon]'); assert r['title'] == 'Ranger' and r['subtasks'] == ['cuisine', 'salon'], r
+    r = q('Acheter des cartons demain @maison'); assert r['title'] == 'Acheter des cartons' and r['where'] == 'home' and r['day'] == d(1), r
+    r = q('Appeler le notaire @lundi'); assert r['title'] == 'Appeler le notaire' and datetime.date.fromisoformat(r['day']).weekday() == 0, r
+    r = q('Facture le 12 décembre pas urgent'); assert r['title'] == 'Facture' and r['prio'] == 'low' and r['day'].endswith('-12-12'), r
+    r = q('Urgence dentaire à appeler'); assert r['title'] == 'Urgence dentaire à appeler' and r['prio'] == '', r
+    r = q('Dossier important à relire demain'); assert r['title'] == 'Dossier important à relire' and r['prio'] == '', r
+    # ajout réel : routine + sous-tâches
+    pg.evaluate("()=>addTask('Méditer tous les jours 10m',today())")
+    assert st(pg, "S.recurring.some(r=>r.title==='Méditer'&&r.rule==='daily')")
+    pg.evaluate("()=>addTask('Ranger [cuisine, salon]',today())")
+    assert st(pg, "S.tasks.find(t=>t.title==='Ranger').subtasks.length") == 2
+    # « > tâche » (Sunsama) : sous-tâche d'une tâche existante
+    pg.evaluate("()=>addTask('Ranger la cave > ranger',today())")
+    assert st(pg, "S.tasks.find(t=>t.title==='Ranger').subtasks.map(x=>x.t)") == ['cuisine', 'salon', 'Ranger la cave'] and not st(pg, "S.tasks.some(t=>t.title==='Ranger la cave')")
+    # projet et habitude en une phrase
+    pg.evaluate("()=>addTask('Nouveau projet Déménagement pour le 20/12, sous-tâches : cartons 1h, résilier la box',today())")
+    pj = st(pg, "S.projects.find(p=>p.name==='Déménagement')"); assert pj and pj['end'].endswith('-12-20'), pj
+    assert st(pg, f"S.tasks.filter(t=>t.proj==='{pj['id']}').length") == 2 and st(pg, "S.tasks.find(t=>t.title==='cartons').est") == 60
+    pg.evaluate("()=>addTask('Nouvelle habitude Lire 10 pages chaque jour',today())")
+    assert st(pg, "S.habits.some(h=>h.name==='Lire 10 pages')")
+    assert not errs, errs; ctx.close()
+
+@test('v2.8 : réordonner projets, habitudes et modèles à la poignée')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.evaluate("()=>{S.projects=[{id:'pa',name:'Alpha',end:null,done:false},{id:'pb',name:'Bêta',end:null,done:false},{id:'pc',name:'Gamma',end:null,done:false}];S.habits=[{id:'ha',name:'Un',freq:'daily',log:{},order:1},{id:'hb',name:'Deux',freq:'daily',log:{},order:2}];save();go('projects')}"); tick(pg, 200)
+    def drag(sel_from, sel_to, below=True):
+        g = pg.locator(sel_from + ' [data-sgrip]').first.bounding_box(); t = pg.locator(sel_to).bounding_box()
+        pg.mouse.move(g['x'] + 5, g['y'] + 8); pg.mouse.down()
+        ty = t['y'] + t['height'] - 4 if below else t['y'] + 4
+        pg.mouse.move(g['x'] + 5, ty, steps=12); pg.mouse.up(); tick(pg, 200)
+    drag('[data-sort="proj"] [data-sid="pa"]', '[data-sort="proj"] [data-sid="pc"]')
+    order = st(pg, "S.projects.slice().sort((a,b)=>a.order-b.order).map(p=>p.id)"); assert order == ['pb', 'pc', 'pa'], order
+    assert pg.evaluate("()=>[...document.querySelectorAll('[data-sort=proj] [data-sid]')].map(x=>x.dataset.sid)") == ['pb', 'pc', 'pa']
+    pg.evaluate("()=>go('habits')"); tick(pg, 200)
+    drag('[data-sort="hab"] [data-sid="hb"]', '[data-sort="hab"] [data-sid="ha"]', below=False)
+    assert st(pg, "habits().map(h=>h.id)") == ['hb', 'ha']
+    assert not errs, errs; ctx.close()
+
+@test('v3.0 : boutons ✦ Génie par endroit (contexte limité, consignes en cache), aucun appel automatique')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2), storage="localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:true}}))")
+    bodies = []
+    def route(r):
+        bodies.append(json.loads(r.request.post_data))
+        r.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'tool_use', 'name': 'proposer', 'id': 't', 'input': {'message': 'ok', 'updates': [{'id': 'x', 'est': 5}]}}], 'stop_reason': 'tool_use', 'usage': {'input_tokens': 10, 'output_tokens': 10}}))
+    pg.route('https://api.anthropic.com/**', route)
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("()=>addTask('Tâche test 10m',today())"); pg.wait_for_timeout(3200)
+    assert len(bodies) == 0, 'aucun appel automatique'
+    pg.click('#main .head [data-act="genie"][data-w="day"]'); pg.wait_for_timeout(400)
+    b = bodies[-1]; txt = b['messages'][-1]['content']
+    assert 'Organise ma journée' in txt and 'Tâches du jour' in txt and 'Charge des 7' not in txt
+    assert b['system'][0].get('cache_control') and b['tools'][0].get('cache_control') and len(b['messages']) <= 4
+    assert 'new_items' in json.dumps(b['tools'][0]) and 'new_tasks' not in json.dumps(b['tools'][0])
+    assert st(pg, "S.chat.filter(m=>m.role==='user').at(-1).text") == '✦ Organise ma journée'
+    pg.evaluate("()=>go('week')"); pg.wait_for_timeout(200); pg.click('#main .head [data-act="genie"][data-w="week"]'); pg.wait_for_timeout(400)
+    assert 'Répartis ma semaine' in bodies[-1]['messages'][-1]['content'] and 'Semaine du' in bodies[-1]['messages'][-1]['content']
+    tid = st(pg, "dayTasks(today())[0].id"); pg.evaluate(f"()=>{{go('today');openTask('{tid}')}}"); pg.wait_for_timeout(200)
+    pg.click('#modal [data-act="genie"][data-w="task"]'); pg.wait_for_timeout(400)
+    assert 'Prépare cette tâche' in bodies[-1]['messages'][-1]['content'] and 'Tâches du jour' not in bodies[-1]['messages'][-1]['content']
+    for v, w in [('backlog', 'backlog'), ('habits', None), ('projects', None)]:
+        pg.evaluate(f"()=>go('{v}')"); pg.wait_for_timeout(150)
+    pg.evaluate("()=>{S.projects=[{id:'pp',name:'Salon',end:addDays(today(),20),done:false}];go('projects')}"); pg.wait_for_timeout(150)
+    pg.click('#main [data-act="genie"][data-w="project"]'); pg.wait_for_timeout(400)
+    assert 'plan d’attaque' in bodies[-1]['messages'][-1]['content'] and 'Projet : Salon' in bodies[-1]['messages'][-1]['content']
+    assert not errs, errs; ctx.close()
+
+@test('v3.0 : raccourcis Sunsama sur la tâche choisie (S, D, Z, !, ⌘↑, C, J, N, A, O, G)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("()=>{S.tasks.push(mk({id:'k1',title:'Clavier un',day:today(),order:-5,est:10}),mk({id:'k2',title:'Clavier deux',day:today(),order:-4,est:10}));save();render()}"); tick(pg, 150)
+    pg.click('#main h1'); pg.keyboard.press('ArrowDown'); tick(pg, 80)
+    sel = st(pg, "kbSel")
+    pg.keyboard.press('Shift+1'); tick(pg, 100)
+    assert st(pg, f"T('{sel}').prio") in ('low', 'high', '')
+    pg.keyboard.press('d'); tick(pg, 150)
+    assert st(pg, f"T('{sel}').day") == d(1)
+    pg.evaluate(f"()=>{{moveTask('{sel}',today(),true);render()}}"); tick(pg, 100)
+    pg.evaluate(f"()=>{{kbSel='{sel}';kbShow()}}"); pg.keyboard.press('z'); tick(pg, 150)
+    assert st(pg, f"T('{sel}').day") is None
+    pg.evaluate("()=>{['k1','k2'].forEach(id=>{const t=T(id);t.day=today();t.done=false});T('k1').order=-5;T('k2').order=-4;renorm(today());save();render()}"); tick(pg, 100)
+    pg.evaluate("()=>{kbSel='k2';kbShow()}"); pg.keyboard.press('Control+ArrowUp'); tick(pg, 150)
+    ids = st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>t.id)"); assert ids.index('k2') < ids.index('k1') or ids[0] == 'k2', ids
+    pg.evaluate("()=>{kbSel='k1';kbShow()}"); pg.keyboard.press('c'); tick(pg, 200)
+    assert st(pg, "T('k1').done")
+    pg.keyboard.press('Escape'); pg.click('#main h1')
+    pg.keyboard.press('n'); tick(pg, 150); assert st(pg, "view") == 'week'
+    pg.keyboard.press('t'); tick(pg, 150); assert st(pg, "view") == 'today'
+    pg.keyboard.press('a'); tick(pg, 150); assert pg.locator('#modal [data-adtitle]').count() == 1
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    pg.keyboard.press('o'); tick(pg, 150); assert st(pg, "ritual&&ritual.type") == 'shutdown', (pg.evaluate("()=>[document.activeElement.tagName,document.activeElement.className,document.getElementById('modal').className,view]"))
+    pg.keyboard.press('Escape'); tick(pg, 100)
+    lay = st(pg, "layout"); pg.keyboard.press('j'); tick(pg, 150); assert st(pg, "layout") != lay
+    pg.keyboard.press('j'); tick(pg, 100)
+    pg.keyboard.press('Shift+?'); tick(pg, 150); assert 'Plus tard' in pg.inner_text('#modal') and 'Le Génie' in pg.inner_text('#modal')
+    assert not errs, errs; ctx.close()
+
+@test('v3.0 : suggestions sous « Ajouter une tâche » (échéance, souvent ce jour-là, habitude), sans le Génie')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("""()=>{const d=today(),w1=addDays(d,-7),w2=addDays(d,-14);
+      S.archive=(S.archive||[]).concat([{id:'s1',t:'Lessive',a:1800,d:w1},{id:'s2',t:'Lessive',a:1500,d:w2}]);
+      S.tasks.push(mk({id:'due1',title:'Payer la facture',day:null,due:addDays(d,1),est:10}));
+      S.habits=[{id:'hs',name:'Étirements',kind:'build',freq:'daily',icon:'lotus',est:5,log:{},skip:[],created:Date.now()}];save();render()}""")
+    tick(pg, 200)
+    txt = pg.inner_text('#main .sugrow')
+    assert 'Payer la facture' in txt and 'Lessive' in txt and 'Étirements' in txt and 'souvent le' in txt, txt
+    pg.click('#main .sugrow [data-act="sugadd"][data-k="b-due1"]'); tick(pg, 150)
+    assert st(pg, "T('due1').day") == d()
+    pg.click('#main .sugrow [data-act="sugno"] >> nth=0'); tick(pg, 150)
+    assert pg.locator('#main .sugrow .sugchip:not([class*=skind])').count() == 1
+    assert st(pg, "S.chat.length") == 0
+    assert not errs, errs; ctx.close()
+
+@test('v3.0.2 : suggestions de routines, habitudes et projets d’après l’historique')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("""()=>{const d=today(),a=[];
+      for(let w=1;w<=4;w++)a.push({id:'l'+w,t:'Lessive',a:1800,d:addDays(d,-7*w)});
+      for(let i=1;i<=12;i++)a.push({id:'m'+i,t:'Méditation',a:600,d:addDays(d,-i)});
+      S.archive=(S.archive||[]).concat(a);
+      ['Peindre le salon','Choisir rideaux salon','Mesurer le salon'].forEach((t,i)=>S.tasks.push(mk({id:'ps'+i,title:t,day:null})));save();go('habits')}""")
+    tick(pg, 200)
+    txt = pg.inner_text('#main .sugrow')
+    assert 'Routine : Lessive' in txt and 'Habitude : Méditation' in txt, txt
+    pg.click('#main [data-act="ssugadd"][data-k="r:lessive"]'); tick(pg, 150)
+    r = st(pg, "S.recurring.find(r=>r.title==='Lessive')"); assert r and r['rule'] == 'weekly' and r['dow'] == datetime.date.fromisoformat(d()).isoweekday() % 7, r
+    pg.click('#main [data-act="ssugadd"][data-k="h:meditation"]'); tick(pg, 150)
+    assert st(pg, "S.habits.some(h=>h.name==='Méditation')")
+    pg.evaluate("()=>go('projects')"); tick(pg, 150)
+    assert 'Projet : Salon' in pg.inner_text('#main .sugrow'), pg.inner_text('#main')
+    pg.click('#main [data-act="ssugadd"][data-k="p:salon"]'); tick(pg, 150)
+    pid = st(pg, "S.projects.find(p=>p.name==='Salon').id"); assert st(pg, f"S.tasks.filter(t=>t.proj==='{pid}').length") == 3
+    assert st(pg, "S.chat.length") == 0
+    assert not errs, errs; ctx.close()
+
+@test('v3.0.3 : menu d’une tâche (clic droit, ⋯, appui long au téléphone) avec tout en haut / tout en bas')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    ids = st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>t.id)")
+    last = ids[-1]
+    pg.click(f'#main .card[data-id="{last}"] .ctitle', button='right'); tick(pg, 150)
+    pg.click('#modal [data-act="mvtop"]'); tick(pg, 150)
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done)[0].id") == last
+    pg.hover(f'#main .card[data-id="{last}"]'); pg.click(f'#main .card[data-id="{last}"] [data-act="tsheet"]'); tick(pg, 150)
+    pg.click('#modal [data-act="mvbottom"]'); tick(pg, 150)
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done).at(-1).id") == last
+    pg.click(f'#main .card[data-id="{last}"] .ctitle', button='right'); tick(pg, 150)
+    pg.click('#modal [data-act="sheetsel"]'); tick(pg, 150)
+    assert st(pg, "msel.size") == 1
+    assert not errs, errs; ctx.close()
+    # téléphone : appui long = le menu, sans sélection en même temps
+    ctx, pg, errs = new_page(c['b'], 390, 844, clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    cdp = ctx.new_cdp_session(pg); cdp.send('Emulation.setTouchEmulationEnabled', {'enabled': True, 'maxTouchPoints': 1})
+    bb = pg.locator('#main .card[data-id]:not(.done) .ctitle').first.bounding_box()
+    x, y = bb['x'] + 20, bb['y'] + 6
+    cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y}]}); pg.wait_for_timeout(700)
+    cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); tick(pg, 150)
+    assert pg.locator('#modal .tsheet').count() == 1 and st(pg, "msel.size") == 0, (pg.locator('#modal .tsheet').count(), st(pg, 'msel.size'), pg.evaluate('()=>document.getElementById("modal").className'), x, y, pg.evaluate('()=>document.getElementById("sheet").innerHTML.slice(0,300)'))
     assert not errs, errs; ctx.close()
 
 def main():

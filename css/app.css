@@ -1387,3 +1387,66 @@ details.mmore .grid2{margin-top:8px}
 .hbmark svg{width:13px;height:13px}
 .card.fromhab{border-style:dashed;border-color:color-mix(in srgb,var(--cc,var(--acc)) 50%,var(--line))}
 .wcol .hbmark{width:16px;height:16px;margin-right:4px}.wcol .hbmark svg{width:11px;height:11px}
+/* v2.8 · réordonner projets, habitudes, modèles */
+.sgrip2{display:inline-flex;align-items:center;justify-content:center;width:22px;min-height:28px;color:var(--mute);cursor:grab;touch-action:none;opacity:.55;flex:none;margin-right:4px}
+.sgrip2:hover{opacity:1;color:var(--ink)}
+[data-sid].sorting{position:relative;z-index:5;box-shadow:0 10px 28px rgba(0,0,0,.18);cursor:grabbing}
+body.sortingnow{user-select:none;cursor:grabbing}
+.hbcard .sgrip2{position:absolute;left:3px;top:14px;width:18px}.hbcard{position:relative;padding-left:26px!important}
+/* v3.0 · le Génie à chaque endroit : un bouton discret à la lampe */
+button.genie{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line));background:color-mix(in srgb,var(--acc) 7%,var(--panel));color:var(--ink);font-weight:500}
+button.genie:hover{background:color-mix(in srgb,var(--acc) 14%,var(--panel));border-color:var(--acc)}
+button.genie .glogo,button.genie .logo{width:20px;height:20px;flex:none}
+.mhead button.genie{padding:4px 10px;font-size:13px;margin-left:6px;flex:none}
+.ftopacts button.genie{background:transparent;color:var(--ink);border-color:#6A604A}
+.admatch{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.admatch small{color:var(--mute)}
+textarea.adt{resize:none;min-height:46px;font:inherit;line-height:1.45}
+.olddump{margin:10px 0 14px;padding:10px 12px;border:1px dashed var(--line);border-radius:var(--r1)}.olddump summary{cursor:pointer;color:var(--mute)}.olddump textarea{width:100%;margin-top:8px}
+.reclist{display:flex;flex-direction:column;gap:6px}.recrow{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r1)}.recrow .mute{font-size:13px}
+#nav button.navadd{display:none}
+@media (max-width:720px){#nav button.navadd{display:flex}}
+.admatch .admh{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--r1);background:var(--panel2);font-size:13px}
+/* v3.0 · suggestions sous « Ajouter une tâche » */
+.sugrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 12px;font-size:13px}
+.sugchip{display:inline-flex;align-items:stretch;border:1px dashed color-mix(in srgb,var(--acc) 40%,var(--line));border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--acc) 5%,transparent)}
+.sugchip button{border:0;background:transparent;padding:4px 10px;font-size:13px;display:inline-flex;align-items:baseline;gap:6px;min-height:30px}
+.sugchip button small{color:var(--mute);font-size:12px}
+.sugchip button:hover{background:color-mix(in srgb,var(--acc) 12%,transparent)}
+.sugchip .sugno{padding:4px 9px 4px 4px;color:var(--mute)}
+.sugchip.skind-project,.sugchip.skind-routine,.sugchip.skind-habit{border-style:solid;border-color:color-mix(in srgb,var(--acc) 30%,var(--line));background:color-mix(in srgb,var(--acc) 9%,var(--panel))}
+/* v3.0.3 · ⋯ sur chaque tâche : le même menu que le clic droit */
+.card .cmore{border:0;background:transparent;color:var(--mute);width:26px;height:26px;min-height:26px;padding:0;border-radius:50%;font-size:16px;line-height:1;opacity:0;transition:opacity .15s;flex:none}
+.card:hover .cmore,.card:focus-within .cmore,.card.kbsel .cmore{opacity:1}
+.card .cmore:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
+@media (hover:none){.card .cmore{opacity:.7}}
+/* v3.0.3 · raccourcis toujours accessibles en bas à gauche */
+#nav button.navkeys{border:0;background:transparent;text-align:left;font-weight:500;display:flex;align-items:center;gap:10px;min-height:0;padding:8px 12px;color:var(--mute);margin-top:auto}
+#nav button.navkeys svg{width:18px;height:18px;flex:none;opacity:.7}
+#nav button.navkeys kbd{margin-left:auto;font-size:11px}
+#nav button.navkeys:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 5%,transparent)}
+body.hidenav #nav button.navkeys .ll,body.hidenav #nav button.navkeys kbd{display:none}
+@media (max-width:720px){#nav button.navkeys{display:none!important}}
+/* v3.0 · focus : une grande case à cocher à la place de « Terminer » */
+.fbtns{align-items:center}
+.fchk{width:52px;height:52px;min-height:52px;border-radius:50%;padding:0;border:2.5px solid var(--gold,var(--acc));background:transparent;color:transparent;display:inline-flex;align-items:center;justify-content:center;transition:background .2s,color .2s,transform .15s}
+.fchk svg{width:28px;height:28px}
+.fchk:hover{background:color-mix(in srgb,var(--gold,var(--acc)) 18%,transparent);color:var(--gold,var(--acc))}
+.fchk:active{transform:scale(.92);background:var(--gold,var(--acc));color:#141418}
+.fchkl{color:var(--mute);font-size:14px;margin-left:-4px}
+/* surprise : le Génie sort de la lampe */
+.gwish{position:fixed;left:50%;bottom:12vh;width:min(260px,60vw);transform:translateX(-50%);z-index:9999;pointer-events:none}
+.gwish svg{width:100%;height:auto;overflow:visible}
+.gwsmoke{fill:none;stroke:#D4B05A;stroke-width:9;stroke-linecap:round;stroke-dasharray:520;stroke-dashoffset:520;opacity:.85;animation:gwdraw 1.1s cubic-bezier(.3,.7,.2,1) forwards,gwfade .6s 1.2s forwards}
+.gwfig{fill:#F3DFA4;opacity:0;transform-box:fill-box;transform-origin:center;animation:gwpop .5s .8s cubic-bezier(.3,1.6,.5,1) forwards,gwfly .7s 1.2s ease-in forwards}
+.gweye{fill:#141418}.gwmouth{fill:none;stroke:#141418;stroke-width:2;stroke-linecap:round}
+.gwstar{fill:#F3DFA4;opacity:0;animation:gwtw 1.1s calc(.3s + var(--i)*.08s) ease-out forwards}
+@keyframes gwdraw{to{stroke-dashoffset:0}}
+@keyframes gwfade{to{opacity:0}}
+@keyframes gwpop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
+@keyframes gwfly{to{opacity:0;transform:translate(40px,-140px) scale(.6)}}
+@keyframes gwtw{0%{opacity:0;transform:scale(.3)}40%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(1.2)}}
+/* v3.0.3 · la tâche « maintenant » est marquée dans la liste (plus de carte en double) */
+.card.isnow{border-color:color-mix(in srgb,var(--acc) 55%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 30%,transparent),var(--sh)}
+.card .nowlbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--acc-strong,var(--acc));margin-bottom:2px}
+#minifocus .mfchk{margin:0 2px 0 8px;align-self:center;border-color:currentColor}
+.runbox{position:relative}.runbox .runchk{position:absolute;right:8px;top:8px;width:18px;height:18px;min-height:18px}

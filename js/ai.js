@@ -13,11 +13,11 @@ const AI_TOOL={name:'proposer',description:'Propose des changements concrets au 
  focus:{type:'string',description:'Id d’une tâche dont lancer le focus maintenant'},
  pick:{type:'array',items:{type:'string'},description:'Ids de tâches existantes (backlog, autres jours) à ajouter au jour affiché'},
  blocks:{type:'array',items:{type:'object',properties:{id:{type:'string'},start:{type:'string',description:'HH:MM'}},required:['id','start']},description:'Créneaux horaires proposés pour des tâches du jour'},
- intent:{type:'string',description:'Intention courte pour la journée'},
- new_projects:{type:'array',items:{type:'object',properties:{name:{type:'string'},end:{type:'string',description:'YYYY-MM-DD, date de fin (facultative)'},tasks:{type:'array',items:{type:'string'},description:'Titres de tâches à créer dans ce projet'}},required:['name']},description:'Nouveaux projets à créer (quand l’utilisateur en demande un ou qu’un objectif en plusieurs étapes s’y prête)'},
- new_tasks:{type:'array',items:{type:'object',properties:{title:{type:'string'},channel:{type:'string'},est:{type:'integer'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},reason:{type:'string'}},required:['title']}}
+ intent:{type:'string',description:'Intention courte pour la journée'}
 },required:['message']}};
+let aiScope='';
 function aiContext(){
+ if(aiScope&&GENIE_CTX[aiScope])return GENIE_CTX[aiScope]();
  const d=cur,t0=today(),now=new Date(),line=t=>`- [${t.id}] ${t.title}${t.prio?' | priorité '+t.prio:''}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | catégorie '+nodeLabel(t.channel):' | sans catégorie'}${t.block?' | créneau '+hm(new Date(t.block.start)):''}${t.done?' | FAITE':''}${t.src?' | To Do':''}${t.due?' | échéance '+t.due:''}`;
  const hist=S.tasks.filter(t=>t.done&&t.day&&t.day>=addDays(t0,-14)&&t.est&&t.actual).slice(-25).map(t=>`- ${t.title} : estimé ${t.est} min, réel ${Math.round(t.actual/60)} min`);
  const meet=timedEvents(d).map(e=>`- ${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))} ${e.summary||'(sans titre)'} (${evFree(e)?'compatible avec du travail sur les tâches':'occupé'})`);
@@ -38,11 +38,11 @@ Règles :
 - Français, tutoiement, ton chaleureux et direct, réponses courtes (3-6 phrases max).
 - Sois réaliste : tâches + rendez-vous ne doivent pas dépasser les heures de travail ; s'il y a trop, propose de reporter (updates avec day) plutôt que d'entasser.
 - Ordre conseillé : tâches importantes et exigeantes tôt, petites tâches entre les rendez-vous, liées aux projets en cours en priorité.
-- Tu peux créer des projets (new_projects : nom, date de fin, premières tâches) quand on te le demande ou qu’un objectif en plusieurs étapes s’y prête.
+- Pour créer quoi que ce soit (tâche, projet avec ses tâches, routine, habitude), utilise new_items.
 - Durées : appuie-toi sur l'historique estimé/réel quand il existe (si l'utilisateur sous-estime, corrige).
 - Catégories : uniquement des noms de la liste fournie.
 - Échéances : une tâche doit être planifiée avant sa date d’échéance ; signale celles qui sont menacées.
-- Nouvelles tâches : maximum 3, seulement si vraiment utiles, avec une raison courte.
+- Nouvelles tâches non demandées : maximum 3, seulement si vraiment utiles, avec une raison courte.
 - Tu peux proposer toutes les actions de l’appli sauf les réglages et les suppressions : créer (new_items : tâches détaillées, projets, routines, habitudes), modifier une tâche (titre, jour, heure fixe, durée, catégorie, priorité, échéance, projet, lieu, notes, sous-tâches, routine, tâche phare, cocher), réordonner, cocher une habitude, objectifs de la semaine, heures du jour, lancer un focus. Tu ne supprimes jamais rien : pour écarter une tâche, envoie-la au backlog.
 - Dès que tu suggères un changement concret, utilise l'outil « proposer » : l'utilisateur validera chaque élément. Ne prétends jamais avoir modifié quelque chose toi-même.`;
 // coût en dollars par million de jetons (tarifs publics Anthropic ; Haiku : prompts ≤ 100 000 jetons)
@@ -55,7 +55,7 @@ function costTxt(){const u=usageNow(),b=+S.settings.aiBudget||0;return `Ce mois-
 async function callClaude(messages,force,big){
  {const b=+S.settings.aiBudget||0;if(b&&usageNow().usd>=b)throw new Error(`plafond mensuel atteint (${usd(b)}) — modifiable dans Réglages`)}
  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':S.settings.aiKey.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-  body:JSON.stringify({model:S.settings.aiModel||'claude-haiku-5-5',max_tokens:big?6000:3000,system:AI_SYS+(force?'\n\nPour cette demande, réponds obligatoirement en appelant l’outil « proposer ».':''),tools:[AI_TOOL],tool_choice:{type:'auto'},messages})});
+  body:JSON.stringify({model:S.settings.aiModel||'claude-haiku-5-5',max_tokens:big?6000:3000,system:[{type:'text',text:AI_SYS,cache_control:{type:'ephemeral'}},...(force?[{type:'text',text:'Pour cette demande, réponds obligatoirement en appelant l’outil « proposer ».'}]:[])],tools:[Object.assign({},AI_TOOL,{cache_control:{type:'ephemeral'}})],tool_choice:{type:'auto'},messages})});
  const j=await r.json().catch(()=>({}));
  if(!r.ok)throw new Error(r.status===401?'clé API refusée':(j.error&&j.error.message)||('erreur '+r.status));
  trackUsage(j.usage,S.settings.aiModel||'claude-haiku-5-5');
@@ -120,16 +120,16 @@ function applyItem(m,k){
  else if(k[0]==='n'){const n=p.new_tasks[+k.slice(1)];if(n){const day=n.day==='backlog'?null:(n.day||cur);const c=chByName(n.channel);S.tasks.push(mk({title:n.title,est:n.est||0,channel:c?c.id:null,day,order:nextOrder(day)}))}}
  m.applied[k]=true;save();render();
 }
-async function aiAsk(text,force){
+async function aiAsk(text,force,sendText){
  if(!aiOn()){sideTab='ai';renderSide();toast('Ajoute ta clé API Anthropic dans Réglages');return}
  if(aiBusy)return;aiBusy=true;
  if(text)S.chat.push({role:'user',text,at:Date.now()});
  S.chat=S.chat.slice(-30);save();renderSide();
  // l'historique renvoyé au Génie : ses propositions résumées, jamais une réponse vide (sinon il finit par l'imiter)
- const hist=S.chat.slice(-10).filter(m=>!m.empty&&!(m.role==='assistant'&&/^Voici mes propositions\.?$/.test(m.text||'')&&!propItems(m.prop).length)).map(m=>{if(m.role!=='assistant')return{role:m.role,content:m.text};const it=propItems(m.prop).map(x=>'- '+x.label).join('\n');return{role:'assistant',content:[m.text,it].filter(Boolean).join('\n')}}).filter(m=>m.content&&m.content.trim());
+ const hist=S.chat.slice(-4).filter(m=>!m.empty&&!(m.role==='assistant'&&/^Voici mes propositions\.?$/.test(m.text||'')&&!propItems(m.prop).length)).map(m=>{if(m.role!=='assistant')return{role:m.role,content:m.text};const it=propItems(m.prop).map(x=>'- '+x.label).join('\n');return{role:'assistant',content:[m.text,it].filter(Boolean).join('\n')}}).filter(m=>m.content&&m.content.trim());
  while(hist.length&&hist[0].role!=='user')hist.shift();
  const last=hist[hist.length-1];if(!last||last.role!=='user')hist.push({role:'user',content:'Regarde ma journée et propose-moi une organisation.'});
- hist[hist.length-1]={role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\n${hist[hist.length-1].content}`};
+ hist[hist.length-1]={role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\n${sendText||hist[hist.length-1].content}`};
  try{let r=await callClaude(hist,force);
   // réponse coupée ou vide : on réessaie une fois, avec plus de place et l'outil obligatoire
   if(r.cut||(!r.text&&!propItems(r.prop).length))r=await callClaude(hist,true,true);
@@ -142,7 +142,7 @@ async function aiAsk(text,force){
 }
 function renderBadge(){const b=$('#aibadge');if(b)b.innerHTML=aiUnread?`<span class="badge">${aiUnread}</span>`:''}
 // en sous-marin : catégorie et durée des nouvelles tâches
-function aiWatch(t){if(!aiOn()||!S.settings.aiAuto||!t||(t.est&&t.channel))return;aiQueue.add(t.id);clearTimeout(aiT);aiT=setTimeout(aiClassify,2500)}
+function aiWatch(t){return;if(!aiOn()||!t||(t.est&&t.channel))return;aiQueue.add(t.id);clearTimeout(aiT);aiT=setTimeout(aiClassify,2500)}
 async function aiClassify(){
  const ids=[...aiQueue].filter(id=>T(id));aiQueue.clear();if(!ids.length||!aiOn())return;
  try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nPour ces tâches uniquement, propose une catégorie (format « Domaine › Catégorie ») et une durée (updates, sans order ni new_tasks, message très court) : ${ids.map(id=>'['+id+'] '+T(id).title).join(' ; ')}`}],true);
@@ -151,7 +151,7 @@ async function aiClassify(){
  }catch(e){}
 }
 // en sous-marin : revue du matin, une fois par jour
-function aiMorning(){
+function aiMorning(){return;
  const d=today();if(!aiOn()||!S.settings.aiAuto||cur!==d||(S.days[d]||{}).aiDone)return;
  S.days[d]=Object.assign(S.days[d]||{},{aiDone:true});save();
  setTimeout(()=>aiAsk('Bonjour ! Regarde ma journée : propose un ordre, complète les catégories et durées manquantes, signale si je suis surchargé, et suggère au besoin 1 à 3 tâches utiles.',true),gTok()?2500:500);
@@ -166,3 +166,43 @@ function viewAI(){
  <div class="sinfo" style="padding:0 14px 6px;font-size:12px" data-live="aicost">${costTxt()}</div>
  <form class="aiform" data-form="ai"><textarea name="t" data-keep="ai" rows="1" placeholder="Écris au Génie…" aria-label="Message au Génie"></textarea><button class="pri" type="submit">Envoyer</button></form>`;
 }
+
+/* ---------- le Génie à chaque endroit (v3.0) : un seul appel, un contexte limité à l'endroit ---------- */
+const tline=t=>`- [${t.id}] ${t.title}${t.prio?' | priorité '+t.prio:''}${t.est?' | '+t.est+' min':' | sans durée'}${ch(t.channel)?' | '+nodeLabel(t.channel):''}${t.block?' | '+hm(new Date(t.block.start)):''}${t.due?' | échéance '+t.due:''}${t.done?' | FAITE':''}`;
+const ctxHead=()=>`Maintenant : ${cap1(fmtDay(today()))}, ${hm(new Date())}. Jour affiché : ${cur}.\n${hasTree()?'Catégories :\n'+catPaths().join('\n'):'Catégories : '+(S.channels.map(c=>c.name).join(', ')||'aucune')}${activeProjects().length?'\nProjets en cours : '+activeProjects().map(p=>p.name+(p.end?' (fin '+p.end+')':'')).join(', '):''}`;
+const dayLine=x=>{const L=loadInfo(x);return `${x} (${fmtDay(x,{weekday:'long'})}) : ${fmtMin(L.task)} de tâches, ${fmtMin(L.meet)} de rendez-vous, ${fmtMin(L.cap)} disponibles`};
+const GENIE_CTX={
+ add:()=>`${ctxHead()}\nHabitudes : ${(S.habits||[]).map(h=>h.name).join(', ')||'aucune'}\nRoutines : ${S.recurring.map(r=>r.title).join(', ')||'aucune'}\nCharge des 7 prochains jours :\n${[...Array(7)].map((_,i)=>dayLine(addDays(today(),i))).join('\n')}`,
+ day:()=>{const d=cur;return `${ctxHead()}\n${dayLine(d)}\nHeures : ${hhmm(dayHours(d).s)}–${hhmm(dayHours(d).end)}\nRendez-vous :\n${timedEvents(d).map(e=>`- ${hm(new Date(e.start.dateTime))}–${hm(new Date(e.end.dateTime))} ${e.summary||''}${evFree(e)?' (compatible)':''}`).join('\n')||'- aucun'}\nTâches du jour :\n${dayTasks(d).map(tline).join('\n')||'- aucune'}\nEn retard :\n${pastUndone().slice(0,6).map(tline).join('\n')||'- rien'}\nPlus tard (extrait) :\n${S.tasks.filter(t=>!t.day&&!t.done).slice(0,12).map(tline).join('\n')||'- vide'}`},
+ task:()=>{const t=T(GENIE_ID);if(!t)return ctxHead();return `${ctxHead()}\nTâche :\n${tline(t)}\nSous-tâches : ${(t.subtasks||[]).map(x=>x.t).join(' ; ')||'aucune'}\nNotes : ${t.notes||'aucune'}\n${t.day?dayLine(t.day):'Sans date'}\nDurées réelles de tâches proches : ${S.tasks.filter(x=>x.done&&x.actual&&x.channel===t.channel).slice(-5).map(x=>x.title+' '+Math.round(x.actual/60)+' min').join(' ; ')||'aucune'}`},
+ week:()=>{const w=monday(cur),ds=[...Array(7)].map((_,i)=>addDays(w,i));return `${ctxHead()}\nSemaine du ${w} :\n${ds.map(x=>dayLine(x)+'\n'+dayTasks(x).filter(t=>!t.done).map(tline).join('\n')).join('\n')}`},
+ backlog:()=>`${ctxHead()}\nPlus tard (sans date) :\n${S.tasks.filter(t=>!t.day&&!t.done).slice(0,60).map(tline).join('\n')||'- vide'}\nCharge des 7 prochains jours :\n${[...Array(7)].map((_,i)=>dayLine(addDays(today(),i))).join('\n')}`,
+ project:()=>{const p=(S.projects||[]).find(x=>x.id===GENIE_ID);if(!p)return ctxHead();return `${ctxHead()}\nProjet : ${p.name}${p.end?' (fin '+p.end+')':' (sans date de fin)'}\nSes tâches :\n${S.tasks.filter(t=>t.proj===p.id).map(t=>tline(t)+(t.day?' | '+t.day:' | plus tard')).join('\n')||'- aucune'}\nCharge des 14 prochains jours :\n${[...Array(14)].map((_,i)=>dayLine(addDays(today(),i))).join('\n')}`},
+ habits:()=>`${ctxHead()}\nHabitudes :\n${(S.habits||[]).map(h=>`- ${h.name} (${h.kind==='quit'?'à arrêter':hbFreqLabel(h)}) : force ${Math.round(hbForce(h)*100)} %, série ${hbStreak(h)}${h.paused?', en pause':''}`).join('\n')||'- aucune'}`,
+ focus:()=>{const t=T(GENIE_ID);if(!t)return ctxHead();return `Tâche en cours : ${t.title}${t.est?' ('+t.est+' min prévues)':''}, ${Math.round(actualSec(t)/60)} min passées.\nSous-tâches : ${(t.subtasks||[]).map(x=>(x.d?'✓ ':'')+x.t).join(' ; ')||'aucune'}\nNotes : ${t.notes||'aucune'}`},
+};
+const GENIE_Q={
+ add:x=>`Transforme ceci en plan concret avec new_items (tâches datées et durées réalistes, projet si plusieurs étapes, routines ou habitudes si ça revient) :\n${x}`,
+ day:()=>`Organise ma journée : un ordre (order), des créneaux si utile (blocks), complète durées et catégories manquantes (updates), et si c’est trop chargé, propose des reports (updates day).`,
+ task:()=>`Prépare cette tâche : sous-tâches concrètes, durée réaliste, catégorie si absente, et le tout premier petit pas dans le message.`,
+ week:()=>`Répartis ma semaine : équilibre la charge entre les jours (updates day), signale les jours surchargés, sans toucher aux heures fixes.`,
+ backlog:()=>`Trie mes tâches « plus tard » : repère les doublons (renomme ou envoie au backlog celle en trop, ne supprime rien), propose un jour pour celles qui pressent (updates day), et regroupe en projet (new_items) ce qui forme un tout.`,
+ project:()=>`Fais le plan d’attaque de ce projet : les étapes manquantes en tâches (new_items, project = son nom) et un jour pour chacune jusqu’à l’échéance, sans surcharger mes journées.`,
+ habits:()=>`Ajuste mes habitudes d’après leur force : laquelle alléger (plus petite ou moins souvent), laquelle renforcer, en 3-4 phrases ; coche celles que je dis avoir faites (habit_checks).`,
+ focus:()=>`Je bloque sur cette tâche. Donne-moi le prochain tout petit pas, concret, en une ou deux phrases, et propose-le en sous-tâche (updates subtasks).`,
+};
+let GENIE_ID=null;
+function genieAsk(where,text,id){
+ if(!aiOn()){sideTab='ai';document.body.classList.add('side-open');renderSide();toast('Ajoute ta clé du Génie dans Réglages');return}
+ GENIE_ID=id||null;aiScope=where;sideTab='ai';document.body.classList.add('side-open');renderSide();
+ const q=(GENIE_Q[where]||(x=>x))(text),lbl={add:'✦ '+String(text||'').slice(0,140),day:'✦ Organise ma journée',task:'✦ Prépare « '+((T(id)||{}).title||'')+' »',week:'✦ Répartis ma semaine',backlog:'✦ Trie « plus tard »',project:'✦ Plan d’attaque : '+(((S.projects||[]).find(p=>p.id===id))||{}).name,habits:'✦ Ajuste mes habitudes',focus:'✦ Je bloque sur « '+((T(id)||{}).title||'')+' »'}[where]||text;
+ aiAsk(lbl,true,q).finally(()=>{aiScope='';GENIE_ID=null});
+}
+// le bouton ✦ de l'endroit où tu es (touche G)
+function genieHere(){
+ if(focusOn)return genieAsk('focus','',focusOn);
+ if(modalTask)return genieAsk('task','',modalTask);
+ if(ad){const tx=(document.querySelector('[data-adtitle]')||{}).value||'';if(tx.trim()){closeModal();return genieAsk('add',tx)}}
+ if(view==='week')return genieAsk('week');if(view==='backlog')return genieAsk('backlog');if(view==='habits')return genieAsk('habits');
+ return genieAsk('day')}
+const genieBtn=(where,id,label)=>`<button class="genie" data-act="genie" data-w="${where}"${id?` data-id="${id}"`:''} title="${label} · G">${LAMP_SVG}<span>${label}</span></button>`;
