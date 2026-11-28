@@ -1375,3 +1375,10 @@ details.mmore .grid2{margin-top:8px}
 @media (prefers-reduced-motion:reduce){.gthink .glogo,.gthink .glogo .lf{animation:none}}
 /* v2.5.2 · Semaine : case cochée à la couleur de la catégorie */
 .wcol .card.done .chk{background:var(--cc,var(--acc));border-color:var(--cc,var(--acc));color:#fff}
+/* v2.6 · glisser-déposer vivant : la liste s'écarte, le trait au milieu de l'espace ouvert */
+.list.lvlive .card[data-id]{transition:transform .16s cubic-bezier(.2,.8,.2,1)}
+.card.lvcol{height:0!important;min-height:0!important;padding-top:0!important;padding-bottom:0!important;margin:0!important;border-width:0!important;opacity:0!important;overflow:hidden!important}
+.list.lvlive .card.dropbefore::before{top:calc(var(--lvh,12px)/-2 - 1px)}.list.lvlive .card.dropbefore::after{top:calc(var(--lvh,12px)/-2 - 4px)}
+.list.lvlive .card.dropafter::before{bottom:calc(var(--lvh,12px)/-2 - 1px)}.list.lvlive .card.dropafter::after{bottom:calc(var(--lvh,12px)/-2 - 4px)}
+.list.lvlive{padding-bottom:var(--lvh,0)}
+@media (prefers-reduced-motion:reduce){.list.lvlive .card[data-id]{transition:none}}

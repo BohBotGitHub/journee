@@ -23,9 +23,9 @@ Réponds toujours en **français**.
 
 ## Commandes
 
-- Tests (Playwright, ~5 min) : `python3 tests/e2e.py` ; un seul test : `ONLY="mot du titre" python3 tests/e2e.py`. Tous doivent passer (84 au 27/11).
+- Tests (Playwright, ~5 min) : `python3 tests/e2e.py` ; un seul test : `ONLY="mot du titre" python3 tests/e2e.py`. Tous doivent passer (86 au 28/11).
 - Démo : `python3 dev/tools/build_demo.py` (écrit dans `/tmp/diem-demo`) puis `cp about.html /tmp/diem-demo/`.
-- À chaque version : monter `?v=NN` dans `index.html` et `CACHE = 'mydaybot-vNN'` dans `sw.js` (v92 au 28/11), et l'étiquette `<b>vX.Y · JJ/MM</b>` du menu.
+- À chaque version : monter `?v=NN` dans `index.html` et `CACHE = 'mydaybot-vNN'` dans `sw.js` (v93 au 28/11), et l'étiquette `<b>vX.Y · JJ/MM</b>` du menu.
 - Mise en ligne (sur « mets en ligne ») :
   ```
   git fetch && [ "$(git rev-parse main)" = "$(git ls-remote origin refs/heads/main | cut -f1)" ]
