@@ -1373,3 +1373,5 @@ details.mmore .grid2{margin-top:8px}
 .gthink .glogo .lf{animation:fflame 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
 @keyframes gbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 @media (prefers-reduced-motion:reduce){.gthink .glogo,.gthink .glogo .lf{animation:none}}
+/* v2.5.2 · Semaine : case cochée à la couleur de la catégorie */
+.wcol .card.done .chk{background:var(--cc,var(--acc));border-color:var(--cc,var(--acc));color:#fff}
