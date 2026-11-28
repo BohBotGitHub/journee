@@ -48,3 +48,6 @@ window.addEventListener('popstate',()=>{if(!$('#modal').classList.contains('hidd
 })();
 // 27/11 : « Exploitation » devient occupée par défaut ; l'ancien réglage « Prestations » (qui était le défaut) est remis au défaut une seule fois
 (function(){try{if(S.settings.jobCalsMig)return;const jc=S.settings.jobCals||{};for(const k in jc)if(jc[k]==='phases')delete jc[k];S.settings.jobCalsMig=1;save()}catch(e){}})();
+
+// une erreur inattendue ne passe plus inaperçue : un message court, pour pouvoir la signaler
+let errAt=0;addEventListener('error',e=>{if(Date.now()-errAt<8000||!e.message||/ResizeObserver|Script error/.test(e.message))return;errAt=Date.now();try{toast('Petit souci : '+e.message.slice(0,120))}catch(x){}});
