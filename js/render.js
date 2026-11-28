@@ -136,7 +136,8 @@ function pushZones(d){
  const z=[[addDays(d,1),'Demain'],[addDays(d,3),'Dans 3 jours'],[addDays(monday(d),7),'Semaine prochaine'],['backlog','Backlog']];
  return `<div class="pzones" aria-label="Glisse une tâche ici pour la repousser">${z.map(([to,l])=>`<div class="pzone" data-drop="push" data-pz="${to}"><b>${l}</b>${to!=='backlog'?`<small>${fmtDay(to,{weekday:'short',day:'numeric',month:'short'})}</small>`:'<small>sans date</small>'}</div>`).join('')}</div>`;
 }
-function renderRitual(){
+function renderRitual(){try{renderRitual0()}catch(e){console.error(e);showModal(`<div class="rit"><h2>Le rituel n’a pas pu s’afficher</h2><p class="lead">Une erreur l’a bloqué : <code>${esc(e.message||String(e))}</code></p><p class="mute">Envoie ce message à Claude pour qu’il corrige.</p><div class="row" style="justify-content:flex-end"><button data-act="close">Fermer</button></div></div>`)}}
+function renderRitual0(){
  if(!ritual)return;const d=ritual.day,i=ritual.step,dl=fmtDay(d,{weekday:'long',day:'numeric',month:'long'});let h='';
  if(ritual.type==='plan'){
   const info=S.days[d]||{},H=dayHours(d),rollRow=(t,opts)=>`<div class="rrow${(t.roll||0)>=4?' hot':''}"><button class="chk" data-act="ritdone" data-id="${t.id}" aria-label="Cocher : faite" title="Faite"></button><div><b>${esc(t.title)}</b><small>${(t.roll||0)>=4?`<span class="rollm">↻ ${t.roll}</span> reportée ${t.roll} fois`:`↻ revenue${t.roll>1?' '+t.roll+' fois':''}`}${t.est?' · '+fmtMin(t.est):''}</small></div><div class="btns">${opts}</div></div>`;

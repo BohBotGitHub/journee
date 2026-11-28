@@ -236,6 +236,8 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',async e=>{
  const el=e.target,f=el.dataset.f;
+ // heures du jour (puce « Il te reste ») : début / fin de cette journée
+ if(el.dataset.dh){const d=el.dataset.day,[a,b]=(el.value||'').split(':').map(Number);if(!isNaN(a)){const v=a+(b||0)/60;S.days[d]=Object.assign(S.days[d]||{},el.dataset.dh==='s'?{hs:v,he:typeof (S.days[d]||{}).he==='number'?S.days[d].he:dayHours(d).end}:{he:v,hs:dayHours(d).s});if(flowOn()&&typeof reflow==='function')reflow(d);save();render();toast('Heures du jour : '+hhmm(dayHours(d).s)+' → '+hhmm(dayHours(d).end))}return}
  if(el.hasAttribute('data-ua')){const r=el.closest('[data-uaid]'),u=r&&(S.unavail||[]).find(x=>x.id===r.dataset.uaid);if(u){u[el.dataset.ua]=el.value;save();if(el.dataset.ua!=='label')render()}return}
  if(el.hasAttribute('data-adest')){adKeep();ad.est=+el.value||0;renderAdd();return}
  if(el.hasAttribute('data-adday')){adKeep();ad.day=el.value||null;renderAdd();return}
@@ -286,8 +288,48 @@ function calMinute(z,y){const r=z.getBoundingClientRect();let m=calGeom().st*60+
 document.addEventListener('dragstart',e=>{const c=e.target.closest('[data-drag]');if(!c)return;drag=c.dataset.drag;try{e.dataTransfer.setData('text/plain',drag);e.dataTransfer.effectAllowed='move'}catch(err){}
  // la tuile reste bien visible sous la souris : copie nette (pas l'original estompé) comme image de glissement
  try{const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragimg');{const id=(c.dataset.drag||'').split('|')[1];if(msel.size>1&&msel.has(id)){g.classList.add('dragmulti');g.setAttribute('data-n',msel.size)}}g.style.width=r.width+'px';document.body.appendChild(g);e.dataTransfer.setDragImage(g,Math.min(e.clientX-r.left,r.width-10),Math.min(e.clientY-r.top,r.height-6));setTimeout(()=>g.remove(),0)}catch(err){}
- requestAnimationFrame(()=>{c.classList.add('dragging');const id=drag.split('|')[1];if(drag.startsWith('task|')&&msel.size>1&&msel.has(id))msel.forEach(x=>document.querySelectorAll(`#main .card[data-id="${x}"]`).forEach(k=>k.classList.add('dragging')))})});
-document.addEventListener('dragend',()=>{document.querySelectorAll('.dragging,.over,.dropbefore,.dropafter,.dropsub,.subbefore,.subafter').forEach(x=>x.classList.remove('dragging','over','dropbefore','dropafter','dropsub','subbefore','subafter'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
+ lvStart(c);requestAnimationFrame(()=>{c.classList.add('dragging');const id=drag.split('|')[1];if(drag.startsWith('task|')&&msel.size>1&&msel.has(id))msel.forEach(x=>document.querySelectorAll(`#main .card[data-id="${x}"]`).forEach(k=>k.classList.add('dragging')))})});
+document.addEventListener('dragend',()=>{lvEnd();document.querySelectorAll('.dragging,.over,.dropbefore,.dropafter,.dropsub,.subbefore,.subafter').forEach(x=>x.classList.remove('dragging','over','dropbefore','dropafter','dropsub','subbefore','subafter'));document.querySelectorAll('.ghostblk').forEach(g=>g.classList.add('hidden'));drag=null});
+
+/* ---------- glisser-déposer vivant (v2.6) ----------
+   Pendant le glisser, la liste du jour s'écarte pour ouvrir la place d'arrivée (le trait reste au milieu de l'espace) ;
+   au dépôt, chaque tuile glisse vers sa nouvelle position (FLIP). La logique de dépôt reste celle des marqueurs dropbefore / dropafter / dropsub. */
+let LV=null;
+const lvMotion=()=>!matchMedia('(prefers-reduced-motion: reduce)').matches;
+function lvStart(c){LV=null;if(!drag||!lvMotion())return;const id=drag.split('|')[1];if(msel.size>1&&msel.has(id))return;
+ const r=c.getBoundingClientRect(),src=c.matches('.list .card')?c.closest('.list'):null;
+ LV={h:Math.max(36,r.height),src,el:src?c:null,list:null,items:[],idx:-1};
+ if(src)requestAnimationFrame(()=>{if(LV&&LV.el){c.classList.add('lvcol')}})}
+function lvReset(list,anim){if(!list)return;list.classList.remove('lvlive');list.querySelectorAll('.card').forEach(k=>{if(!anim)k.style.transition='none';k.style.transform='';if(!anim)requestAnimationFrame(()=>k.style.transition='')})}
+function lvLeave(){if(LV&&LV.list){lvReset(LV.list,true);LV.list.querySelectorAll('.dropbefore,.dropafter,.dropsub').forEach(x=>x.classList.remove('dropbefore','dropafter','dropsub'));LV.list=null;LV.idx=-1}}
+function lvEnter(z){lvLeave();LV.list=z;z.classList.add('lvlive');
+ const gap=parseFloat(getComputedStyle(z).rowGap)||6,zr=z.getBoundingClientRect();
+ LV.items=[...z.querySelectorAll('.card[data-id]')].filter(k=>!k.classList.contains('lvcol')&&k.offsetParent&&!k.closest('.donegrp')).map(k=>{const r=k.getBoundingClientRect();return{el:k,top:r.top-zr.top,bottom:r.bottom-zr.top,mid:(r.top+r.bottom)/2-zr.top}});
+ LV.sh=LV.h+(z===LV.src?0:gap);z.style.setProperty('--lvh',LV.sh+'px')}
+function lvOver(z,e){
+ if(!LV)return false;
+ if(!z.matches('#main .list[data-drop^="day:"]')){lvLeave();return false}
+ if(LV.list!==z)lvEnter(z);
+ const zr=z.getBoundingClientRect(),y=e.clientY-zr.top;
+ // sous-tâche : sur la tuile visée (moitié droite, milieu), la liste ne bouge pas
+ const card=e.target.closest('.card[data-id]'),subOk=card&&z.contains(card)&&!card.classList.contains('lvcol')&&(drag.startsWith('task|')||drag.startsWith('sub|')&&card.dataset.id!==drag.split('|')[1]);
+ if(subOk){const r=card.getBoundingClientRect(),fy=(e.clientY-r.top)/r.height;if(e.clientX>r.left+r.width*.55&&fy>.2&&fy<.8){z.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));z.querySelectorAll('.dropsub').forEach(x=>{if(x!==card)x.classList.remove('dropsub')});card.classList.add('dropsub');return true}}
+ z.querySelectorAll('.dropsub').forEach(x=>x.classList.remove('dropsub'));
+ const n=LV.items.length;let idx=LV.items.filter(it=>it.mid<y).length;
+ if(idx!==LV.idx){LV.idx=idx;LV.items.forEach((it,i)=>{it.el.style.transform=i>=idx?`translateY(${LV.sh}px)`:'';it.el.classList.remove('dropbefore','dropafter')});
+  if(n){if(idx<n)LV.items[idx].el.classList.add('dropbefore');else LV.items[n-1].el.classList.add('dropafter')}}
+ return true}
+function lvEnd(){if(!LV)return;lvLeave();if(LV.el)LV.el.classList.remove('lvcol');LV=null}
+// défilement automatique quand on glisse près du bord
+function lvScroll(e){let sc=e.target instanceof Element?e.target:null;while(sc&&sc!==document.body&&sc!==document.documentElement){const o=getComputedStyle(sc).overflowY;if(/(auto|scroll)/.test(o)&&sc.scrollHeight>sc.clientHeight+2)break;sc=sc.parentElement}
+ if(!sc||sc===document.body||sc===document.documentElement)sc=document.scrollingElement;
+ const r=sc===document.scrollingElement?{top:0,bottom:innerHeight}:sc.getBoundingClientRect(),m=56;
+ if(e.clientY<r.top+m)sc.scrollTop-=Math.ceil((r.top+m-e.clientY)/4);else if(e.clientY>r.bottom-m)sc.scrollTop+=Math.ceil((e.clientY-(r.bottom-m))/4);}
+// FLIP : après un dépôt, chaque tuile glisse de son ancienne place vers la nouvelle
+function lvSnap(e){const m=new Map();document.querySelectorAll('#main .card[data-id]').forEach(k=>{if(!k.classList.contains('lvcol'))m.set(k.dataset.id,k.getBoundingClientRect().top)});return{m,y:e&&e.clientY,id:drag&&drag.split('|')[1]}}
+function lvFlip(sn){if(!sn||!lvMotion())return;document.querySelectorAll('#main .card[data-id]').forEach(k=>{const id=k.dataset.id,nt=k.getBoundingClientRect().top;let ot=sn.m.get(id);
+ if(ot==null&&id===sn.id&&sn.y!=null)ot=sn.y-k.offsetHeight/2;if(ot==null)return;const dy=ot-nt;if(Math.abs(dy)<1)return;
+ k.style.transition='none';k.style.transform=`translateY(${dy}px)`;k.offsetHeight;k.style.transition='transform .22s cubic-bezier(.2,.8,.2,1)';k.style.transform='';k.addEventListener('transitionend',()=>{k.style.transition=''},{once:true})})}
 // zone de dépôt : aussi juste au-dessus d'une liste (pour placer en première position)
 function dropZone(e){const z=e.target.closest('[data-drop]');if(z)return z;for(const l of document.querySelectorAll('#main .list[data-drop^="day:"]')){const r=l.getBoundingClientRect();if(r.width&&e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top-56&&e.clientY<r.top)return l}return null}
 document.addEventListener('dragover',e=>{
@@ -295,6 +337,7 @@ document.addEventListener('dragover',e=>{
   if(row&&row.dataset.drag&&row.dataset.drag!==drag){e.preventDefault();const r=row.getBoundingClientRect(),cls=e.clientY<r.top+r.height/2?'subbefore':'subafter';row.classList.remove('subbefore','subafter');row.classList.add(cls);return}}
  const z=dropZone(e);if(!z||!drag)return;e.preventDefault();
  document.querySelectorAll('.over').forEach(x=>{if(x!==z)x.classList.remove('over')});z.classList.add('over');
+ lvScroll(e);if(lvOver(z,e))return;
  // place d'arrivée : un trait de couleur entre les tuiles
  {const card=e.target.closest('.list .card,.mrow .card'),cur=document.querySelector('.dropbefore,.dropafter,.dropsub');const sub=card&&(drag.startsWith('task|')||drag.startsWith('sub|')&&card.dataset.id!==drag.split('|')[1])&&!(msel.size>1&&msel.has(drag.split('|')[1]));if(card&&z.contains(card)&&!card.classList.contains('dragging')){const r=card.getBoundingClientRect(),fy=(e.clientY-r.top)/r.height,cls=sub&&e.clientX>r.left+r.width*.55&&fy>.2&&fy<.8?'dropsub':fy<.5?'dropbefore':'dropafter';if(cur&&(cur!==card||!cur.classList.contains(cls)))cur.classList.remove('dropbefore','dropafter','dropsub');card.classList.add(cls)}else if(!card&&(z.dataset.drop||'').startsWith('day:')){const n=nearCard(z,e.clientY);if(n){if(cur&&(cur!==n.c||!cur.classList.contains(n.cls)))cur.classList.remove('dropbefore','dropafter','dropsub');n.c.classList.add(n.cls)}}else if(cur&&!(card&&card===cur))cur.classList.remove('dropbefore','dropafter','dropsub')}
  document.querySelectorAll('.ghostblk').forEach(x=>{if(!z.contains(x))x.classList.add('hidden')});const g=z.querySelector('.ghostblk');if(g){if(z.dataset.drop==='cal'){const sp=drag.split('|'),tt=sp[0]!=='todo'&&T(sp[1]),dur=(tt&&tt.est)||30,m=calMinute(z,e.clientY);g.classList.remove('hidden');g.style.top=(m-S.settings.dayStart*60)/60*PX+'px';g.style.height=Math.max(18,dur/60*PX)+'px';g.textContent=pad(Math.floor(m/60))+':'+pad(m%60)+' – '+fmtMin(dur)}else g.classList.add('hidden')}
@@ -302,24 +345,25 @@ document.addEventListener('dragover',e=>{
 document.addEventListener('drop',async e=>{
  if(drag&&drag.startsWith('sub|')&&subDrop(e))return;
  const z=dropZone(e);if(!z||!drag)return;e.preventDefault();
+ {const sn=lvSnap(e);setTimeout(()=>lvFlip(sn),0)}
  const pre=undoSnap();setTimeout(()=>undoCommit(pre,'drop'),0);
  const dz=z.dataset.drop==='today'?'day:'+today():z.dataset.drop,src=drag.split('|');drag=null;z.classList.remove('over');
  let t;
  if(src[0]==='todo'){const x=(todo.tasks[src[1]]||[]).find(x=>x.id===src[2]);if(!x)return;t=importTodo(src[1],x,dz==='backlog'?null:dz.startsWith('day:')?dz.slice(4):(z.dataset.day||cur))}
  else if(src[0]==='sub'){const p=T(src[1]),s=p&&(p.subtasks||[]).find(x=>x.id===src[2]);if(!s)return;
   // sur une autre tâche (moitié droite) : elle y devient sous-tâche
-  const hs=e.target.closest('.card.dropsub');if(hs){const q=T(hs.dataset.id);hs.classList.remove('dropsub');if(q&&q!==p){p.subtasks=p.subtasks.filter(x=>x!==s);q.subtasks=q.subtasks||[];q.subtasks.push(s);subShow(q.id);save();render();toast('Sous-tâche déplacée dans « '+q.title+' »');return}}
+  const hs=e.target.closest('.card.dropsub')||document.querySelector('#main .card.dropsub');if(hs){const q=T(hs.dataset.id);hs.classList.remove('dropsub');if(q&&q!==p){p.subtasks=p.subtasks.filter(x=>x!==s);q.subtasks=q.subtasks||[];q.subtasks.push(s);subShow(q.id);save();render();toast('Sous-tâche déplacée dans « '+q.title+' »');return}}
   // ailleurs : elle devient une tâche à part entière, à l'endroit du dépôt
   p.subtasks=p.subtasks.filter(x=>x!==s);t=mk({title:s.t,done:!!s.d,doneAt:s.d?Date.now():null,channel:p.channel,proj:p.proj||null,day:null});S.tasks.push(t);src[0]='task';src[1]=t.id;toast('« '+s.t+' » est devenue une tâche')}
  else t=T(src[1]);
  if(!t)return;
- {const hs=e.target.closest('.card.dropsub');if(hs&&src[0]==='task'&&hs.dataset.id!==t.id){const p=T(hs.dataset.id);hs.classList.remove('dropsub');if(p){if(t.subtasks&&t.subtasks.length){toast('Cette tâche a déjà des sous-tâches : impossible d’en faire une sous-tâche');render();return}p.subtasks=p.subtasks||[];p.subtasks.push({id:uid(),t:t.title,d:!!t.done});subShow(p.id);deleteTask(t.id);save();render();toast('Devenue sous-tâche de « '+p.title+' » · ⌘/Ctrl Z pour annuler');return}}}
+ {const hs=e.target.closest('.card.dropsub')||document.querySelector('#main .card.dropsub');if(hs&&src[0]==='task'&&hs.dataset.id!==t.id){const p=T(hs.dataset.id);hs.classList.remove('dropsub');if(p){if(t.subtasks&&t.subtasks.length){toast('Cette tâche a déjà des sous-tâches : impossible d’en faire une sous-tâche');render();return}p.subtasks=p.subtasks||[];p.subtasks.push({id:uid(),t:t.title,d:!!t.done});subShow(p.id);deleteTask(t.id);save();render();toast('Devenue sous-tâche de « '+p.title+' » · ⌘/Ctrl Z pour annuler');return}}}
  if(src[0]!=='todo'&&msel.size>1&&msel.has(t.id)){const grp=mselOrdered([...msel]);msel.clear();renderMsel();return dropGroup(grp,z,dz,e)}
  if(dz==='cal'){const dd=z.dataset.day||cur,dt=parseYmd(dd);dt.setMinutes(calMinute(z,e.clientY));t.pinned=true;if(t.day!==dd)t.order=nextOrder(dd);const p=setBlock(t,dt,true);syncOrder(dd);save();render();await p;return}
  if(z.dataset.pz){const to=z.dataset.pz;moveTask(t.id,to);toast(to==='backlog'?'Au backlog':'Repoussée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));if(ritual)renderRitual();return}
  if(dz==='backlog'){if(t.day!==null){moveTask(t.id,'backlog');toast('Renvoyée au backlog')}else render();return}
  if(dz.startsWith('day:')){
-  const day=dz.slice(4),hit=e.target.closest('.card')||z.querySelector('.card.dropbefore,.card.dropafter')||((z.dataset.drop||'').startsWith('day:')&&(nearCard(z,e.clientY)||{}).c)||null,after=hit&&(hit.classList.contains('dropafter')||(!e.target.closest('.card')&&!hit.classList.contains('dropbefore')&&nearCard(z,e.clientY)&&nearCard(z,e.clientY).cls==='dropafter')),before=hit;document.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));
+  const day=dz.slice(4),hit=z.querySelector('.card.dropbefore,.card.dropafter')||e.target.closest('.card:not(.lvcol)')||((z.dataset.drop||'').startsWith('day:')&&(nearCard(z,e.clientY)||{}).c)||null,after=hit&&(hit.classList.contains('dropafter')||(!hit.classList.contains('dropbefore')&&!e.target.closest('.card')&&!hit.classList.contains('dropbefore')&&nearCard(z,e.clientY)&&nearCard(z,e.clientY).cls==='dropafter')),before=hit;document.querySelectorAll('.dropbefore,.dropafter').forEach(x=>x.classList.remove('dropbefore','dropafter'));
   if(t.day!==day)moveTask(t.id,day,true);
   if(src[0]==='blk'&&t.block){if(flowOn()){t.pinned=false;toast('Créneau libéré : la tâche suit l’ordre de la liste')}else{clearBlock(t,true);toast('Retiré de l’agenda')}}
   if(before&&before.dataset.id!==t.id){const b=T(before.dataset.id);if(b&&b.day===day){t.order=b.order+(after?.5:-.5);renorm(day)}}

@@ -1773,6 +1773,41 @@ def _(c):
     assert 'Claude : tes conversations' in pg.inner_text('#main') and 'Relié' in pg.inner_text('#main')
     assert not errs, errs; ctx.close()
 
+@test('v2.6 : glisser-déposer vivant (la liste s’écarte, dépôt exact, Semaine)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    titles = st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>t.title)")
+    cards = pg.locator('#main .list .card[data-id]')
+    src = cards.nth(2).bounding_box(); dst = cards.nth(0).bounding_box()
+    pg.mouse.move(src['x'] + 60, src['y'] + 12); pg.mouse.down()
+    pg.mouse.move(src['x'] + 60, src['y'] - 20, steps=3)
+    pg.mouse.move(dst['x'] + 30, dst['y'] + 6, steps=8); pg.wait_for_timeout(250)
+    live = pg.evaluate("()=>({live:!!document.querySelector('#main .list.lvlive'),moved:[...document.querySelectorAll('#main .list .card[data-id]')].filter(k=>k.style.transform.includes('translateY')).length,col:!!document.querySelector('.card.lvcol'),mark:document.querySelector('.card.dropbefore')&&document.querySelector('.card.dropbefore').dataset.id})")
+    assert live['live'] and live['moved'] >= 1 and live['col'], live
+    pg.mouse.up(); tick(pg, 300)
+    order = st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>t.title)")
+    assert order[0] == titles[2] and order[1] == titles[0], (titles, order)
+    assert not pg.evaluate("()=>!!document.querySelector('.lvlive,.lvcol')")
+    # Semaine : la colonne s'écarte aussi
+    pg.evaluate("()=>go('week')"); tick(pg, 200)
+    col = pg.locator('#main .wcol').filter(has=pg.locator('.card[data-id]')).first
+    cs = col.locator('.card[data-id]')
+    if cs.count() >= 2:
+        b = cs.nth(1).bounding_box(); a = cs.nth(0).bounding_box()
+        pg.mouse.move(b['x'] + 6, b['y'] + 10); pg.mouse.down(); pg.mouse.move(b['x'] + 6, b['y'] - 10, steps=3); pg.mouse.move(a['x'] + 6, a['y'] + 3, steps=6); pg.wait_for_timeout(200)
+        assert pg.evaluate("()=>!!document.querySelector('#main .wcol .list.lvlive')")
+        pg.mouse.up(); tick(pg, 200)
+    assert not errs, errs; ctx.close()
+
+@test('Puce « Il te reste » : ouvre les heures du jour, modifiables')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.click('.sumchip[data-k="left"]'); tick(pg, 150)
+    assert pg.locator('.sumdet [data-dh="s"]').count() == 1 and pg.locator('.sumdet [data-dh="e"]').count() == 1
+    pg.fill('.sumdet [data-dh="e"]', '20:30'); pg.dispatch_event('.sumdet [data-dh="e"]', 'change'); tick(pg, 150)
+    assert st(pg, "dayHours(today()).end") == 20.5, st(pg, "dayHours(today())")
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

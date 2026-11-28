@@ -86,6 +86,7 @@ function summaryHtml(d,isT){
  else if(open==='late'&&past.length)det=`<div class="row" style="flex-wrap:wrap"><span>${past.length} tâche${past.length>1?'s':''} non terminée${past.length>1?'s':''} des jours précédents.</span><span class="sp"></span><button class="sm pri" data-act="rollover">Tout ici</button><button class="sm" data-act="plan">Trier une à une</button></div>`;
  else if(open==='due')det=`<div class="row" style="flex-wrap:wrap">${soon.map(t=>`<button class="sm ghost" data-act="open" data-id="${t.id}">${esc(t.title)} · ${dueLabel(t).replace(/<[^>]+>/g,'').replace('⏰ ','')}</button>`).join('')}</div>`;
  else if(open==='obj')det=objChips(monday(d))||'';
+ else if(open==='left'){const H=dayHours(d),L=loadInfo(d);det=`<div class="row dhours" style="flex-wrap:wrap;gap:10px;align-items:end"><label>Début<input type="time" step="900" data-dh="s" data-day="${d}" value="${hhmm(H.s)}"></label><span style="padding-bottom:8px">→</span><label>Fin<input type="time" step="900" data-dh="e" data-day="${d}" value="${hhmm(H.end)}"></label><span class="mute" style="font-size:13px;padding-bottom:8px">${fmtMin(L.task)} de tâches${L.meet?' · '+fmtMin(L.meet)+' de rendez-vous':''} pour ${fmtMin(L.cap)} disponibles${H.set?'':' · heures habituelles (Réglages)'}</span></div>`}
  return `<div class="summary">${chips}</div>${det?`<div class="sumdet"><button class="x sumx" data-act="sum" data-k="${open}" aria-label="Fermer">×</button>${det}</div>`:''}`;
 }
 let uiOpen='',uiDoneOpen=false;
