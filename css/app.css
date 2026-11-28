@@ -1413,3 +1413,4 @@ textarea.adt{resize:none;min-height:46px;font:inherit;line-height:1.45}
 .sugchip button small{color:var(--mute);font-size:12px}
 .sugchip button:hover{background:color-mix(in srgb,var(--acc) 12%,transparent)}
 .sugchip .sugno{padding:4px 9px 4px 4px;color:var(--mute)}
+.sugchip.skind-project,.sugchip.skind-routine,.sugchip.skind-habit{border-style:solid;border-color:color-mix(in srgb,var(--acc) 30%,var(--line));background:color-mix(in srgb,var(--acc) 9%,var(--panel))}

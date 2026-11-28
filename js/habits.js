@@ -79,6 +79,7 @@ function hbCard(h){
 function viewHabits(){
  const hs=habits();
  return `<div class="head"><div><h1>Habitudes & routines</h1><div class="sub">De toutes petites étapes, un jour après l’autre. Un jour manqué ne remet pas tout à zéro.</div></div><div class="acts">${(S.habits||[]).length?genieBtn('habits',null,'Ajuster'):''}<button class="pri" data-act="hbnew">${ico('plus')} Nouvelle habitude</button></div></div>
+ ${(()=>{const h=structSugHtml(['habit','routine']);return h?`<div class="sugrow"><span class="mute">Suggestions</span>${h}</div>`:''})()}
  ${hs.length?`<div class="hblist" data-sort="hab">${hs.map(hbCard).join('')}</div>`:`<div class="empty"><p><b>Aucune habitude pour l’instant.</b></p><p class="mute">Commence petit : une seule habitude, facile à tenir. Tu pourras l’alléger ou la mettre en pause pendant la revue de la semaine.</p><button class="pri" data-act="hbnew">Créer ma première habitude</button></div>`}
  ${hs.filter(h=>!h.paused).length>HB_MAX_PILLS?`<p class="mute" style="margin-top:14px">Seules les ${HB_MAX_PILLS} premières s’affichent en haut d’Aujourd’hui.</p>`:''}
  ${recListHtml()}

@@ -1984,8 +1984,31 @@ def _(c):
     assert 'Payer la facture' in txt and 'Lessive' in txt and 'Étirements' in txt and 'souvent le' in txt, txt
     pg.click('#main .sugrow [data-act="sugadd"][data-k="b-due1"]'); tick(pg, 150)
     assert st(pg, "T('due1').day") == d()
-    pg.click('#main .sugrow [data-act="sugno"]'); tick(pg, 150)
-    assert pg.locator('#main .sugrow .sugchip').count() == 1
+    pg.click('#main .sugrow [data-act="sugno"] >> nth=0'); tick(pg, 150)
+    assert pg.locator('#main .sugrow .sugchip:not([class*=skind])').count() == 1
+    assert st(pg, "S.chat.length") == 0
+    assert not errs, errs; ctx.close()
+
+@test('v3.0.2 : suggestions de routines, habitudes et projets d’après l’historique')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("""()=>{const d=today(),a=[];
+      for(let w=1;w<=4;w++)a.push({id:'l'+w,t:'Lessive',a:1800,d:addDays(d,-7*w)});
+      for(let i=1;i<=12;i++)a.push({id:'m'+i,t:'Méditation',a:600,d:addDays(d,-i)});
+      S.archive=(S.archive||[]).concat(a);
+      ['Peindre le salon','Choisir rideaux salon','Mesurer le salon'].forEach((t,i)=>S.tasks.push(mk({id:'ps'+i,title:t,day:null})));save();go('habits')}""")
+    tick(pg, 200)
+    txt = pg.inner_text('#main .sugrow')
+    assert 'Routine : Lessive' in txt and 'Habitude : Méditation' in txt, txt
+    pg.click('#main [data-act="ssugadd"][data-k="r:lessive"]'); tick(pg, 150)
+    r = st(pg, "S.recurring.find(r=>r.title==='Lessive')"); assert r and r['rule'] == 'weekly' and r['dow'] == datetime.date.fromisoformat(d()).isoweekday() % 7, r
+    pg.click('#main [data-act="ssugadd"][data-k="h:meditation"]'); tick(pg, 150)
+    assert st(pg, "S.habits.some(h=>h.name==='Méditation')")
+    pg.evaluate("()=>go('projects')"); tick(pg, 150)
+    assert 'Projet : Salon' in pg.inner_text('#main .sugrow'), pg.inner_text('#main')
+    pg.click('#main [data-act="ssugadd"][data-k="p:salon"]'); tick(pg, 150)
+    pid = st(pg, "S.projects.find(p=>p.name==='Salon').id"); assert st(pg, f"S.tasks.filter(t=>t.proj==='{pid}').length") == 3
     assert st(pg, "S.chat.length") == 0
     assert not errs, errs; ctx.close()
 

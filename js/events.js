@@ -146,6 +146,8 @@ document.addEventListener('click',async e=>{
   case'genie':{const w=b.dataset.w,id=b.dataset.id;if(w==='focus'&&focusOn){focusMin=focusOn;focusOn=null;renderFocus();render()}else if(w==='task'||ritual){closeModal()}genieAsk(w,'',id);break}
   case'dumptotasks':{const ls=(S.dump||'').split('\n').map(x=>x.trim()).filter(Boolean);let n=0;ls.forEach(l=>{if(addTask(l.replace(/^[-•*]\s*/,''),null))n++});S.dump='';save();render();toast(n+' tâches créées dans Plus tard · ⌘/Ctrl Z pour annuler');break}
   case'sugadd':{const d=b.dataset.d,x=daySugs(d).find(y=>y.k===b.dataset.k);if(!x)break;if(x.id&&T(x.id))moveTask(x.id,d,true);else{const t=mk({title:x.title,est:x.est,channel:x.channel,day:d,order:nextOrder(d)});S.tasks.push(t);if(x.k.startsWith('h-')){const h=H(x.k.slice(2));if(h)t.habitId=h.id}placeNew(t)}save();render();toast('Ajoutée : '+x.title+' · ⌘/Ctrl Z pour annuler');break}
+  case'ssugadd':{const m=structSugApply(b.dataset.k);if(m){save();render();toast(m+' · ⌘/Ctrl Z pour annuler')}break}
+  case'ssugno':{S.settings.structNo=[...(S.settings.structNo||[]),b.dataset.k];save();render();break}
   case'sugno':{const d=b.dataset.d;S.days[d]=Object.assign(S.days[d]||{},{sugNo:[...((S.days[d]||{}).sugNo||[]),b.dataset.k]});save();render();break}
   case'adgo':closeModal();if(b.dataset.v==='today')cur=today();go(b.dataset.v);break;
   case'adgenie':{adKeep();const tx=(ad&&ad.title||'').trim();if(!tx){toast('Écris d’abord ce que tu veux (ex. « plan pour préparer le salon »)');break}closeModal();genieAsk('add',tx);break}
@@ -582,7 +584,7 @@ function keepUnder(b){
 }
 
 // ---------- annuler partout : Ctrl/⌘ Z revient avant la dernière action sur les tâches ----------
-const UNDO_ACTS=new Set(['sugadd','dumptotasks','mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
+const UNDO_ACTS=new Set(['ssugadd','sugadd','dumptotasks','mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
 let undoStack=[];
 const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[],unavail:S.unavail||[]});
 function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}

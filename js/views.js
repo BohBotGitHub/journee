@@ -435,7 +435,8 @@ function viewProjects(){
   <div class="projmeta"><span>${g.n?`${g.done}/${g.n} tâches faites`:'Aucune tâche pour l’instant'}</span>${left!==null&&!p.done?`<span class="${late?'warn':left<=7?'soon':''}">${late?'en retard de '+(-left)+' j':left===0?'se termine aujourd’hui':'encore '+left+' j'}</span>`:''}<code>+${esc(projKey(p))}</code></div>
   ${p.done?'':`<form class="add" data-form="add" data-day="" data-proj="${esc(p.id)}"><input name="t" data-keep="pj-${esc(p.id)}" placeholder="Ajouter une tâche à ce projet…" autocomplete="off" aria-label="Nouvelle tâche du projet"></form>`}
   ${open.length?`<div class="list">${open.map(card).join('')}</div>`:''}</section>`};
- return `<div class="head"><div><h1>Projets</h1><div class="sub">Les projets ont une date de fin (tape <code>+nom</code> en créant une tâche pour l’y rattacher) ; les routines et modèles s’ajoutent à un jour en un clic.</div></div><div class="acts"><button class="pri" data-act="projadd">Nouveau projet</button></div></div>
+ return `<div class="head"><div><h1>Projets</h1><div class="sub">Les projets ont une date de fin (tape <code>+nom</code> en créant une tâche pour l’y rattacher). ✦ Plan d’attaque : le Génie découpe le projet en tâches datées.</div></div><div class="acts"><button class="pri" data-act="projadd">Nouveau projet</button></div></div>
+ ${(()=>{const h=structSugHtml(['project']);return h?`<div class="sugrow"><span class="mute">Suggestions</span>${h}</div>`:''})()}
  <h2 class="prsec">Projets</h2>
  ${act.length?`<div data-sort="proj">${act.map(one).join('')}</div>`:'<div class="empty">Aucun projet en cours. Crée-en un : un spectacle, un déménagement, une formation…</div>'}
  ${fin.length?`<details class="projfin"><summary>Terminés (${fin.length})</summary>${fin.map(one).join('')}</details>`:''}
@@ -527,5 +528,35 @@ function daySugs(d){
  // 3. habitude du jour pas encore faite ni placée
  if(typeof habits==='function')habits().filter(h=>!h.paused&&h.kind!=='quit'&&!h.toDay&&(h.freq==='week'?hbWeekCount(h,d)<(h.n||1):hbDue(h,d))&&!hbDone(h,d)).forEach(h=>push('h-'+h.id,h.name,'habitude',h.est,h.channel));
  return out.slice(0,3)}
-function sugHtml(d){const xs=daySugs(d);if(!xs.length)return '';
- return `<div class="sugrow" aria-label="Suggestions"><span class="mute">Suggestions</span>${xs.map(x=>`<span class="sugchip"><button data-act="sugadd" data-k="${esc(x.k)}" data-d="${d}" title="Ajouter à ${d===today()?'aujourd’hui':fmtDay(d,{weekday:'long'})}">+ ${esc(x.title)}<small>${esc(x.why)}${x.est?' · '+fmtMin(x.est):''}</small></button><button class="sugno" data-act="sugno" data-k="${esc(x.k)}" data-d="${d}" aria-label="Ne plus proposer « ${esc(x.title)} » ce jour-là" title="Pas aujourd’hui">×</button></span>`).join('')}</div>`}
+function sugHtml(d){const xs=daySugs(d),st=d===today()?structSugHtml(['routine','habit','project'],2):'';if(!xs.length&&!st)return '';
+ return `<div class="sugrow" aria-label="Suggestions"><span class="mute">Suggestions</span>${st}${xs.map(x=>`<span class="sugchip"><button data-act="sugadd" data-k="${esc(x.k)}" data-d="${d}" title="Ajouter à ${d===today()?'aujourd’hui':fmtDay(d,{weekday:'long'})}">+ ${esc(x.title)}<small>${esc(x.why)}${x.est?' · '+fmtMin(x.est):''}</small></button><button class="sugno" data-act="sugno" data-k="${esc(x.k)}" data-d="${d}" aria-label="Ne plus proposer « ${esc(x.title)} » ce jour-là" title="Pas aujourd’hui">×</button></span>`).join('')}</div>`}
+
+/* ---------- suggestions de routines, habitudes et projets (v3.0.2) : d'après ton historique, sur l'appareil ---------- */
+const STOPW=new Set(['avec','pour','dans','faire','acheter','appeler','envoyer','prendre','preparer','ranger','chez','apres','avant','entre','toutes','tous','cette','votre','notre','leurs','quelque']);
+function structSugs(){
+ const no=new Set(S.settings.structNo||[]),out=[],t0=today(),known=new Set([...(S.recurring||[]).map(r=>norm(r.title).trim()),...(S.habits||[]).map(h=>norm(h.name).trim())]);
+ // historique des tâches faites : archive + tâches cochées (hors routines et habitudes)
+ const hist={};const addH=(title,day,sec)=>{if(!day)return;const k=norm(title).trim();if(!k||known.has(k))return;(hist[k]=hist[k]||{t:title,days:new Set(),sec:[]});hist[k].days.add(day);if(sec)hist[k].sec.push(sec)};
+ (S.archive||[]).forEach(a=>addH(a.t,a.d,a.a));S.tasks.filter(t=>t.done&&!t.recurId&&!t.habitId).forEach(t=>addH(t.title,t.day,t.actual));
+ for(const [k,h] of Object.entries(hist)){
+  const ds=[...h.days].filter(d=>d>=addDays(t0,-56)&&d<=t0),last30=ds.filter(d=>d>=addDays(t0,-30)),avg=h.sec.length?h.sec.reduce((a,b)=>a+b,0)/h.sec.length/60:0;
+  if(last30.length>=8&&(!avg||avg<=30)){if(!no.has('h:'+k))out.push({k:'h:'+k,kind:'habit',title:h.t,why:`faite ${last30.length} jours sur les 30 derniers`,est:avg?Math.max(5,Math.round(avg/5)*5):0});continue}
+  const by=[0,0,0,0,0,0,0];ds.forEach(d=>by[parseYmd(d).getDay()]++);const wd=by.indexOf(Math.max(...by));
+  if(by[wd]>=3&&!no.has('r:'+k))out.push({k:'r:'+k,kind:'routine',title:h.t,why:`faite ${by[wd]} ${JOURS[wd]}s sur les 8 dernières semaines`,dow:wd,est:avg?Math.max(5,Math.round(avg/5)*5):0});
+ }
+ // projet : au moins 3 tâches à faire, hors projet, qui partagent un mot important
+ const open=S.tasks.filter(t=>!t.done&&!t.proj&&!t.recurId&&!t.habitId),words={};
+ open.forEach(t=>{new Set(norm(t.title).replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).filter(w=>w.length>=5&&!STOPW.has(w))).forEach(w=>{(words[w]=words[w]||[]).push(t.id)})});
+ const projN=new Set((S.projects||[]).map(p=>norm(p.name)));
+ Object.entries(words).filter(([w,ids])=>ids.length>=3&&!projN.has(w)&&!no.has('p:'+w)).sort((a,b)=>b[1].length-a[1].length).slice(0,2).forEach(([w,ids])=>{
+  const t=T(ids[0]),m=t.title.match(new RegExp('[^\\s]*','g')).find(x=>norm(x).replace(/[^a-z0-9]/g,'')===w)||w;
+  out.push({k:'p:'+w,kind:'project',title:cap1(m.replace(/[^\p{L}\p{N}'’-]/gu,'')),why:`${ids.length} tâches en parlent : ${ids.slice(0,3).map(id=>T(id).title).join(', ')}`,ids})});
+ return out}
+const SKIND={habit:'Habitude',routine:'Routine',project:'Projet'};
+function structSugHtml(kinds,max){const xs=structSugs().filter(x=>kinds.includes(x.kind)).slice(0,max||6);if(!xs.length)return '';
+ return xs.map(x=>`<span class="sugchip skind-${x.kind}"><button data-act="ssugadd" data-k="${esc(x.k)}" title="${esc(x.why)}">+ ${SKIND[x.kind]} : ${esc(x.title)}<small>${x.kind==='routine'?'chaque '+JOURS[x.dow]:x.kind==='project'?x.ids.length+' tâches':'tous les jours'}</small></button><button class="sugno" data-act="ssugno" data-k="${esc(x.k)}" aria-label="Ne plus proposer" title="Ne plus proposer">×</button></span>`).join('')}
+function structSugApply(k){const x=structSugs().find(y=>y.k===k);if(!x)return null;
+ if(x.kind==='routine'){const d=addDays(today(),((x.dow-parseYmd(today()).getDay()+7)%7));S.recurring.push({id:uid(),title:x.title,channel:catGuess(x.title),est:x.est,notes:'',subs:[],from:d,skip:[],rule:'weekly',dow:x.dow,dom:parseYmd(d).getDate()});genRecurring();return 'Routine créée : '+x.title+' chaque '+JOURS[x.dow]}
+ if(x.kind==='habit'){S.habits=S.habits||[];S.habits.push({id:uid(),name:x.title,kind:'build',freq:'daily',days:[1,2,3,4,5,6,0],n:3,channel:catGuess(x.title),icon:'spark',est:x.est,toDay:false,paused:false,log:{},skip:[],created:Date.now(),order:Math.max(0,...S.habits.map(h=>h.order||0))+1});return 'Habitude créée : '+x.title}
+ if(x.kind==='project'){S.projects=S.projects||[];const p={id:uid(),name:x.title,end:null,done:false};S.projects.push(p);x.ids.forEach(id=>{const t=T(id);if(t)t.proj=p.id});return 'Projet « '+x.title+' » créé avec '+x.ids.length+' tâches'}
+ return null}
