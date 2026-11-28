@@ -256,6 +256,7 @@ document.addEventListener('change',async e=>{
    case'due':{t.due=el.value||null;if(t.due&&t.day&&t.day>t.due){const nd=t.due<today()?today():t.due;if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;t.order=nextOrder(nd);toast('Date prévue avancée au '+fmtDay(nd,{weekday:'long',day:'numeric'})+' pour tenir l’échéance')}break}
    case'prio':if((t.prio||'')!==(el.value||'')){t.prio=el.value;placeByPrio(t)}break;
    case'recur':setRecur(t,el.value);break;
+   case'recpos':{const r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);if(r){r.pos=el.value;save();toast(el.value==='genie'?'Le Génie la placera là où tu as l’habitude de la mettre':'Les prochaines fois : '+RECPOS[el.value].toLowerCase())}break}
    case'actual':if(S.running&&S.running.taskId===t.id)S.running.start=Date.now();t.actual=Math.max(0,+el.value||0)*60;break;
    default:return;
   }
@@ -367,6 +368,7 @@ document.addEventListener('drop',async e=>{
   if(t.day!==day)moveTask(t.id,day,true);
   if(src[0]==='blk'&&t.block){if(flowOn()){t.pinned=false;toast('Créneau libéré : la tâche suit l’ordre de la liste')}else{clearBlock(t,true);toast('Retiré de l’agenda')}}
   if(before&&before.dataset.id!==t.id){const b=T(before.dataset.id);if(b&&b.day===day){t.order=b.order+(after?.5:-.5);renorm(day)}}
+  recLearn(t);
   if(!flowOn()&&reflow(day))toast('Agenda réorganisé selon le nouvel ordre');else if(z.dataset.drop==='today'&&view!=='today')toast('Pour aujourd’hui · ⌘/Ctrl Z pour annuler');
   save();render();
  }
@@ -515,7 +517,7 @@ document.addEventListener('keydown',e=>{
  const cs=kbCards(),ids=cs.map(c=>c.dataset.id);if(!ids.length)return;
  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();ids.forEach(id=>{const t=T(id);if(t&&!t.done)msel.add(id)});renderMsel();return}
  if(e.shiftKey&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();const i=ids.indexOf(kbSel),j=i<0?0:Math.max(0,Math.min(ids.length-1,i+(e.key==='ArrowDown'?1:-1)));if(i>=0)msel.add(ids[i]);msel.add(ids[j]);kbSel=ids[j];mselAnchor=mselAnchor||ids[i<0?j:i];renderMsel();kbShow();return}
- if(e.altKey&&(e.key==='ArrowDown'||e.key==='ArrowUp')&&kbSel){e.preventDefault();const t=T(kbSel);if(!t)return;const sib=ids.map(T).filter(x=>x&&x.day===t.day&&!x.done),i=sib.indexOf(t),j=i+(e.key==='ArrowDown'?1:-1);if(i<0||j<0||j>=sib.length)return;const pre=undoSnap();const o=sib[j].order;sib[j].order=t.order;t.order=o;if(t.day){renorm(t.day);if(!flowOn())reflow(t.day)}undoCommit(pre,'kbmove');save();render();return}
+ if(e.altKey&&(e.key==='ArrowDown'||e.key==='ArrowUp')&&kbSel){e.preventDefault();const t=T(kbSel);if(!t)return;const sib=ids.map(T).filter(x=>x&&x.day===t.day&&!x.done),i=sib.indexOf(t),j=i+(e.key==='ArrowDown'?1:-1);if(i<0||j<0||j>=sib.length)return;const pre=undoSnap();const o=sib[j].order;sib[j].order=t.order;t.order=o;if(t.day){renorm(t.day);recLearn(t);if(!flowOn())reflow(t.day)}undoCommit(pre,'kbmove');save();render();return}
  if((e.key==='Delete'||e.key==='Backspace')&&msel.size&&!e.metaKey){e.preventDefault();const pre=undoSnap();mselAct('del');undoCommit(pre,'mselact');return}
 });
 document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});

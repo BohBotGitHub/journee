@@ -198,6 +198,18 @@ function putFront(ids,day){if(!day||day==='backlog')return;const set=new Set(ids
 /* ---------- récurrence ---------- */
 const RULES={daily:'Tous les jours',weekdays:'Jours ouvrés (lun–ven)',weekly:'Chaque semaine',monthly:'Chaque mois'};
 function matches(r,day){const d=parseYmd(day),w=d.getDay();switch(r.rule){case'daily':return true;case'weekdays':return w>0&&w<6;case'weekly':return w===r.dow;case'monthly':return d.getDate()===r.dom}return false}
+// place d'une routine dans la journée : en haut, en bas, ou « Génie » (là où tu as l'habitude de la mettre)
+const RECPOS={bottom:'En bas de la journée',top:'En haut de la journée',genie:'Génie : là où je la mets d’habitude'};
+function recOrder(r,day){
+ const ts=S.tasks.filter(t=>t.day===day&&!t.done).sort((a,b)=>a.order-b.order);
+ if(r.pos==='top')return ts.length?ts[0].order-1:1;
+ if(r.pos==='genie'&&typeof r.rank==='number'&&ts.length){const i=Math.round(r.rank*ts.length);
+  if(i<=0)return ts[0].order-1;if(i>=ts.length)return ts[ts.length-1].order+1;return (ts[i-1].order+ts[i].order)/2}
+ return nextOrder(day)}
+// le Génie apprend : chaque fois que tu déplaces une tâche de routine dans sa journée, il retient sa place (0 = en haut, 1 = en bas)
+function recLearn(t){const r=t&&t.recurId&&S.recurring.find(x=>x.id===t.recurId);if(!r||!t.day)return;
+ const ts=S.tasks.filter(x=>x.day===t.day&&!x.done).sort((a,b)=>a.order-b.order),n=ts.length,i=ts.indexOf(t);if(i<0||n<2)return;
+ const f=i/(n-1);r.rank=typeof r.rank==='number'?Math.round((r.rank*.6+f*.4)*100)/100:f}
 function genRecurring(){
  const t0=today();let changed=false;
  for(let i=0;i<7;i++){const day=addDays(t0,i);
@@ -205,7 +217,7 @@ function genRecurring(){
    if(day<r.from||(r.skip||[]).includes(day)||!matches(r,day))continue;
    if(S.tasks.some(t=>t.recurId===r.id&&t.day===day))continue;
    if(!r.channel)r.channel=catGuess(r.title);
-   S.tasks.push(mk({title:r.title,channel:r.channel,est:r.est,notes:r.notes||'',day,recurId:r.id,order:nextOrder(day),subtasks:(r.subs||[]).map(x=>({id:uid(),t:x,d:false}))}));changed=true;
+   S.tasks.push(mk({title:r.title,channel:r.channel,est:r.est,notes:r.notes||'',day,recurId:r.id,order:recOrder(r,day),subtasks:(r.subs||[]).map(x=>({id:uid(),t:x,d:false}))}));changed=true;
   }}
  if(typeof genHabitTasks==='function'&&genHabitTasks())changed=true;
  if(changed)save();

@@ -1382,3 +1382,8 @@ details.mmore .grid2{margin-top:8px}
 .list.lvlive .card.dropafter::before{bottom:calc(var(--lvh,12px)/-2 - 1px)}.list.lvlive .card.dropafter::after{bottom:calc(var(--lvh,12px)/-2 - 4px)}
 .list.lvlive{padding-bottom:var(--lvh,0)}
 @media (prefers-reduced-motion:reduce){.list.lvlive .card[data-id]{transition:none}}
+/* v2.7 · tâche venue d'une habitude : pastille ronde à son icône et sa couleur, liseré en pointillé */
+.hbmark{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:color-mix(in srgb,var(--hc,var(--acc)) 18%,transparent);color:var(--hc,var(--acc));margin-right:6px;vertical-align:-4px;flex:none}
+.hbmark svg{width:13px;height:13px}
+.card.fromhab{border-style:dashed;border-color:color-mix(in srgb,var(--cc,var(--acc)) 50%,var(--line))}
+.wcol .hbmark{width:16px;height:16px;margin-right:4px}.wcol .hbmark svg{width:11px;height:11px}
