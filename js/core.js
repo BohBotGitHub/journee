@@ -120,12 +120,16 @@ function dateWord(w){
 }
 // langage naturel → codes de la saisie rapide (v2.8) : « demain à 14h pendant 45 minutes, catégorie natation, urgent, sous-tâches : a, b et c »
 const MOIS=['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
+// tâche existante la plus proche de quelques mots (jour affiché d'abord)
+function findTaskByWords(words){const W=norm(words).replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).filter(w=>w.length>2);if(!W.length)return null;let best=null,bs=0;
+ for(const t of S.tasks){if(t.done)continue;const tw=norm(t.title);let sc=0;for(const w of W)if(tw.includes(w))sc+=w.length;sc=sc/Math.max(8,tw.length)+(t.day===cur?.05:0);if(sc>bs){bs=sc;best=t}}return bs>=.15?best:null}
 function nlPre(txt){
- const x={subtasks:[],notes:'',repeat:null,dow:null};let s=(' '+txt+' ').replace(/([,;.])(?=\s)/g,' $1');
+ const x={subtasks:[],notes:'',repeat:null,dow:null,parent:null};let s=(' '+txt+' ').replace(/([,;.])(?=\s)/g,' $1');
  // sous-tâches et notes : jusqu'à la fin de la phrase (ou jusqu'au marqueur suivant)
  s=s.replace(/\s(?:notes?|nb)\s?:\s?(.+?)(?=\s(?:sous[-\s]?t[aâ]ches?|st)\s?:|$)/i,(m,n)=>{x.notes=n.trim().replace(/[,;.\s]+$/,'');return ' '});
  s=s.replace(/\s(?:sous[-\s]?t[aâ]ches?|st)\s?:\s?(.+?)(?=\s(?:notes?|nb)\s?:|$)/i,(m,l)=>{x.subtasks=l.split(/\s*(?:[,;]|\s>\s|\set\s)\s*/).map(v=>v.trim().replace(/[.\s]+$/,'')).filter(Boolean);return ' '});
- s=s.replace(/\s>\s(.+)$/,(m,l)=>{x.subtasks=x.subtasks.concat(l.split(/\s>\s/).map(v=>v.trim()).filter(Boolean));return ' '});
+ // « > nom d'une tâche » (comme Sunsama) : la nouvelle tâche devient une sous-tâche de celle-là
+ s=s.replace(/\s>\s?([^>].*)$/,(m,l)=>{x.parent=l.trim();return ' '});
  s=s.replace(/\s\[([^\]]+)\]/,(m,l)=>{x.subtasks=x.subtasks.concat(l.split(/[,;]/).map(v=>v.trim()).filter(Boolean));return ' '});
  // répétition → routine
  const WD=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
@@ -149,6 +153,7 @@ function nlPre(txt){
   .replace(/\s(?:priorité|priorite)\s(?:basse|faible)(?=[\s,.])|\s,\spas\surgent(?=\s)|\spas\surgent\s*$/i,()=>' !bas ')
   .replace(/\s(?:priorité|priorite)\s(?:haute|forte|élevée|elevee)(?=[\s,.])|\s,\s(?:urgent|important)e?(?=\s)|\s(?:urgent|important)e?\s*$/i,()=>' ! ')
   .replace(/\s(?:chez moi|à la maison|a la maison)(?=[\s,.])/i,()=>' @maison ').replace(/\s(?:dehors|en extérieur|en exterieur)(?=[\s,.])/i,()=>' @dehors ');
+ s=s.replace(/\s@(aujourd['’]hui|auj|demain|apr[eè]s-demain|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|\d{1,2}\/\d{1,2})(?=[\s,.])/i,(m,w)=>' '+w+' ');
  // jours en toutes lettres
  s=s.replace(/\s(?:ce soir|ce matin|cet après-midi|cet apres-midi|ce midi)(?=[\s,.])/i,()=>' auj ')
   .replace(/\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\sprochain(?=[\s,.])/i,(m,w)=>' '+w+' ')
@@ -177,12 +182,13 @@ function parseQuick(txt){
   .replace(/\s(\d{1,2})\/(\d{1,2})(?=\s)/,(m,dd,mm)=>{const y=new Date().getFullYear();let d=ymd(new Date(y,+mm-1,+dd));if(d<t0)d=ymd(new Date(y+1,+mm-1,+dd));day=d;return ' '});
  if(NL.x.day&&day===undefined)day=NL.x.day;
  // routine hebdo « chaque lundi » : le premier jour est ce jour-là
- return {title:txt.trim().replace(/\s+/g,' ').replace(/^[,;:\-–\s]+|[,;:\-–\s]+$/g,''),est,channel,day,due,proj:pj,prio,where,at,badCat,badProj,subtasks:NL.x.subtasks,notes:NL.x.notes,repeat:NL.x.repeat};
+ return {title:txt.trim().replace(/\s+/g,' ').replace(/^[,;:\-–\s]+|[,;:\-–\s]+$/g,''),est,channel,day,due,proj:pj,prio,where,at,badCat,badProj,subtasks:NL.x.subtasks,notes:NL.x.notes,repeat:NL.x.repeat,parent:NL.x.parent};
 }
 // catégorie déjà donnée à une tâche du même nom (routines, modèles, récurrences)
 function catGuess(title){const n=(title||'').trim().toLowerCase();if(!n)return null;const x=S.tasks.find(t=>t.channel&&(t.title||'').trim().toLowerCase()===n);if(x)return x.channel;const a=(S.archive||[]).find(a=>a.c&&(a.t||'').trim().toLowerCase()===n);if(a)return a.c;return typeof hasTree==='function'&&hasTree()?ruleFor(title)||null:null}
 function addTask(text,day){
  const q=parseQuick(text);if(!q.title)return null;if(q.day!==undefined)day=q.day;
+ if(q.parent){const p=findTaskByWords(q.parent);if(p){p.subtasks=p.subtasks||[];p.subtasks.push({id:uid(),t:q.title,d:false});if(typeof subShow==='function')subShow(p.id);save();render();toast('Sous-tâche de « '+p.title+' »');return {title:q.title,parent:p.id,subOf:true}}}
  // « nouveau projet Déménagement pour le 20/12, sous-tâches : cartons, box » : un projet et ses premières tâches
  {const m=q.title.match(/^(?:nouveau\s+projet|projet)\s*:?\s+(.+)$/i);if(m){S.projects=S.projects||[];const pj={id:uid(),name:m[1].trim(),end:q.due||(q.day&&q.day!==today()?q.day:null),done:false,notes:q.notes||''};S.projects.push(pj);
   (q.subtasks||[]).forEach(x=>{const r=parseQuick(x);if(r.title)S.tasks.push(mk({title:r.title,est:r.est||0,channel:r.channel||(hasTree()?ruleFor(r.title):null),day:r.day||null,order:nextOrder(r.day||null),proj:pj.id,prio:r.prio||''}))});
@@ -338,7 +344,7 @@ function quickPreview(txt){const q=parseQuick(txt||'');if(!q.title)return '';con
  if(q.day)out.push(q.day===today()?'aujourd’hui':fmtDay(q.day,{weekday:'long',day:'numeric'}));if(q.at!=null)out.push('à '+hhmm(q.at/60));if(q.badCat)out.push('⚠ catégorie « '+q.badCat+' » inconnue (Arbre pour la créer)');if(q.due)out.push('échéance '+fmtDay(q.due,{day:'numeric',month:'short'}));
  const le=q.est?0:learnedEst(q.title);if(q.est)out.push(fmtMin(q.est));else if(le)out.push('≈ '+fmtMin(le)+' (d’habitude)');
  if(q.prio)out.push(q.prio==='high'?'priorité haute':'priorité basse');if(q.where)out.push({home:'chez moi',out:'dehors',any:'n’importe où'}[q.where]);
- if(q.channel)out.push(nodeLabel(q.channel));if(q.proj){const p=proj(q.proj);if(p)out.push('+'+p.name)}if(q.badProj)out.push('⚠ projet « '+q.badProj+' » inconnu');if(q.repeat)out.push('↻ '+(RULES[q.repeat]||q.repeat).toLowerCase());if(q.subtasks&&q.subtasks.length)out.push(q.subtasks.length+' sous-tâche'+(q.subtasks.length>1?'s':''));if(q.notes)out.push('note');
+ if(q.channel)out.push(nodeLabel(q.channel));if(q.proj){const p=proj(q.proj);if(p)out.push('+'+p.name)}if(q.parent){const p=findTaskByWords(q.parent);out.push(p?'sous-tâche de « '+p.title+' »':'⚠ tâche « '+q.parent+' » introuvable')}if(q.badProj)out.push('⚠ projet « '+q.badProj+' » inconnu');if(q.repeat)out.push('↻ '+(RULES[q.repeat]||q.repeat).toLowerCase());if(q.subtasks&&q.subtasks.length)out.push(q.subtasks.length+' sous-tâche'+(q.subtasks.length>1?'s':''));if(q.notes)out.push('note');
  return out.length?out.map(x=>`<span>${esc(x)}</span>`).join(''):''}
 
 // durées proposées : de 5 en 5 min jusqu'à 1 h, de 15 en 15 min jusqu'à 2 h 30, puis de 30 en 30 min jusqu'à 8 h

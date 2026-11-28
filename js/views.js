@@ -103,10 +103,10 @@ function viewToday(){
  const pct=ts.length?Math.round(done.length/ts.length*100):0,ring=ts.length?`<span class="dayring${pct===100?' full':''}" title="${done.length}/${ts.length} tâches faites" aria-label="${done.length} sur ${ts.length} tâches faites"><svg viewBox="0 0 36 36"><circle class="rbg" cx="18" cy="18" r="15.9"/><circle class="rfg" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="${pct} 100"/>${pct===100?'<g class="rsun"><circle cx="18" cy="18" r="5"/><path d="M18 8.5v2.5M18 25v2.5M8.5 18h2.5M25 18h2.5M11.3 11.3l1.8 1.8M22.9 22.9l1.8 1.8M24.7 11.3l-1.8 1.8M13.1 22.9l-1.8 1.8"/></g>':`<text x="18" y="21.5">${done.length}</text>`}</svg></span>`:'<span class="dayring" style="visibility:hidden" aria-hidden="true"></span>';
  const hz=isT?(()=>{const h=dayHours(d),b=+parseYmd(d),p=Math.max(0,Math.min(1,(Date.now()-(b+h.s*3600e3))/((h.e-h.s)*3600e3))),hr=new Date().getHours();const sky=hr<5||hr>=21?'night':hr<9?'dawn':hr<17?'day':'dusk';return `<div class="horizon sky-${sky}" style="--p:${p.toFixed(3)}" title="Ta journée : ${Math.round(p*100)} % du temps écoulé" aria-hidden="true"><i class="hsun${hr>=20||hr<6?' moon':''}"></i></div>`})():'<div class="horizon hzoff" aria-hidden="true"></div>';
  return `${hz}<div class="head tight"><div class="htitle"><h1>${title}${ring}</h1><div class="sub kicker dline"><span class="dnav"><button data-act="prev" aria-label="Jour précédent" title="Jour précédent (←)">‹</button><button data-act="next" aria-label="Jour suivant" title="Jour suivant (→)">›</button></span><span class="dtxt">${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'long'}))}${info.intent?' · <em>'+esc(info.intent)+'</em>':''}</span>${isT?'':'<button class="dtoday" data-act="gotoday">Revenir à aujourd’hui</button>'}</div></div>
- <div class="acts">${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
+ <div class="acts">${main?`<button class="pri" data-act="${main[0]}">${main[1]}<kbd class="k">${main[2]}</kbd></button>`:''}${genieBtn('day',null,'Organiser')}<button class="more" data-act="daymenu" aria-label="Autres actions de la journée">•••</button>${layoutBtn()}</div></div>
  ${summaryHtml(d,isT)}${d>=today()&&typeof hbPills==='function'?hbPills(d):''}
 
- <button class="addopen" data-act="addopen" data-d="${d}" aria-label="Ajouter une tâche (touche N)">${ico('plus')}<span>Ajouter une tâche</span><kbd>N</kbd></button>
+ <button class="addopen" data-act="addopen" data-d="${d}" aria-label="Ajouter une tâche (touche A)">${ico('plus')}<span>Ajouter une tâche</span><kbd>A</kbd></button>
  ${isT?nowNext(d):''}
  ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.filter(t=>!t.done).map(card).join('')||(isT?doneSky(done.length,fmtMin(ts.reduce((a,t)=>a+actualSec(t),0)/60)):'<div class="empty">Tout est fait.</div>'):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>${done.length?`<details class="donegrp" data-donegrp ${uiDoneOpen?'open':''}><summary>${ico('check')}Faites (${done.length})</summary><div class="list donelist">${done.map(card).join('')}</div></details>`:''}`}
  ${(()=>{const sl=S.tasks.filter(t=>!t.done&&t.slid===d&&t.day===addDays(d,1));return sl.length?`<button class="slidnote" data-act="next">${sl.length} tâche${sl.length>1?'s':''} à demain →</button>`:''})()}
@@ -144,7 +144,7 @@ function viewWeek(){
  const tot=days.reduce((a,d)=>a+dayTasks(d).reduce((x,t)=>x+(t.est||0),0),0);
  const thisW=w===monday(today());
  return `<div class="head tight"><div class="htitle"><h1>Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</h1><div class="sub kicker dline"><span class="dnav"><button data-act="prevw" aria-label="Semaine précédente" title="Semaine précédente">‹</button><button data-act="nextw" aria-label="Semaine suivante" title="Semaine suivante">›</button></span><span class="dtxt">${fmtMin(tot)} de tâches prévues</span>${thisW?'':'<button class="dtoday" data-act="gotoday">Revenir à cette semaine</button>'}</div></div>
- <div class="acts"><button data-act="weekplan">Planifier la semaine</button>${layoutBtn()}</div></div>
+ <div class="acts">${genieBtn('week',null,'Répartir')}<button data-act="weekplan">Planifier la semaine</button>${layoutBtn()}</div></div>
  ${objChips(w)}
  <div class="week">${days.map(d=>{const ts=dayTasks(d),L=loadInfo(d);return `<div class="wcol${d===today()?' today':''}">
   <h3 data-act="openday" data-day="${d}">${cap1(fmtDay(d,{weekday:'short',day:'numeric'}))}<small class="${L.over>0?'':'mute'}" style="${L.over>0?'color:var(--warn)':''}">${fmtMin(L.task)}</small></h3>
@@ -178,6 +178,14 @@ async function dumpSort(){
  try{const r=await callClaude([{role:'user',content:`<contexte>\n${aiContext()}\n</contexte>\n\nVoici mon braindump (une idée par ligne, en vrac) :\n<vide_tete>\n${txt}\n</vide_tete>\nTransforme-le en tâches claires et actionnables (new_tasks) : reformule brièvement si besoin, fusionne les doublons, découpe ce qui contient plusieurs actions, attribue une catégorie existante, une durée réaliste et un jour (day = YYYY-MM-DD si c'est daté ou urgent, sinon "backlog"). Ce qui n'est pas une tâche (idée, note, souci) : mentionne-le dans le message, en une phrase. Message court.`}],true);dumpAI={text:r.text,prop:r.prop,applied:{}}}
  catch(e){dumpAI={error:e.message}}
  render();
+}
+// dictée dans la zone d'ajout : chaque phrase devient une ligne (une tâche)
+function adDictate(){
+ if(!SR){toast('La dictée n’est pas disponible dans ce navigateur');return}if(rec){rec.stop();rec=null;renderAdd();return}
+ rec=new SR();rec.lang='fr-FR';rec.continuous=true;rec.interimResults=false;
+ rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){const t=e.results[i][0].transcript.trim();if(!t||!ad)continue;adKeep();ad.title=((ad.title||'').replace(/\s*$/,'')+(ad.title&&ad.title.trim()?'\n':'')+t.charAt(0).toUpperCase()+t.slice(1));renderAdd()}};
+ rec.onend=()=>{rec=null;if(ad)renderAdd()};rec.onerror=e=>{toast('Dictée : '+(e.error==='not-allowed'?'micro refusé':e.error));rec=null;if(ad)renderAdd()};
+ try{rec.start();renderAdd()}catch(e){rec=null}
 }
 function dictate(){
  if(!SR)return;if(rec){rec.stop();rec=null;render();return}
@@ -220,8 +228,9 @@ function viewBacklog(){
  const SORTS=[['cat','Catégorie','tag'],['due','Échéance','clock'],['prio','Priorité','star'],['est','Durée','clock'],['new','Récentes','plus'],['old','Anciennes','left']];
  const sorted=so==='cat'?null:[...ts].sort(so==='due'?(a,b)=>(a.due||'9999')<(b.due||'9999')?-1:(a.due||'9999')>(b.due||'9999')?1:a.order-b.order:so==='prio'?(a,b)=>(PR[a.prio||'']-PR[b.prio||''])||a.order-b.order:so==='est'?(a,b)=>((a.est||999)-(b.est||999))||a.order-b.order:so==='new'?(a,b)=>(b.created||0)-(a.created||0)||b.order-a.order:(a,b)=>(a.created||0)-(b.created||0)||a.order-b.order);
  const sortbar=`<div class="blsort" role="radiogroup" aria-label="Trier le backlog"><span>Trier</span>${SORTS.map(([v,l,i])=>`<button role="radio" aria-checked="${so===v}" class="${so===v?'on':''}" data-act="blsort" data-v="${v}">${l}</button>`).join('')}</div>`;
- return `<div class="head"><div><h1>Backlog</h1><div class="sub kicker">${ts.length} tâche${ts.length>1?'s':''} en attente d’un jour</div></div></div>
- ${addForm(null,'Ajouter au backlog… (ex. « Réserver le garage 1h #admin »)')}
+ return `<div class="head"><div><h1>Plus tard</h1><div class="sub kicker">${ts.length} tâche${ts.length>1?'s':''} sans jour : idées et choses à caser</div></div><div class="acts">${ts.length?genieBtn('backlog',null,'Trier'):''}</div></div>
+ ${addForm(null,'Ajouter pour plus tard… (une par ligne, ex. « Réserver le garage 1h #admin »)')}
+ ${(S.dump||'').trim()?`<details class="olddump"><summary>Ton ancien braindump (${(S.dump||'').split('\n').filter(x=>x.trim()).length} lignes)</summary><textarea data-dump rows="6">${esc(S.dump)}</textarea><div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button class="sm" data-act="dumptotasks">Une tâche par ligne</button></div></details>`:''}
  ${ts.length>1?`<div class="bltools">${ts.length>6?`<label class="blfilter">${ico('search')}<input data-blf placeholder="Filtrer le backlog…" aria-label="Filtrer le backlog" value="${esc(blFilter)}"></label>`:''}${sortbar}</div>`:''}
  <div class="list" data-drop="backlog" style="gap:0">${sorted?`<div class="list" data-drop="backlog">${sorted.map(bk).join('')}</div>`:groups.length?groups.map(g=>`<div class="group"><h3>${g.c?`<span class="chip" style="--c:${esc(g.c.color)}">${esc(g.c.lvl===1?pillarOf(g.c.id).name+' › '+g.c.name:g.c.name)}</span>`:'Sans catégorie'}</h3><div class="list" data-drop="backlog">${g.items.map(t=>card(t).replace('<div class="ctime">',`<div class="ctime"><button class="sm ghost" data-act="totoday" data-id="${t.id}">Aujourd’hui</button>`)).join('')}</div></div>`).join(''):'<div class="empty">Backlog vide. Les tâches sans date atterrissent ici.</div>'}</div>`;
 }
@@ -248,7 +257,7 @@ function viewObjectives(){
  const w=monday(cur),os=weekObjs(w),wk=S.weeks[w]||{};
  return `<div class="head"><div><h1>Ta semaine</h1><div class="sub kicker">Semaine du ${fmtDay(w,{day:'numeric',month:'long'})}</div></div>
  <div class="dnav"><button data-act="prevw" aria-label="Semaine précédente">‹</button><button data-act="gotoday">Cette semaine</button><button data-act="nextw" aria-label="Semaine suivante">›</button></div>
- <div class="acts"><button class="${wk.planned?'':'pri'}" data-act="weekplan">Planifier la semaine</button><button data-act="weekreview">Revue de la semaine</button></div></div>
+ <div class="acts">${genieBtn('week',null,'Répartir')}<button class="${wk.planned?'':'pri'}" data-act="weekplan">Planifier la semaine</button><button data-act="weekreview">Revue de la semaine</button></div></div>
  <h2 style="font-size:18px;margin:8px 0 6px">Projets en cours</h2>${projListHtml(w)}
  <h2 style="font-size:18px;margin:28px 0 6px">Cette semaine en chiffres</h2>${statsHtml(w)}
  ${wk.review?`<div class="note"><b>Revue de la semaine</b>\n${esc(wk.review)}</div>`:''}`;
@@ -317,8 +326,7 @@ function viewSettings(){
   <div class="row"><span class="status${notifOk()?' on':''}">${notifOk()?'Activées':('Notification' in window&&Notification.permission==='denied')?'Bloquées par le navigateur':'Désactivées'}</span><span class="sp"></span>${notifOk()?'<button class="ghost sm" data-act="notifoff">Désactiver</button><button class="sm" data-act="notiftest">Tester</button>':'<button class="pri" data-act="notifon">Activer</button>'}</div></section>
  <section><h2>Génie (assistant, propulsé par Claude)</h2><p>Colle ici ta clé API Anthropic (console.anthropic.com → API Keys), une seule fois : elle est recopiée sur tes autres appareils par la synchro, dans le dossier caché de Diem de ton Google Drive (invisible pour les autres applis). Coût : quelques centimes par jour avec Haiku.</p>
   ${aiKeyOpen?`<label>Clé API<input type="text" class="secret" data-set="aiKey" name="diem-claude" value="" placeholder="${aiOn()?'Colle la nouvelle clé (laisser vide = garder l’ancienne)':'sk-ant-…'}" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>`:`<div class="row"><button class="sm" data-act="aikey">${aiOn()?'Changer la clé':'Saisir une clé'}</button><span class="mute" style="font-size:13px">Facultatif : la clé reste sur tes appareils et ne part que vers api.anthropic.com.</span></div>`}
-  <div class="grid2"><label>Modèle<select data-set="aiModel"><option value="claude-haiku-5-5" ${s.aiModel==='claude-haiku-5-5'?'selected':''}>Haiku — rapide et économique</option><option value="claude-sonnet-5-5" ${s.aiModel==='claude-sonnet-5-5'?'selected':''}>Sonnet — plus fin</option></select></label>
-  <label>En arrière-plan<select data-set="aiAuto"><option value="1" ${s.aiAuto?'selected':''}>Suggestions automatiques</option><option value="" ${s.aiAuto?'':'selected'}>Seulement quand je demande</option></select></label></div>
+  <div class="grid2"><label>Modèle<select data-set="aiModel"><option value="claude-haiku-5-5" ${s.aiModel==='claude-haiku-5-5'?'selected':''}>Haiku — rapide et économique</option><option value="claude-sonnet-5-5" ${s.aiModel==='claude-sonnet-5-5'?'selected':''}>Sonnet — plus fin</option></select></label></div>
   <div class="grid2"><label>Plafond mensuel ($, 0 = aucun)<input type="number" min="0" step="0.5" data-set="aiBudget" value="${esc(s.aiBudget)}"></label></div>
   <p style="margin:10px 0 0"><b data-live="aicost">${costTxt()}</b> — estimation d’après les jetons consommés ; le montant exact est sur console.anthropic.com.</p>
   <div class="row" style="margin-top:12px"><span class="status${aiOn()?' on':''}">${aiOn()?'Clé enregistrée':'Pas de clé'}</span><span class="sp"></span><button class="ghost sm" data-act="aiclear">Effacer</button></div></section>
@@ -421,16 +429,16 @@ function viewProjects(){
  const one=p=>{const ts=S.tasks.filter(t=>t.proj===p.id),open=ts.filter(t=>!t.done).sort((a,b)=>(a.day||'9')<(b.day||'9')?-1:1),g=projProgress(p.id),pc=g.n?Math.round(g.done/g.n*100):0,late=p.end&&!p.done&&p.end<today(),left=p.end?Math.round((new Date(p.end)-new Date(today()))/864e5):null;
   return `<section class="proj${late?' late':''}" data-sid="${esc(p.id)}"><div class="projhead">${p.done?'':SGRIP}<input class="projname" data-pn="${esc(p.id)}" value="${esc(p.name)}" aria-label="Nom du projet">
   <label class="projend">Fin<input type="date" data-pe="${esc(p.id)}" value="${esc(p.end||'')}" aria-label="Date de fin"></label>
-  <label class="projdone"><input type="checkbox" data-pd="${esc(p.id)}" ${p.done?'checked':''}>Terminé</label></div>
+  <label class="projdone"><input type="checkbox" data-pd="${esc(p.id)}" ${p.done?'checked':''}>Terminé</label>${p.done?'':genieBtn('project',p.id,'Plan d’attaque')}</div>
   <div class="projbar" title="${g.done}/${g.n} tâches faites"><i style="width:${pc}%"></i></div>
   <div class="projmeta"><span>${g.n?`${g.done}/${g.n} tâches faites`:'Aucune tâche pour l’instant'}</span>${left!==null&&!p.done?`<span class="${late?'warn':left<=7?'soon':''}">${late?'en retard de '+(-left)+' j':left===0?'se termine aujourd’hui':'encore '+left+' j'}</span>`:''}<code>+${esc(projKey(p))}</code></div>
   ${p.done?'':`<form class="add" data-form="add" data-day="" data-proj="${esc(p.id)}"><input name="t" data-keep="pj-${esc(p.id)}" placeholder="Ajouter une tâche à ce projet…" autocomplete="off" aria-label="Nouvelle tâche du projet"></form>`}
   ${open.length?`<div class="list">${open.map(card).join('')}</div>`:''}</section>`};
- return `<div class="head"><div><h1>Projets & Routines</h1><div class="sub">Les projets ont une date de fin (tape <code>+nom</code> en créant une tâche pour l’y rattacher) ; les routines et modèles s’ajoutent à un jour en un clic.</div></div><div class="acts"><button class="pri" data-act="projadd">Nouveau projet</button></div></div>
+ return `<div class="head"><div><h1>Projets</h1><div class="sub">Les projets ont une date de fin (tape <code>+nom</code> en créant une tâche pour l’y rattacher) ; les routines et modèles s’ajoutent à un jour en un clic.</div></div><div class="acts"><button class="pri" data-act="projadd">Nouveau projet</button></div></div>
  <h2 class="prsec">Projets</h2>
  ${act.length?`<div data-sort="proj">${act.map(one).join('')}</div>`:'<div class="empty">Aucun projet en cours. Crée-en un : un spectacle, un déménagement, une formation…</div>'}
  ${fin.length?`<details class="projfin"><summary>Terminés (${fin.length})</summary>${fin.map(one).join('')}</details>`:''}
- <div style="margin-top:26px">${tplHtml()}</div>`;
+ `;
 }
 
 /* ---------- Maintenant / Ensuite ---------- */
@@ -449,9 +457,11 @@ function addSheetHtml(){
  const days=[[today(),'Aujourd’hui'],[addDays(today(),1),'Demain'],...[2,3,4,5,6].map(k=>[addDays(today(),k),cap1(fmtDay(addDays(today(),k),{weekday:'long',day:'numeric'}))]),['','Backlog']];
  if(dd&&!days.some(x=>x[0]===dd))days.splice(2,0,[dd,cap1(fmtDay(dd,{weekday:'long',day:'numeric',month:'short'}))]);
  const est=ad.est||q.est||0,cat=ad.channel||q.channel;
- return `<div class="rit addsheet"><h2>Nouvelle tâche</h2>
- <input class="adt" data-adtitle value="${esc(ad.title)}" placeholder="Titre de la tâche" autocomplete="off" aria-label="Titre de la tâche">
- <div class="qprev">${quickPreview(ad.title)}</div>
+ const lines=(ad.title||'').split('\n').map(x=>x.trim()).filter(Boolean),multi=lines.length>1;
+ return `<div class="rit addsheet"><h2>${multi?lines.length+' tâches':'Ajouter'}</h2>
+ <textarea class="adt" data-adtitle rows="${Math.min(8,Math.max(1,lines.length||1))}" placeholder="Une tâche en langage naturel (« demain à 14h dentiste 1h ») · une par ligne pour en ajouter plusieurs · ✦ pour un plan" autocomplete="off" aria-label="Ajouter : une tâche ou plusieurs (une par ligne), ou une demande au Génie">${esc(ad.title)}</textarea>
+ <div class="qprev">${multi?`<span>${lines.length} tâches, une par ligne</span>`:quickPreview(ad.title)}</div>
+ ${multi?'':adMatches(ad.title)}
  <div class="adrow">
   <button class="adbtn" data-act="addposcycle" title="Où placer la tâche : clique pour changer">${ico(P[2])}<span>${({top:'En haut',bottom:'En bas',auto:'Génie'})[pos]}</span></button>
   <label class="adbtn">${ico('clock')}<select data-adest aria-label="Durée"><option value="0">Durée</option>${durOpts(est).map(m=>`<option value="${m}" ${m===est?'selected':''}>${fmtMin(m)}</option>`).join('')}</select></label>
@@ -462,10 +472,20 @@ function addSheetHtml(){
   <span class="prow" role="radiogroup" aria-label="Priorité">${[['high','Haute'],['','Normale'],['low','Basse']].map(([v,l])=>`<button type="button" class="pbtn${(ad.prio||q.prio||'')===v?' on':''}" data-act="adprio" data-v="${v}" aria-label="Priorité ${l.toLowerCase()}" title="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>
   <span class="prow" role="radiogroup" aria-label="Lieu">${WHERES.map(([v,l])=>`<button type="button" class="pbtn${(ad.where||q.where||'')===v?' on':''}" data-act="adwhere" data-v="${v}" aria-label="${v?l:'Auto'}" title="${v?l:'Lieu : selon la catégorie'}">${ico({'':'auto',any:'laptop',home:'home',out:'walk'}[v])}</button>`).join('')}</span>
  </div>
- <div class="mfoot"><small class="mute">Entrée pour ajouter · Maj + Entrée pour en ajouter une autre</small><span class="sp"></span><button class="ghost" data-act="close">Fermer</button><button class="pri" data-act="adok">Ajouter</button></div></div>`}
+ <div class="mfoot"><small class="mute">Entrée : ajouter · Maj + Entrée : ajouter et continuer</small><span class="sp"></span>${SR?`<button class="ghost" data-act="addictate" aria-label="Dicter">${rec?'■':'🎙'}<span class="lg"> ${rec?'Arrêter':'Dicter'}</span></button>`:''}<button class="genie" data-act="adgenie" title="Le Génie transforme ton texte en plan (tâches, projet, routines) · G">${LAMP_SVG}<span>Génie</span></button><button class="pri" data-act="adok">Ajouter</button></div></div>`}
+// pendant la frappe : ce qui existe déjà (pour éviter les doublons) et les écrans du même nom
+const AD_VIEWS=[['today','Aujourd’hui'],['week','Semaine'],['backlog','Plus tard'],['habits','Habitudes & routines'],['projects','Projets'],['tree','Arbre'],['stats','Statistiques'],['settings','Réglages']];
+function adMatches(txt){const q=norm(parseQuick(txt||'').title||'').trim();if(q.length<3)return '';
+ const W=q.split(/\s+/).filter(w=>w.length>2);const hits=S.tasks.filter(t=>!t.done&&W.length&&W.every(w=>norm(t.title).includes(w))).slice(0,4);
+ const vs=AD_VIEWS.filter(([,l])=>norm(l).startsWith(q)).slice(0,2);
+ const arc=hits.length?[]:(S.archive||[]).filter(x=>W.length&&W.every(w=>norm(x.t).includes(w))).sort((a,b)=>(b.d||'')>(a.d||'')?1:-1).slice(0,2);
+ if(!hits.length&&!vs.length&&!arc.length)return '';
+ return `<div class="admatch">${hits.map(t=>`<button class="sm ghost" data-act="open" data-id="${t.id}">Existe déjà : ${esc(t.title)}<small> · ${t.day?(t.day===today()?'aujourd’hui':fmtDay(t.day,{weekday:'short',day:'numeric'})):'plus tard'}</small></button>`).join('')}${arc.map(x=>`<span class="sm admh">Déjà fait : ${esc(x.t)}<small> · ${x.d?fmtDay(x.d,{day:'numeric',month:'short'}):''}${x.a?' · '+fmtMin(Math.round(x.a/60)):''}</small></span>`).join('')}${vs.map(([v,l])=>`<button class="sm ghost" data-act="adgo" data-v="${v}">Aller à ${l} →</button>`).join('')}</div>`}
 function renderAdd(first){if(!ad)return;const i=document.querySelector('[data-adtitle]'),pos=i?i.selectionStart:null;showModal(addSheetHtml());const n=document.querySelector('[data-adtitle]');if(n){n.focus();if(pos!==null&&!first)n.setSelectionRange(pos,pos)}}
-function addSubmit(chain){if(!ad)return;const t0=(document.querySelector('[data-adtitle]')||{}).value||'';if(!t0.trim()){toast('Écris d’abord un titre');return}
- const t=addTask(t0,ad.day);if(!t)return;
+function addSubmit(chain){if(!ad)return;const t0=(document.querySelector('[data-adtitle]')||{}).value||'';if(!t0.trim()){toast('Écris d’abord quelque chose');return}
+ const ls=t0.split('\n').map(x=>x.trim()).filter(Boolean);
+ if(ls.length>1){let n=0;ls.forEach(l=>{if(addTask(l.replace(/^[-•*]\s*/,''),ad.day))n++});toast(n+' tâches ajoutées · ⌘/Ctrl Z pour annuler');if(!chain){closeModal();return}ad=Object.assign(ad,{title:''});renderAdd(true);return}
+ const t=addTask(t0,ad.day);if(!t)return;if(!t.title||t.subOf){if(!t.subOf)toast((t.freq?'Habitude':'Projet')+' « '+t.name+' » créé');if(!chain)closeModal();else{ad=Object.assign(ad,{title:''});renderAdd(true)}return}
  if(ad.est)setEst(t,ad.est);if(ad.channel)t.channel=ad.channel;if(ad.prio!=='')t.prio=ad.prio;if(ad.where)t.where=ad.where;
  if(ad.prio||ad.where||ad.channel)placeNew(t);save();render();toast('Ajoutée : '+t.title);
  if(!chain){closeModal();return}
@@ -482,10 +502,10 @@ function moreMenu(){
   ${it('data-act="morego"','data-v="rit-plan"','sunrise','Planifier ma journée')}
   ${it('data-act="morego"','data-v="rit-shutdown"','moon','Clôturer la journée')}
   ${it('data-act="morego"','data-v="rit-week"','cal','Ma semaine (planifier ou revoir)')}
-  ${it('data-act="morego"','data-v="habits"','hb-spark','Habitudes')}
+  ${it('data-act="morego"','data-v="habits"','hb-spark','Habitudes & routines')}
   ${it('data-act="morego"','data-v="stats"','target','Statistiques')}
-  ${it('data-act="morego"','data-v="projects"','folder','Projets & Routines')}
+  ${it('data-act="morego"','data-v="projects"','folder','Projets')}
   ${it('data-act="morego"','data-v="tree"','tree','Arbre')}
   ${it('data-act="morego"','data-v="settings"','gear','Réglages')}
-  ${it('data-act="palopen"','','search','Rechercher')}
+  ${it('data-act="palopen"','','search','Ajouter ou chercher')}
  </div></div>`)}

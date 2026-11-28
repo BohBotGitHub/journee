@@ -4,7 +4,7 @@ let toastT;
 let toastFn=null;
 function toast(msg,act,fn){if(!act&&typeof msg==='string'&&/⌘\/Ctrl Z pour annuler/.test(msg)){msg=msg.replace(/\s*·?\s*⌘\/Ctrl Z pour annuler/,'');act='Annuler';fn=()=>undoPop()}const el=$('#toast');el.textContent=msg;toastFn=act&&fn?fn:null;if(toastFn){const b=document.createElement('button');b.className='tact';b.dataset.act='toastact';b.textContent=act;el.appendChild(b)}el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>{el.classList.remove('show');toastFn=null},toastFn?7000:3200)}
 document.addEventListener('click',async e=>{
- const nv=e.target.closest('#nav [data-view]');if(nv){if(nv.dataset.view==='today')cur=today();go(nv.dataset.view);return}
+ const nv=e.target.closest('#nav [data-view]');if(nv){if(nv.dataset.view==='add'){if(!$('#modal').classList.contains('hidden'))closeModal();openAdd(cur);return}if(nv.dataset.view==='today')cur=today();go(nv.dataset.view);return}
  const sd=e.target.closest('[data-side]');if(sd){sideTab=sd.dataset.side;renderSide();return}
  if(e.target.id==='modal'){if(!ritual&&downOnBackdrop)closeModal();return}
  // multi-sélection : ⌘/Ctrl-clic ajoute ou retire une tâche, Maj-clic prend toute la plage
@@ -142,7 +142,12 @@ document.addEventListener('click',async e=>{
   case'tplfromday':{const ts=dayTasks(cur).filter(t=>!t.recurId);if(!ts.length){toast('Aucune tâche ce jour-là');break}S.templates=S.templates||[];const tp={id:uid(),name:'Journée type du '+fmtDay(cur,{day:'numeric',month:'short'}),items:ts.map(t=>({title:t.title,est:t.est,channel:t.channel,subs:t.subtasks.map(x=>x.t)}))};S.templates.push(tp);save();editTpl(tp.id);break}
   case'tplsug':{const x=tplSuggestions().find(z=>z.c===b.dataset.c);if(x){S.templates=S.templates||[];S.templates.push({id:uid(),name:'Routine '+ch(x.c).name,items:x.items});save();render();toast('Routine créée')}break}
   case'archcopy':{const a=(S.archive||[]).find(x=>x.id===id);if(a){S.tasks.push(mk({title:a.t,channel:a.c,est:a.e||Math.round((a.a||0)/60)||0,day:today(),order:nextOrder(today())}));save();closeModal();go('today');toast('Ajoutée à aujourd’hui')}break}
-  case'palopen':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();openPal();break;
+  case'palopen':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();openAdd(cur);break;
+  case'genie':{const w=b.dataset.w,id=b.dataset.id;if(w==='focus'&&focusOn){focusMin=focusOn;focusOn=null;renderFocus();render()}else if(w==='task'||ritual){closeModal()}genieAsk(w,'',id);break}
+  case'dumptotasks':{const ls=(S.dump||'').split('\n').map(x=>x.trim()).filter(Boolean);let n=0;ls.forEach(l=>{if(addTask(l.replace(/^[-•*]\s*/,''),null))n++});S.dump='';save();render();toast(n+' tâches créées dans Plus tard · ⌘/Ctrl Z pour annuler');break}
+  case'adgo':closeModal();if(b.dataset.v==='today')cur=today();go(b.dataset.v);break;
+  case'adgenie':{adKeep();const tx=(ad&&ad.title||'').trim();if(!tx){toast('Écris d’abord ce que tu veux (ex. « plan pour préparer le salon »)');break}closeModal();genieAsk('add',tx);break}
+  case'addictate':adDictate();break;
   case'synchide':lsSet('journee.sync.hide',today());renderSyncBar();break;
   case'timerreset':{const t=T(id);if(!t)break;const run=!!(S.running&&S.running.taskId===id);if(run)stopTimer();const prev={a:t.actual||0,run};t.actual=0;save();renderFocus();render();timerUndo={id,...prev,at:Date.now()};toast('Minuteur remis à zéro et en pause',run||prev.a?'Annuler':null,()=>undoTimer());break}
   case'timeradj':{const t=T(id);if(!t)break;const nv=Math.max(0,Math.round(actualSec(t)+(+b.dataset.v)*60));if(S.running&&S.running.taskId===id)S.running.start=Date.now();t.actual=nv;save();renderFocus();break}
@@ -415,7 +420,7 @@ async function dropGroup(grp,z,dz,e){
  if(!flowOn())reflow(day);save();render();toast(n+' tâches déplacées · ⌘/Ctrl Z pour annuler');
 }
 /* ---------- interactions fluides liste ↔ agenda ---------- */
-const KEYS=[['⌘K','Palette : chercher, créer, aller à…'],['N','Nouvelle tâche'],['P','Planifier la journée'],['S','Clôturer la journée'],['F','Focus sur la prochaine tâche'],['C','Inverser liste et grand agenda'],['D','Braindump'],['T','Aujourd’hui'],['W','Semaine'],['B','Backlog'],['O','Semaine et projets'],['J','Projets & Routines'],['Espace','Focus : pause / reprise'],['A','Arbre des catégories'],['← →','Jour ou semaine précédent / suivant'],['Maj ↑ ↓','Étendre la sélection'],['⌘/Ctrl A','Sélectionner toute la liste'],['Alt ↑ ↓','Monter ou descendre la tâche choisie'],['Suppr','Supprimer la sélection'],['Échap','Fermer'],['?','Afficher tous les raccourcis']];
+const KEYS=[['A','Ajouter (une tâche, plusieurs lignes, ou ✦ un plan) · aussi ⌘K'],['G','Le Génie, là où tu es'],['T','Aujourd’hui'],['N','Semaine'],['B','Plus tard'],['H','Habitudes & routines'],['P','Planifier la journée'],['O','Clôturer la journée'],['F','Focus'],['K','Pause du minuteur'],['J','Liste ⇄ grand agenda'],['⇧ Espace','Revenir à aujourd’hui'],['⇧ ← →','Jour précédent / suivant'],['↑ ↓','Choisir une tâche'],['C','Cocher la tâche'],['Espace','Minuteur de la tâche'],['S','La mettre aujourd’hui'],['D','La reporter d’un jour'],['Z','Plus tard (⇧Z : en tête)'],['X','La placer dans l’agenda (⌘X : l’en retirer)'],['Q','Catégorie (⇧Q : celle suggérée)'],['W','Durée prévue'],['E','Temps passé'],['!','Priorité'],['@','Date'],['V','Ajouter une sous-tâche'],['⌘D','Dupliquer'],['⌘ ↑ ↓','Monter / descendre (⇧ : tout en haut / en bas)'],['Entrée','Ouvrir la tâche'],['⌘Z','Annuler'],['⇧L','Mode sombre'],['< >','Masquer / afficher les volets'],['?','Cette liste']];
 function showKeys(){showModal(`<div class="rit"><h2>Raccourcis clavier</h2><div class="keys" style="margin-top:12px">${KEYS.map(([k,l])=>`<kbd>${k}</kbd><span>${l}</span>`).join('')}</div><div class="mfoot"><label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-tips ${lsGet('journee.tips')==='off'?'':'checked'} style="width:auto;min-height:0">Rappels réguliers en bas de l’écran</label><span class="sp"></span><button class="pri" data-act="close">OK</button></div></div>`)}
 let tipI=0;
 function renderTip(){const el=$('#tip');if(!el)return;if(lsGet('journee.tips')==='off'||innerWidth<720){el.innerHTML='';return}const [k,l]=KEYS[tipI%KEYS.length];el.innerHTML=`<span>Raccourci</span><kbd>${k}</kbd><span>${l}</span>`;tipI++}
@@ -500,7 +505,7 @@ function runPal(it){
 }
 document.addEventListener('input',e=>{if(e.target.id==='palq'&&pal){pal.q=e.target.value;pal.sel=0;renderPal()}});
 document.addEventListener('keydown',e=>{
- if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();pal?closePal():openPal();return}
+ if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();if(ad)closeModal();else{if(!$('#modal').classList.contains('hidden'))closeModal();openAdd(cur)}return}
  if(!pal)return;
  if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();closePal();return}
  if(e.key==='ArrowDown'){e.preventDefault();pal.sel=Math.min(pal.sel+1,(pal.items||[]).length-1);renderPal()}
@@ -517,23 +522,33 @@ document.addEventListener('keydown',e=>{
  const cs=kbCards(),ids=cs.map(c=>c.dataset.id);if(!ids.length)return;
  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();ids.forEach(id=>{const t=T(id);if(t&&!t.done)msel.add(id)});renderMsel();return}
  if(e.shiftKey&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();const i=ids.indexOf(kbSel),j=i<0?0:Math.max(0,Math.min(ids.length-1,i+(e.key==='ArrowDown'?1:-1)));if(i>=0)msel.add(ids[i]);msel.add(ids[j]);kbSel=ids[j];mselAnchor=mselAnchor||ids[i<0?j:i];renderMsel();kbShow();return}
- if(e.altKey&&(e.key==='ArrowDown'||e.key==='ArrowUp')&&kbSel){e.preventDefault();const t=T(kbSel);if(!t)return;const sib=ids.map(T).filter(x=>x&&x.day===t.day&&!x.done),i=sib.indexOf(t),j=i+(e.key==='ArrowDown'?1:-1);if(i<0||j<0||j>=sib.length)return;const pre=undoSnap();const o=sib[j].order;sib[j].order=t.order;t.order=o;if(t.day){renorm(t.day);recLearn(t);if(!flowOn())reflow(t.day)}undoCommit(pre,'kbmove');save();render();return}
+ if((e.altKey||e.metaKey||e.ctrlKey)&&(e.key==='ArrowDown'||e.key==='ArrowUp')&&kbSel){e.preventDefault();const t=T(kbSel);if(!t)return;const sib=ids.map(T).filter(x=>x&&x.day===t.day&&!x.done),i=sib.indexOf(t);let j=i+(e.key==='ArrowDown'?1:-1);if(e.shiftKey&&!e.altKey)j=e.key==='ArrowDown'?sib.length-1:0;if(i<0||j<0||j>=sib.length||j===i)return;if(e.shiftKey&&!e.altKey){const pre=undoSnap();t.order=e.key==='ArrowDown'?sib[sib.length-1].order+1:sib[0].order-1;if(t.day){renorm(t.day);recLearn(t);if(!flowOn())reflow(t.day)}undoCommit(pre,'kbmove');save();render();return}const pre=undoSnap();const o=sib[j].order;sib[j].order=t.order;t.order=o;if(t.day){renorm(t.day);recLearn(t);if(!flowOn())reflow(t.day)}undoCommit(pre,'kbmove');save();render();return}
  if((e.key==='Delete'||e.key==='Backspace')&&msel.size&&!e.metaKey){e.preventDefault();const pre=undoSnap();mselAct('del');undoCommit(pre,'mselact');return}
 });
 document.addEventListener('keydown',e=>{if(e.target.dataset&&e.target.dataset.keep==='ai'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.target.form.requestSubmit()}});
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){if(!$('#modal').classList.contains('hidden'))closeModal();else if(focusOn){focusMin=focusOn;focusOn=null;renderFocus();render()}else document.body.classList.remove('side-open');return}
- if(e.target.matches('input,textarea,select')||e.metaKey||e.ctrlKey||e.altKey||focusOn||!$('#modal').classList.contains('hidden'))return;
+ if(e.target.matches('input,textarea,select')||focusOn||!$('#modal').classList.contains('hidden'))return;
+ if((e.metaKey||e.ctrlKey)&&!(['d','x','enter'].includes(e.key.toLowerCase())&&kbSel))return;
+ if(e.altKey)return;
  const k=e.key.toLowerCase();
  if(kbList(e))return;
- if(k==='n'){e.preventDefault();if(view==='today'||view==='week')openAdd(cur);else{const i=document.querySelector('[data-keep^="add-"]');if(i)i.focus()}}
+ if(e.metaKey||e.ctrlKey)return;
+ if(e.shiftKey&&e.code==='Space'){e.preventDefault();cur=today();go('today');return}
+ if(e.shiftKey&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,s);if(view!=='today')go('today');else{render();daySlide(s)}return}
+ if(e.shiftKey&&k==='l'){const dk=document.documentElement.dataset.mode==='dark'||(!document.documentElement.dataset.mode&&matchMedia('(prefers-color-scheme: dark)').matches);S.settings.mode=dk?'light':'dark';applyLook();save();return}
+ if(e.key==='<'){paneTog('nav');return}if(e.key==='>'){paneTog('side');return}
+ if(k==='a'){e.preventDefault();openAdd(view==='backlog'?null:cur)}
+ else if(k==='n')go('week');
  else if(k==='t'){cur=today();go('today')}
- else if(k==='c'){toggleLayout()}
+ else if(k==='j'){toggleLayout()}
+ else if(k==='g'){e.preventDefault();genieHere()}
+ else if(k==='h')go('habits');
+ else if(k==='k'){if(S.running){stopTimer();render();renderFocus();toast('Pause')}}
  else if(e.key==='?'){showKeys()}
- else if(e.key==='/'){e.preventDefault();openPal()}
- else if(k==='d'){go('dump');setTimeout(()=>{const ta=document.querySelector('[data-dump]');if(ta){ta.focus();ta.selectionStart=ta.value.length}},50)}
- else if(k==='w')go('week');else if(k==='b')go('backlog');else if(k==='o')go('objectives');else if(k==='a')go('tree');else if(k==='j')go('projects');else if(k==='r')go('review');
- else if(k==='p')startRitual('plan',cur);else if(k==='s')startRitual('shutdown',cur>today()?today():cur);
+ else if(e.key==='/'){e.preventDefault();openAdd(cur)}
+ else if(k==='b')go('backlog');else if(k==='r')go('review');
+ else if(k==='p')startRitual('plan',cur);else if(k==='o')startRitual('shutdown',cur>today()?today():cur);
  else if(k==='f'){const t=(kbSel&&T(kbSel)&&!T(kbSel).done)?T(kbSel):dayTasks(cur).find(t=>!t.done);if(t)openFocus(t.id)}
  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const s=e.key==='ArrowLeft'?-1:1;cur=addDays(cur,(view==='week'||view==='objectives')?7*s:s);render();daySlide(s)}
 });
@@ -543,6 +558,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&
 let timerUndo=null;
 document.addEventListener('keydown',e=>{if(e.code!=='Space'||e.target.matches('input,textarea,select,button,[contenteditable]'))return;
  // en grand, ou réduit en pastille (fenêtre fermée) : Espace met en pause et relance
+ if(!focusOn&&kbSel&&T(kbSel)&&['today','week','backlog','projects'].includes(view))return;
  const big=focusOn&&!$('#focus').classList.contains('hidden'),mini=!focusOn&&$('#modal').classList.contains('hidden')&&(focusMin||S.running);if(!big&&!mini)return;
  e.preventDefault();const id=big?focusOn:(focusMin||S.running.taskId);if(S.running&&S.running.taskId===id){stopTimer();render()}else startTimer(id);renderFocus();renderMini()});
 function undoTimer(){if(!timerUndo)return;const t=T(timerUndo.id);if(t){t.actual=timerUndo.a;if(timerUndo.run)startTimer(t.id);save();renderFocus();render();toast('Minuteur rétabli')}timerUndo=null}
@@ -564,7 +580,7 @@ function keepUnder(b){
 }
 
 // ---------- annuler partout : Ctrl/⌘ Z revient avant la dernière action sur les tâches ----------
-const UNDO_ACTS=new Set(['mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
+const UNDO_ACTS=new Set(['dumptotasks','mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
 let undoStack=[];
 const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[],unavail:S.unavail||[]});
 function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}
@@ -578,7 +594,24 @@ function kbList(e){if(!['today','week','backlog','projects'].includes(view))retu
  if((e.key==='ArrowDown'||e.key==='ArrowUp')&&e.shiftKey)return true;
  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const s=e.key==='ArrowDown'?1:-1;kbSel=ids[i<0?(s>0?0:ids.length-1):Math.max(0,Math.min(ids.length-1,i+s))];kbShow();return true}
  if(!kbSel||i<0)return false;
- if(e.key==='x'||e.key==='X'||(e.code==='Space'&&!focusMin&&!S.running)){e.preventDefault();const b=cs[i].querySelector('.chk');if(b)b.click();setTimeout(()=>{const n=kbCards().map(c=>c.dataset.id);if(!n.includes(kbSel))kbSel=n[Math.min(i,n.length-1)]||null;kbShow()},30);return true}
+ const t=T(kbSel),k=e.key,K=k.toLowerCase(),card=cs[i],keepSel=()=>setTimeout(()=>{const n=kbCards().map(c=>c.dataset.id);if(!n.includes(kbSel))kbSel=n[Math.min(i,n.length-1)]||null;kbShow()},30);
+ if(!t)return false;
+ const act=(fn,msg)=>{e.preventDefault();const pre=undoSnap();fn();undoCommit(pre,'kb');save();render();if(msg)toast(msg+' · ⌘/Ctrl Z pour annuler');keepSel();return true};
+ // Sunsama : C cocher, Espace minuteur, S aujourd'hui, D +1 jour, Z backlog, X agenda, ⌘X hors agenda, Q catégorie, W durée, E temps passé, ! priorité, @ date, V sous-tâche, ⌘D dupliquer, G Génie
+ if(K==='c'&&!e.metaKey&&!e.ctrlKey){e.preventDefault();const b=card.querySelector('.chk');if(b)b.click();keepSel();return true}
+ if(e.code==='Space'&&!e.shiftKey){e.preventDefault();if(S.running&&S.running.taskId===t.id)stopTimer();else startTimer(t.id);render();renderMini&&renderMini();return true}
+ if(K==='s'&&!e.metaKey&&!e.ctrlKey)return act(()=>moveTask(t.id,today(),true),'Aujourd’hui : '+t.title);
+ if(K==='d'&&!e.metaKey&&!e.ctrlKey)return act(()=>moveTask(t.id,addDays(t.day&&t.day>=today()?t.day:today(),1),true),'Reportée d’un jour : '+t.title);
+ if(K==='z'&&!e.metaKey&&!e.ctrlKey)return act(()=>{moveTask(t.id,'backlog',true);if(e.shiftKey){const o=S.tasks.filter(x=>!x.day&&!x.done&&x!==t).map(x=>x.order||0);t.order=(o.length?Math.min(...o):1)-1}},'Plus tard : '+t.title);
+ if(K==='x'&&(e.metaKey||e.ctrlKey))return act(()=>clearBlock(t,true),'Retirée de l’agenda');
+ if(K==='x'){e.preventDefault();if(!t.day)moveTask(t.id,cur,true);const pre=undoSnap();t.pinned=false;const n=flowOn()?(reflow(t.day),1):autoBox(t.day);undoCommit(pre,'kb');save();render();toast(n?'Placée dans l’agenda':'Pas de créneau libre assez long');keepSel();return true}
+ if(K==='q'&&!e.shiftKey){e.preventDefault();const b=card.querySelector('[data-act="pickcat"]');if(b)b.click();return true}
+ if(K==='q'&&e.shiftKey)return act(()=>{const c=catGuess(t.title)||(hasTree()?ruleFor(t.title):null);if(c)t.channel=c},'Catégorie suggérée');
+ if(K==='w'){e.preventDefault();const b=card.querySelector('[data-act="estmenu"]');if(b)b.click();return true}
+ if(k==='!'){return act(()=>{t.prio=t.prio==='high'?'':t.prio===''?'low':'high'},'Priorité '+({high:'normale','':'basse',low:'haute'})[t.prio||'']);}
+ if(K==='e'||k==='@'||K==='v'){e.preventDefault();openTask(t.id);setTimeout(()=>{const sel=K==='e'?'[data-f="actual"],[data-f="act"]':k==='@'?'[data-f="day"]':'[data-keep="sub"],form[data-form="sub"] input';const el=document.querySelector('#modal '+sel);if(el){const d=el.closest('details');if(d)d.open=true;el.focus();if(el.showPicker&&k==='@')try{el.showPicker()}catch(x){}}},60);return true}
+ if(K==='d'&&(e.metaKey||e.ctrlKey))return act(()=>{const c=mk(Object.assign({},t,{id:uid(),done:false,doneAt:null,actual:0,block:null,pinned:false,recurId:null,habitId:null,subtasks:(t.subtasks||[]).map(x=>({id:uid(),t:x.t,d:false}))}));c.order=t.order+.5;S.tasks.push(c);if(c.day)renorm(c.day)},'Dupliquée');
+ if(K==='g'){e.preventDefault();genieAsk('task','',t.id);return true}
  if(e.key==='Enter'){e.preventDefault();openTask(kbSel);return true}
  if(e.key==='Escape'){kbSel=null;kbShow();return true}
  return false}
@@ -589,7 +622,7 @@ document.addEventListener('input',e=>{const i=e.target;if(!i.matches||!i.matches
 
 // fenêtre d'ajout : garder le titre tapé, Entrée pour ajouter, aperçu en direct
 function adKeep(){const i=document.querySelector('[data-adtitle]');if(ad&&i)ad.title=i.value}
-document.addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('[data-adtitle]')&&e.key==='Enter'){e.preventDefault();adKeep();addSubmit(e.shiftKey)}},true);
+document.addEventListener('keydown',e=>{if(e.target.matches&&e.target.matches('[data-adtitle]')&&e.key==='Enter'&&!e.altKey){e.preventDefault();adKeep();addSubmit(e.shiftKey)}},true);
 let adT=null;document.addEventListener('input',e=>{if(!e.target.matches||!e.target.matches('[data-adtitle]'))return;adKeep();const p=e.target.parentElement.querySelector('.qprev');if(p)p.innerHTML=quickPreview(e.target.value);clearTimeout(adT);adT=setTimeout(()=>{if(ad&&document.activeElement&&document.activeElement.matches('[data-adtitle]'))renderAdd()},350)});
 // ---------- volets : un bouton en haut à gauche (menu) et un en haut à droite (agenda) ----------
 function paneTog(which){if(innerWidth<=760){if(which==='side')document.body.classList.toggle('side-open');return}
@@ -692,6 +725,7 @@ function srtEnd(e){if(!SRT||(e&&e.pointerId!==SRT.pid))return;const {box,it}=SRT
  const ids=[...box.children].map(x=>x.dataset.sid).filter(Boolean),k=box.dataset.sort,pre=undoSnap();
  if(k==='proj')ids.forEach((id,i)=>{const p=(S.projects||[]).find(x=>x.id===id);if(p)p.order=i});
  else if(k==='hab')ids.forEach((id,i)=>{const h=(S.habits||[]).find(x=>x.id===id);if(h)h.order=i+1});
+ else if(k==='rec'){const m=new Map(S.recurring.map(r=>[r.id,r]));S.recurring=[...ids.map(id=>m.get(id)).filter(Boolean),...S.recurring.filter(r=>!ids.includes(r.id))]}
  else if(k==='tpl'){const m=new Map((S.templates||[]).map(t=>[t.id,t]));S.templates=[...ids.map(id=>m.get(id)).filter(Boolean),...(S.templates||[]).filter(t=>!ids.includes(t.id))]}
  undoCommit(pre,'sort');save();render()}
 document.addEventListener('pointerup',srtEnd);document.addEventListener('pointercancel',srtEnd);

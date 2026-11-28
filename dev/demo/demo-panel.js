@@ -1,6 +1,9 @@
 // Démo Diem : panneau « à tester » (n'existe pas dans la vraie appli)
 (function(){
  const ITEMS=[
+  ['v3.0 · Ajouter','A ou ⌘K : une seule zone. Une phrase, ou plusieurs lignes (une tâche par ligne). Pendant la frappe : ce qui existe déjà, ce que tu as déjà fait, les écrans. ✦ Génie : en fait un plan.','today'],
+  ['v3.0 · Génie partout','Un bouton ✦ à chaque endroit (Organiser, Préparer, Répartir, Trier, Plan d’attaque, Ajuster, Je bloque) ; touche G. Plus aucun appel automatique.','today'],
+  ['v3.0 · Raccourcis Sunsama','? pour la liste. ↑↓ pour choisir une tâche, puis C, S, D, Z, X, Q, W, !, @, V, ⌘↑↓.','today'],
   ['Langage naturel','Dans « Ajouter une tâche », écris par exemple : « Préparer le devis demain à 14h pendant 45 minutes, urgent, sous-tâches : chiffrer, relire et envoyer ». Aussi « chaque lundi », « nouveau projet … », « nouvelle habitude … ».','today'],
   ['Réordonner','Projets & Routines, Habitudes : attrape la poignée ⋮⋮ et glisse.','projects'],
   ['Relié à Claude','Réglages › « Claude : tes conversations » : une fois relié, ce que tu demandes dans une conversation Claude (« ajoute ça dans Diem », plan d’attaque) arrive ici ; les suggestions arrivent dans l’onglet du Génie. Inactif dans la démo.','settings'],

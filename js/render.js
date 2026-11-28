@@ -63,7 +63,7 @@ function openTask(id){
  const t=T(id);if(!t)return;if(modalAI&&modalAI.tid!==id)modalAI=null;modalTask=id;ritual=null;
  const objs=weekObjs(monday(t.day||today())),r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
  const ests=[0,...durOpts(t.est)];
- showModal(`<div class="mhead"><textarea class="mtitle" data-f="title" rows="1" aria-label="Titre">${esc(t.title)}</textarea><button class="x" data-act="close" aria-label="Fermer">×</button></div>
+ showModal(`<div class="mhead"><textarea class="mtitle" data-f="title" rows="1" aria-label="Titre">${esc(t.title)}</textarea>${genieBtn('task',t.id,'Préparer')}<button class="x" data-act="close" aria-label="Fermer">×</button></div>
  <!-- fiche compacte (v2.1, façon Sunsama) : une barre de méta-données, le reste replié -->
  <div class="mbar">
   <label class="mpill" title="Durée estimée">${ico('clock')}<select data-f="est">${ests.map(v=>`<option value="${v}" ${v===t.est?'selected':''}>${v?fmtMin(v):'—'}</option>`).join('')}</select></label>
@@ -144,7 +144,7 @@ function renderRitual0(){
  if(ritual.type==='plan'){
   const info=S.days[d]||{},H=dayHours(d),rollRow=(t,opts)=>`<div class="rrow${(t.roll||0)>=4?' hot':''}"><button class="chk" data-act="ritdone" data-id="${t.id}" aria-label="Cocher : faite" title="Faite"></button><div><b>${esc(t.title)}</b><small>${(t.roll||0)>=4?`<span class="rollm">↻ ${t.roll}</span> reportée ${t.roll} fois`:`↻ revenue${t.roll>1?' '+t.roll+' fois':''}`}${t.est?' · '+fmtMin(t.est):''}</small></div><div class="btns">${opts}</div></div>`;
   if(i===0){
-   h=shell(`${quoteHtml(pickQuote('matin',d))}<h2>Ta journée</h2><p class="lead">${cap1(dl)}. Quand commences-tu et quand t’arrêtes-tu ? Ce qui ne tient pas glissera tout seul à demain.</p>
+   h=shell(`${quoteHtml(pickQuote('matin',d))}<div class="row" style="justify-content:space-between;align-items:center"><h2>Ta journée</h2>${aiOn()?genieBtn('day',null,'Le Génie prépare ma journée'):''}</div><p class="lead">${cap1(dl)}. Quand commences-tu et quand t’arrêtes-tu ? Ce qui ne tient pas glissera tout seul à demain.</p>
    <div class="hoursrow"><label>Début<input type="time" step="900" data-rh="s" value="${hhmm(H.s)}"></label><span>→</span><label>Fin<input type="time" step="900" data-rh="e" value="${hhmm(H.e)}"></label></div>
    <div class="rsec">Boulot aujourd’hui</div>${jobPicker(d)}
    <div class="rsec">Ton énergie</div><div class="seg energy">${[['low','Basse','Journée allégée : fin effective 1 h plus tôt'],['','Normale',''],['high','Haute','Tu peux viser un peu plus']].map(([v,l,tt])=>`<button class="sm${(info.energy||'')===v?' on':''}" data-act="energy" data-v="${v}" title="${tt}">${l}</button>`).join('')}</div>
@@ -210,7 +210,7 @@ function renderRitual0(){
  }
  showModal(h);saveRit();
  const R=RIT_AI[ritual.type+ritual.step];
- if(R&&aiOn()&&S.settings.aiAuto&&!(ritual.ai&&ritual.ai[ritual.step])&&R.when(ritual.day))aiRitual();
+ // plus d'appel automatique du Génie dans les rituels : un bouton ✦ au début suffit
 }
 // garde ce qui a été saisi sur l'étape en cours (heures, note, revue) ; false si c'est invalide
 function ritKeep(){const d=ritual.day,sh=$('#sheet');
@@ -261,7 +261,7 @@ function renderFocus(){
  const c=ch(t.channel),run=S.running&&S.running.taskId===t.id;
  el.classList.remove('hidden');el.classList.add('lamp');
  const sb=focusSub&&t.subtasks.find(x=>x.id===focusSub),nd=(t.subtasks||[]).filter(x=>x.d).length;
- el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<span class="ftopacts"><button class="sm ghost" data-act="focusmin" title="Réduire (Échap) : le minuteur continue, une pastille permet de revenir">${ico('minimize')}Réduire</button><button class="sm ghost" data-act="focusclose" title="Quitter le focus">Quitter</button></span></div>
+ el.innerHTML=`<div class="fwrap"><div class="ftop">${c?`<span class="chip" style="--c:${esc(c.color)}">${esc(c.name)}</span>`:''}<span class="ftopacts">${genieBtn('focus',t.id,'Je bloque')}<button class="sm ghost" data-act="focusmin" title="Réduire (Échap) : le minuteur continue, une pastille permet de revenir">${ico('minimize')}Réduire</button><button class="sm ghost" data-act="focusclose" title="Quitter le focus">Quitter</button></span></div>
  <div class="fhero"><div class="flamp">${lampSvg(t,run)}</div><div class="finfo">
  ${sb?`<div class="fsub">${esc(t.title)} · sous-tâche ${t.subtasks.indexOf(sb)+1}/${t.subtasks.length}</div><h1 class="ftitle">${esc(sb.t)}</h1>`:`<h1 class="ftitle">${esc(t.title)}</h1>`}
  <div class="fclockrow">${focusEdit===t.id?`<input class="fclock fedit" data-fedit="${t.id}" value="${Math.floor(actualSec(t)/60)}" inputmode="numeric" aria-label="Temps passé en minutes (ou 1h20)" title="Minutes, ou 1h20">`:`<button class="fclock${t.est&&actualSec(t)>=t.est*60?' over':''}" data-live="focus" data-act="timeredit" data-id="${t.id}" title="Cliquer pour corriger le temps">${clock(actualSec(t))}</button>`}<div class="fadj"><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="-5" aria-label="Retirer 5 minutes">−5 min</button><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="5" aria-label="Ajouter 5 minutes">+5 min</button></div><button class="freset" data-act="timerreset" data-id="${t.id}" aria-label="Remettre à zéro (met en pause)" title="Remettre à zéro (met en pause)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></div>
