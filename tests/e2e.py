@@ -1808,6 +1808,19 @@ def _(c):
     assert st(pg, "dayHours(today()).end") == 20.5, st(pg, "dayHours(today())")
     assert not errs, errs; ctx.close()
 
+@test('Menu du jour → « Mes heures et mon plan » : le rituel reste ouvert (retour arrière en retard)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.evaluate("()=>Object.defineProperty(navigator,'webdriver',{get:()=>false})")
+    pg.click('[data-act="daymenu"]'); tick(pg, 150)
+    hs = pg.evaluate("()=>!!(history.state&&history.state.m)")
+    # le retour arrière déclenché par la fermeture du menu arrive APRÈS l'ouverture du rituel
+    pg.evaluate("""()=>{const hb=history.back.bind(history);history.back=()=>setTimeout(hb,250)}""")
+    pg.locator('#modal button[data-act="plan"]').last.click(); pg.wait_for_timeout(700)
+    assert pg.evaluate("()=>!document.getElementById('modal').classList.contains('hidden')&&!!document.querySelector('#modal .rsteps')"), hs
+    pg.keyboard.press('Escape'); tick(pg, 150)
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

@@ -39,7 +39,7 @@ function applyPanes(){const b=document.body;if(innerWidth<=760){b.classList.remo
 applyPanes();
 let paneW=innerWidth;addEventListener('resize',()=>{if(Math.abs(innerWidth-paneW)>40){lsDel("journee.pside");lsDel("journee.pnav");paneW=innerWidth}applyPanes()});
 // retour du téléphone : ferme la fenêtre ouverte
-window.addEventListener('popstate',()=>{if(!$('#modal').classList.contains('hidden'))closeModal(true)});
+window.addEventListener('popstate',()=>{if(popSkip){popSkip=false;return}if(!$('#modal').classList.contains('hidden'))closeModal(true)});
 // glisser la fenêtre vers le bas pour la fermer (téléphone)
 (function(){let y0=null,sh=null;
  document.addEventListener('touchstart',e=>{const s=e.target.closest('#sheet');if(!s||innerWidth>760||e.target.closest('input,textarea,select,[data-tgrip]'))return;const sc=e.target.closest('.rit>*:not(h2),.mbody')||s;if(sc.scrollTop>0||s.scrollTop>0)return;y0=e.touches[0].clientY;sh=s},{passive:true});
