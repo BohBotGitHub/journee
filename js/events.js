@@ -674,3 +674,24 @@ document.addEventListener('pointercancel',()=>{if(adz){adz.el.classList.remove('
 document.addEventListener('input',e=>{const f=e.target.dataset&&e.target.dataset.hbf;if(!f||!hbDraft)return;const el=e.target;hbDraft[f]=el.type==='checkbox'?el.checked:el.type==='number'||f==='est'?+el.value:el.value;if(el.type==='checkbox')hbEditRender()});
 document.addEventListener('change',e=>{const f=e.target.dataset&&e.target.dataset.hbf;if(!f||!hbDraft||e.target.type==='checkbox')return;hbDraft[f]=e.target.type==='number'||f==='est'?+e.target.value:e.target.value});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.hbf==='name'&&hbDraft){e.preventDefault();hbDraft.name=e.target.value;hbSave()}});
+
+/* ---------- réordonner projets, habitudes et modèles (v2.8) : poignée ⋮⋮, la liste se réarrange pendant le geste ---------- */
+let SRT=null;
+document.addEventListener('pointerdown',e=>{const g=e.target.closest('[data-sgrip]');if(!g||e.button>0)return;const it=g.closest('[data-sid]'),box=it&&it.closest('[data-sort]');if(!box||it.parentElement!==box)return;
+ e.preventDefault();SRT={box,it,y0:e.clientY,pid:e.pointerId};it.classList.add('sorting');document.body.classList.add('sortingnow')});
+document.addEventListener('pointermove',e=>{if(!SRT||e.pointerId!==SRT.pid)return;e.preventDefault();const {box,it}=SRT;
+ it.style.transform=`translateY(${e.clientY-SRT.y0}px)`;
+ const sib=[...box.children].filter(x=>x!==it&&x.dataset.sid);
+ const before=sib.find(x=>{const r=x.getBoundingClientRect();return e.clientY<r.top+r.height/2});
+ const next=before||null;if((next&&it.nextElementSibling===next)||(!next&&it===box.lastElementChild))return;
+ const first=new Map(sib.map(x=>[x,x.getBoundingClientRect().top])),top0=it.getBoundingClientRect().top-(e.clientY-SRT.y0);
+ box.insertBefore(it,next);
+ const top1=it.getBoundingClientRect().top-(e.clientY-SRT.y0);SRT.y0+=top1-top0;it.style.transform=`translateY(${e.clientY-SRT.y0}px)`;
+ if(lvMotion())sib.forEach(x=>{const dy=first.get(x)-x.getBoundingClientRect().top;if(!dy)return;x.style.transition='none';x.style.transform=`translateY(${dy}px)`;x.offsetHeight;x.style.transition='transform .18s cubic-bezier(.2,.8,.2,1)';x.style.transform=''})},{passive:false});
+function srtEnd(e){if(!SRT||(e&&e.pointerId!==SRT.pid))return;const {box,it}=SRT;SRT=null;it.classList.remove('sorting');document.body.classList.remove('sortingnow');it.style.transform='';
+ const ids=[...box.children].map(x=>x.dataset.sid).filter(Boolean),k=box.dataset.sort,pre=undoSnap();
+ if(k==='proj')ids.forEach((id,i)=>{const p=(S.projects||[]).find(x=>x.id===id);if(p)p.order=i});
+ else if(k==='hab')ids.forEach((id,i)=>{const h=(S.habits||[]).find(x=>x.id===id);if(h)h.order=i+1});
+ else if(k==='tpl'){const m=new Map((S.templates||[]).map(t=>[t.id,t]));S.templates=[...ids.map(id=>m.get(id)).filter(Boolean),...(S.templates||[]).filter(t=>!ids.includes(t.id))]}
+ undoCommit(pre,'sort');save();render()}
+document.addEventListener('pointerup',srtEnd);document.addEventListener('pointercancel',srtEnd);

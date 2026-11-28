@@ -88,3 +88,6 @@ function iconize(root){
 // la lampe du Génie (logo, mascotte)
 const LAMP_SVG=`<svg class="logo glogo" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(-24 -19.8) scale(.4)"><path class="ls" d="M196 92c-7-5 5-11-2-18s-12-2-10-9"/><circle class="lh" cx="78" cy="138" r="13"/><path class="la" d="M168 142C180 136 190 122 200 116c6-4 12 2 8 8-8 14-22 32-42 36z"/><ellipse class="la" cx="126" cy="146" rx="48" ry="30"/><path class="ll" d="M96 126a30 22 0 0 1 60 0z"/><circle class="ll" cx="126" cy="100" r="6"/><rect class="lt" x="106" y="172" width="40" height="8" rx="4"/><circle class="le" cx="112" cy="150" r="3.4"/><circle class="le" cx="140" cy="150" r="3.4"/><path class="lm" d="M118 158q8 6 16 0"/><circle class="lf" cx="206" cy="104" r="7.5"/></g></svg>`;
 const genieTag=(t='Génie')=>`<b class="gtag">${LAMP_SVG}${t}</b>`;
+
+// poignée pour réordonner projets, habitudes, modèles
+const SGRIP='<span class="sgrip2" data-sgrip title="Glisse pour changer l’ordre" aria-hidden="true"><svg viewBox="0 0 12 20" width="10" height="18"><g fill="currentColor"><circle cx="3" cy="4" r="1.6"/><circle cx="9" cy="4" r="1.6"/><circle cx="3" cy="10" r="1.6"/><circle cx="9" cy="10" r="1.6"/><circle cx="3" cy="16" r="1.6"/><circle cx="9" cy="16" r="1.6"/></g></svg></span>';

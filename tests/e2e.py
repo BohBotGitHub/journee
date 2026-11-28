@@ -1866,6 +1866,49 @@ def _(c):
     assert st(pg, "dayHours(today()).s") == 10 and st(pg, "dayHours(today()).end") == 19
     assert not errs, errs; ctx.close()
 
+@test('v2.8 : saisie en langage naturel (durée, heure, catégorie, priorité, sous-tâches, routine, projet, habitude)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    q = lambda t: pg.evaluate("(t)=>parseQuick(t)", t)
+    r = q('Préparer le devis demain à 14h pendant 45 minutes, catégorie menage, urgent, sous-tâches : chiffrer, relire et envoyer')
+    assert r['title'] == 'Préparer le devis' and r['est'] == 45 and r['at'] == 14*60 and r['day'] == d(1) and r['channel'] == 'c-menage' and r['prio'] == 'high' and r['subtasks'] == ['chiffrer', 'relire', 'envoyer'], r
+    r = q('Courrier chaque lundi 10 minutes'); assert r['title'] == 'Courrier' and r['repeat'] == 'weekly' and r['est'] == 10 and datetime.date.fromisoformat(r['day']).weekday() == 0, r
+    r = q('Appeler Léa #inconnue'); assert r['title'] == 'Appeler Léa' and r['badCat'] == 'inconnue', r
+    r = q('Lire une heure et demie ce soir, note : chapitre 3'); assert r['title'] == 'Lire' and r['est'] == 90 and r['day'] == d(0) and r['notes'] == 'chapitre 3', r
+    r = q('Ranger > cuisine > salon'); assert r['title'] == 'Ranger' and r['subtasks'] == ['cuisine', 'salon'], r
+    r = q('Facture le 12 décembre pas urgent'); assert r['title'] == 'Facture' and r['prio'] == 'low' and r['day'].endswith('-12-12'), r
+    r = q('Urgence dentaire à appeler'); assert r['title'] == 'Urgence dentaire à appeler' and r['prio'] == '', r
+    r = q('Dossier important à relire demain'); assert r['title'] == 'Dossier important à relire' and r['prio'] == '', r
+    # ajout réel : routine + sous-tâches
+    pg.evaluate("()=>addTask('Méditer tous les jours 10m',today())")
+    assert st(pg, "S.recurring.some(r=>r.title==='Méditer'&&r.rule==='daily')")
+    pg.evaluate("()=>addTask('Ranger > cuisine > salon',today())")
+    assert st(pg, "S.tasks.find(t=>t.title==='Ranger').subtasks.length") == 2
+    # projet et habitude en une phrase
+    pg.evaluate("()=>addTask('Nouveau projet Déménagement pour le 20/12, sous-tâches : cartons 1h, résilier la box',today())")
+    pj = st(pg, "S.projects.find(p=>p.name==='Déménagement')"); assert pj and pj['end'].endswith('-12-20'), pj
+    assert st(pg, f"S.tasks.filter(t=>t.proj==='{pj['id']}').length") == 2 and st(pg, "S.tasks.find(t=>t.title==='cartons').est") == 60
+    pg.evaluate("()=>addTask('Nouvelle habitude Lire 10 pages chaque jour',today())")
+    assert st(pg, "S.habits.some(h=>h.name==='Lire 10 pages')")
+    assert not errs, errs; ctx.close()
+
+@test('v2.8 : réordonner projets, habitudes et modèles à la poignée')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    pg.evaluate("()=>{S.projects=[{id:'pa',name:'Alpha',end:null,done:false},{id:'pb',name:'Bêta',end:null,done:false},{id:'pc',name:'Gamma',end:null,done:false}];S.habits=[{id:'ha',name:'Un',freq:'daily',log:{},order:1},{id:'hb',name:'Deux',freq:'daily',log:{},order:2}];save();go('projects')}"); tick(pg, 200)
+    def drag(sel_from, sel_to, below=True):
+        g = pg.locator(sel_from + ' [data-sgrip]').first.bounding_box(); t = pg.locator(sel_to).bounding_box()
+        pg.mouse.move(g['x'] + 5, g['y'] + 8); pg.mouse.down()
+        ty = t['y'] + t['height'] - 4 if below else t['y'] + 4
+        pg.mouse.move(g['x'] + 5, ty, steps=12); pg.mouse.up(); tick(pg, 200)
+    drag('[data-sort="proj"] [data-sid="pa"]', '[data-sort="proj"] [data-sid="pc"]')
+    order = st(pg, "S.projects.slice().sort((a,b)=>a.order-b.order).map(p=>p.id)"); assert order == ['pb', 'pc', 'pa'], order
+    assert pg.evaluate("()=>[...document.querySelectorAll('[data-sort=proj] [data-sid]')].map(x=>x.dataset.sid)") == ['pb', 'pc', 'pa']
+    pg.evaluate("()=>go('habits')"); tick(pg, 200)
+    drag('[data-sort="hab"] [data-sid="hb"]', '[data-sort="hab"] [data-sid="ha"]', below=False)
+    assert st(pg, "habits().map(h=>h.id)") == ['hb', 'ha']
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

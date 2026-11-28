@@ -1,6 +1,8 @@
 // Démo Diem : panneau « à tester » (n'existe pas dans la vraie appli)
 (function(){
  const ITEMS=[
+  ['Langage naturel','Dans « Ajouter une tâche », écris par exemple : « Préparer le devis demain à 14h pendant 45 minutes, urgent, sous-tâches : chiffrer, relire et envoyer ». Aussi « chaque lundi », « nouveau projet … », « nouvelle habitude … ».','today'],
+  ['Réordonner','Projets & Routines, Habitudes : attrape la poignée ⋮⋮ et glisse.','projects'],
   ['Relié à Claude','Réglages › « Claude : tes conversations » : une fois relié, ce que tu demandes dans une conversation Claude (« ajoute ça dans Diem », plan d’attaque) arrive ici ; les suggestions arrivent dans l’onglet du Génie. Inactif dans la démo.','settings'],
   ['Focus Lampe','Lance le focus sur une tâche (▶) : la lampe du Génie, l’anneau doré se remplit avec le temps prévu, une volute de fumée par sous-tâche faite.','today'],
   ['Page Habitudes','Menu › Habitudes : une carte par habitude avec la grille du mois (clique un jour pour le cocher), la série et la force (0–100 %).','habits'],

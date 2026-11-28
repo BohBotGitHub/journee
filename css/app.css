@@ -1387,3 +1387,9 @@ details.mmore .grid2{margin-top:8px}
 .hbmark svg{width:13px;height:13px}
 .card.fromhab{border-style:dashed;border-color:color-mix(in srgb,var(--cc,var(--acc)) 50%,var(--line))}
 .wcol .hbmark{width:16px;height:16px;margin-right:4px}.wcol .hbmark svg{width:11px;height:11px}
+/* v2.8 · réordonner projets, habitudes, modèles */
+.sgrip2{display:inline-flex;align-items:center;justify-content:center;width:22px;min-height:28px;color:var(--mute);cursor:grab;touch-action:none;opacity:.55;flex:none;margin-right:4px}
+.sgrip2:hover{opacity:1;color:var(--ink)}
+[data-sid].sorting{position:relative;z-index:5;box-shadow:0 10px 28px rgba(0,0,0,.18);cursor:grabbing}
+body.sortingnow{user-select:none;cursor:grabbing}
+.hbcard .sgrip2{position:absolute;left:3px;top:14px;width:18px}.hbcard{position:relative;padding-left:26px!important}

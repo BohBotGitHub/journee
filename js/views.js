@@ -206,7 +206,7 @@ function editTpl(id){
 function tplHtml(){
  const tps=S.templates||[],sug=tplSuggestions();
  return `<div class="tpls"><div class="row" style="margin-bottom:8px"><h2 style="font-size:18px">Routines et modèles</h2><span class="sp"></span><button class="sm" data-act="tplfromday">Depuis aujourd’hui</button><button class="sm pri" data-act="tplnew">+ Nouveau modèle</button></div>
- ${tps.length?`<div class="tplgrid">${tps.map(tp=>`<div class="tpl"><div class="row"><b>${esc(tp.name)}</b><span class="sp"></span><button class="sm ghost" data-act="tpledit" data-id="${tp.id}">Modifier</button></div><small class="mute">${tp.items.length} tâche${tp.items.length>1?'s':''} · ${fmtMin(tp.items.reduce((a,i)=>a+(i.est||0),0))}</small><div class="tplitems">${tp.items.slice(0,5).map(i=>esc(i.title)).join(' · ')}${tp.items.length>5?' …':''}</div><div class="row"><button class="sm pri" data-act="tplapply" data-id="${tp.id}" data-day="${today()}">Aujourd’hui</button><button class="sm" data-act="tplapply" data-id="${tp.id}" data-day="${addDays(today(),1)}">Demain</button></div></div>`).join('')}</div>`:'<p class="mute">Crée des listes réutilisables (routine du matin, ménage, préparation de voyage) et ajoute-les à un jour en un clic. Aussi depuis la palette Cmd+K.</p>'}
+ ${tps.length?`<div class="tplgrid" data-sort="tpl">${tps.map(tp=>`<div class="tpl" data-sid="${tp.id}"><div class="row">${SGRIP}<b>${esc(tp.name)}</b><span class="sp"></span><button class="sm ghost" data-act="tpledit" data-id="${tp.id}">Modifier</button></div><small class="mute">${tp.items.length} tâche${tp.items.length>1?'s':''} · ${fmtMin(tp.items.reduce((a,i)=>a+(i.est||0),0))}</small><div class="tplitems">${tp.items.slice(0,5).map(i=>esc(i.title)).join(' · ')}${tp.items.length>5?' …':''}</div><div class="row"><button class="sm pri" data-act="tplapply" data-id="${tp.id}" data-day="${today()}">Aujourd’hui</button><button class="sm" data-act="tplapply" data-id="${tp.id}" data-day="${addDays(today(),1)}">Demain</button></div></div>`).join('')}</div>`:'<p class="mute">Crée des listes réutilisables (routine du matin, ménage, préparation de voyage) et ajoute-les à un jour en un clic. Aussi depuis la palette Cmd+K.</p>'}
  ${sug.length?`<div class="tplsug"><small class="mute">Suggestions d’après ton historique :</small>${sug.map(x=>`<div class="pitem"><div><b>Routine ${esc(ch(x.c).name)}</b><small class="mute">${x.items.map(i=>esc(i.title)+' ('+fmtMin(i.est)+')').join(' · ')}</small></div><button class="sm" data-act="tplsug" data-c="${esc(x.c)}">Créer</button></div>`).join('')}</div>`:''}</div>`;
 }
 
@@ -417,9 +417,9 @@ function viewTodo(){
 
 /* ---------- vue Projets ---------- */
 function viewProjects(){
- const ps=(S.projects||[]),act=ps.filter(p=>!p.done).sort((a,b)=>(a.end||'9')<(b.end||'9')?-1:1),fin=ps.filter(p=>p.done);
+ const ps=(S.projects||[]),act=ps.filter(p=>!p.done).sort((a,b)=>(a.order!=null||b.order!=null)?((a.order??1e9)-(b.order??1e9)):((a.end||'9')<(b.end||'9')?-1:1)),fin=ps.filter(p=>p.done);
  const one=p=>{const ts=S.tasks.filter(t=>t.proj===p.id),open=ts.filter(t=>!t.done).sort((a,b)=>(a.day||'9')<(b.day||'9')?-1:1),g=projProgress(p.id),pc=g.n?Math.round(g.done/g.n*100):0,late=p.end&&!p.done&&p.end<today(),left=p.end?Math.round((new Date(p.end)-new Date(today()))/864e5):null;
-  return `<section class="proj${late?' late':''}"><div class="projhead"><input class="projname" data-pn="${esc(p.id)}" value="${esc(p.name)}" aria-label="Nom du projet">
+  return `<section class="proj${late?' late':''}" data-sid="${esc(p.id)}"><div class="projhead">${p.done?'':SGRIP}<input class="projname" data-pn="${esc(p.id)}" value="${esc(p.name)}" aria-label="Nom du projet">
   <label class="projend">Fin<input type="date" data-pe="${esc(p.id)}" value="${esc(p.end||'')}" aria-label="Date de fin"></label>
   <label class="projdone"><input type="checkbox" data-pd="${esc(p.id)}" ${p.done?'checked':''}>Terminé</label></div>
   <div class="projbar" title="${g.done}/${g.n} tâches faites"><i style="width:${pc}%"></i></div>
@@ -428,7 +428,7 @@ function viewProjects(){
   ${open.length?`<div class="list">${open.map(card).join('')}</div>`:''}</section>`};
  return `<div class="head"><div><h1>Projets & Routines</h1><div class="sub">Les projets ont une date de fin (tape <code>+nom</code> en créant une tâche pour l’y rattacher) ; les routines et modèles s’ajoutent à un jour en un clic.</div></div><div class="acts"><button class="pri" data-act="projadd">Nouveau projet</button></div></div>
  <h2 class="prsec">Projets</h2>
- ${act.length?act.map(one).join(''):'<div class="empty">Aucun projet en cours. Crée-en un : un spectacle, un déménagement, une formation…</div>'}
+ ${act.length?`<div data-sort="proj">${act.map(one).join('')}</div>`:'<div class="empty">Aucun projet en cours. Crée-en un : un spectacle, un déménagement, une formation…</div>'}
  ${fin.length?`<details class="projfin"><summary>Terminés (${fin.length})</summary>${fin.map(one).join('')}</details>`:''}
  <div style="margin-top:26px">${tplHtml()}</div>`;
 }
