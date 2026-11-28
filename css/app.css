@@ -1406,3 +1406,10 @@ textarea.adt{resize:none;min-height:46px;font:inherit;line-height:1.45}
 #nav button.navadd{display:none}
 @media (max-width:720px){#nav button.navadd{display:flex}}
 .admatch .admh{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--r1);background:var(--panel2);font-size:13px}
+/* v3.0 · suggestions sous « Ajouter une tâche » */
+.sugrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 12px;font-size:13px}
+.sugchip{display:inline-flex;align-items:stretch;border:1px dashed color-mix(in srgb,var(--acc) 40%,var(--line));border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--acc) 5%,transparent)}
+.sugchip button{border:0;background:transparent;padding:4px 10px;font-size:13px;display:inline-flex;align-items:baseline;gap:6px;min-height:30px}
+.sugchip button small{color:var(--mute);font-size:12px}
+.sugchip button:hover{background:color-mix(in srgb,var(--acc) 12%,transparent)}
+.sugchip .sugno{padding:4px 9px 4px 4px;color:var(--mute)}

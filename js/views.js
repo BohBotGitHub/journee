@@ -107,6 +107,7 @@ function viewToday(){
  ${summaryHtml(d,isT)}${d>=today()&&typeof hbPills==='function'?hbPills(d):''}
 
  <button class="addopen" data-act="addopen" data-d="${d}" aria-label="Ajouter une tâche (touche A)">${ico('plus')}<span>Ajouter une tâche</span><kbd>A</kbd></button>
+ ${d>=today()?sugHtml(d):''}
  ${isT?nowNext(d):''}
  ${isMobile()&&isT?mobileTimeline(d):`<div class="list" data-drop="day:${d}">${ts.length?ts.filter(t=>!t.done).map(card).join('')||(isT?doneSky(done.length,fmtMin(ts.reduce((a,t)=>a+actualSec(t),0)/60)):'<div class="empty">Tout est fait.</div>'):'<div class="empty">Rien de prévu. Ajoute une tâche, ou lance la planification.</div>'}</div>${done.length?`<details class="donegrp" data-donegrp ${uiDoneOpen?'open':''}><summary>${ico('check')}Faites (${done.length})</summary><div class="list donelist">${done.map(card).join('')}</div></details>`:''}`}
  ${(()=>{const sl=S.tasks.filter(t=>!t.done&&t.slid===d&&t.day===addDays(d,1));return sl.length?`<button class="slidnote" data-act="next">${sl.length} tâche${sl.length>1?'s':''} à demain →</button>`:''})()}
@@ -509,3 +510,22 @@ function moreMenu(){
   ${it('data-act="morego"','data-v="settings"','gear','Réglages')}
   ${it('data-act="palopen"','','search','Ajouter ou chercher')}
  </div></div>`)}
+
+/* ---------- suggestions sous « Ajouter une tâche » (v3.0) : calculées sur l'appareil, sans le Génie ni aucun token ---------- */
+const JOURS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+function daySugs(d){
+ const info=S.days[d]||{},no=new Set(info.sugNo||[]),have=new Set(S.tasks.filter(t=>t.day===d).map(t=>norm(t.title).trim())),out=[],seen=new Set();
+ const push=(k,title,why,est,channel,id)=>{const n=norm(title).trim();if(!n||have.has(n)||no.has(k)||seen.has(n))return;seen.add(n);out.push({k,title,why,est:est||0,channel:channel||null,id:id||null})};
+ // 1. échéance proche dans « Plus tard »
+ S.tasks.filter(t=>!t.day&&!t.done&&t.due&&t.due<=addDays(d,2)).sort((a,b)=>a.due<b.due?-1:1).forEach(t=>push('b-'+t.id,t.title,t.due<=d?'échéance aujourd’hui':'échéance '+fmtDay(t.due,{weekday:'long'}),t.est,t.channel,t.id));
+ // 2. ce que tu fais souvent ce jour de la semaine (8 dernières semaines, au moins 2 fois)
+ const wd=parseYmd(d).getDay(),from=addDays(d,-56),cnt={};
+ const add=(title,day,est,c)=>{if(!day||day<from||day>=d||parseYmd(day).getDay()!==wd)return;const k=norm(title).trim();if(!k)return;(cnt[k]=cnt[k]||{t:title,n:0,est:0,c:null,days:new Set()});if(!cnt[k].days.has(day)){cnt[k].days.add(day);cnt[k].n++}if(est)cnt[k].est=est;if(c)cnt[k].c=c};
+ (S.archive||[]).forEach(a=>add(a.t,a.d,a.a?Math.max(5,Math.round(a.a/300)*5):0,a.c));
+ S.tasks.filter(t=>t.done&&!t.recurId&&!t.habitId).forEach(t=>add(t.title,t.day,t.est,t.channel));
+ Object.values(cnt).filter(x=>x.n>=2).sort((a,b)=>b.n-a.n).forEach(x=>push('w-'+norm(x.t).trim(),x.t,'souvent le '+JOURS[wd],x.est,x.c));
+ // 3. habitude du jour pas encore faite ni placée
+ if(typeof habits==='function')habits().filter(h=>!h.paused&&h.kind!=='quit'&&!h.toDay&&(h.freq==='week'?hbWeekCount(h,d)<(h.n||1):hbDue(h,d))&&!hbDone(h,d)).forEach(h=>push('h-'+h.id,h.name,'habitude',h.est,h.channel));
+ return out.slice(0,3)}
+function sugHtml(d){const xs=daySugs(d);if(!xs.length)return '';
+ return `<div class="sugrow" aria-label="Suggestions"><span class="mute">Suggestions</span>${xs.map(x=>`<span class="sugchip"><button data-act="sugadd" data-k="${esc(x.k)}" data-d="${d}" title="Ajouter à ${d===today()?'aujourd’hui':fmtDay(d,{weekday:'long'})}">+ ${esc(x.title)}<small>${esc(x.why)}${x.est?' · '+fmtMin(x.est):''}</small></button><button class="sugno" data-act="sugno" data-k="${esc(x.k)}" data-d="${d}" aria-label="Ne plus proposer « ${esc(x.title)} » ce jour-là" title="Pas aujourd’hui">×</button></span>`).join('')}</div>`}

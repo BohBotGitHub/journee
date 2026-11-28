@@ -52,7 +52,7 @@ function showModal(html){const was=$('#modal').classList.contains('hidden');$('#
  if(was&&!navigator.webdriver){try{history.pushState({m:1},'')}catch(e){}}}
 // le « retour » lancé par closeModal arrive après coup : il ne doit pas refermer la fenêtre ouverte entre-temps
 let popSkip=false;
-function closeModal(fromBack){if(typeof ad!=='undefined')ad=null;if(typeof sheetTid!=='undefined')sheetTid=null;
+function closeModal(fromBack){{const ae=document.activeElement;if(ae&&ae!==document.body&&$('#modal').contains(ae))try{ae.blur()}catch(e){}}if(typeof ad!=='undefined')ad=null;if(typeof sheetTid!=='undefined')sheetTid=null;
  if(!fromBack&&history.state&&history.state.m&&!$('#modal').classList.contains('hidden')){try{popSkip=true;history.back()}catch(e){popSkip=false}}
  if(modalTask){const t=T(modalTask);if(t&&t.block&&t.block.gcalId&&t.block.title!==t.title&&gTok()){t.block.title=t.title;save();gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{})}}
  $('#modal').classList.add('hidden');modalTask=null;ritual=null;render();

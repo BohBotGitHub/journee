@@ -1964,11 +1964,29 @@ def _(c):
     pg.keyboard.press('t'); tick(pg, 150); assert st(pg, "view") == 'today'
     pg.keyboard.press('a'); tick(pg, 150); assert pg.locator('#modal [data-adtitle]').count() == 1
     pg.keyboard.press('Escape'); tick(pg, 100)
-    pg.keyboard.press('o'); tick(pg, 150); assert st(pg, "ritual&&ritual.type") == 'shutdown', pg.evaluate("()=>[document.activeElement.tagName,document.activeElement.className,document.getElementById('modal').className,view]")
+    pg.keyboard.press('o'); tick(pg, 150); assert st(pg, "ritual&&ritual.type") == 'shutdown', (pg.evaluate("()=>[document.activeElement.tagName,document.activeElement.className,document.getElementById('modal').className,view]"))
     pg.keyboard.press('Escape'); tick(pg, 100)
     lay = st(pg, "layout"); pg.keyboard.press('j'); tick(pg, 150); assert st(pg, "layout") != lay
     pg.keyboard.press('j'); tick(pg, 100)
     pg.keyboard.press('Shift+?'); tick(pg, 150); assert 'Plus tard' in pg.inner_text('#modal') and 'Le Génie' in pg.inner_text('#modal')
+    assert not errs, errs; ctx.close()
+
+@test('v3.0 : suggestions sous « Ajouter une tâche » (échéance, souvent ce jour-là, habitude), sans le Génie')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("""()=>{const d=today(),w1=addDays(d,-7),w2=addDays(d,-14);
+      S.archive=(S.archive||[]).concat([{id:'s1',t:'Lessive',a:1800,d:w1},{id:'s2',t:'Lessive',a:1500,d:w2}]);
+      S.tasks.push(mk({id:'due1',title:'Payer la facture',day:null,due:addDays(d,1),est:10}));
+      S.habits=[{id:'hs',name:'Étirements',kind:'build',freq:'daily',icon:'lotus',est:5,log:{},skip:[],created:Date.now()}];save();render()}""")
+    tick(pg, 200)
+    txt = pg.inner_text('#main .sugrow')
+    assert 'Payer la facture' in txt and 'Lessive' in txt and 'Étirements' in txt and 'souvent le' in txt, txt
+    pg.click('#main .sugrow [data-act="sugadd"][data-k="b-due1"]'); tick(pg, 150)
+    assert st(pg, "T('due1').day") == d()
+    pg.click('#main .sugrow [data-act="sugno"]'); tick(pg, 150)
+    assert pg.locator('#main .sugrow .sugchip').count() == 1
+    assert st(pg, "S.chat.length") == 0
     assert not errs, errs; ctx.close()
 
 def main():
