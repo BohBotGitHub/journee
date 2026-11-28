@@ -1523,3 +1523,32 @@ body.hidenav #nav button.navkeys .ll,body.hidenav #nav button.navkeys kbd{displa
  .focus .fmeta{justify-content:center}
 }
 @media (pointer:coarse){.focus .fmeta .fadj button{min-height:44px;min-width:44px}}
+/* v3.2 : focus harmonisé — titre en haut à gauche ; à gauche la lampe et le minuteur ensemble avec leurs commandes ; à droite la grosse case */
+.focus .fhead{margin:6px 0 18px}
+.focus .fhead .ftitle{margin:0;text-align:left}
+.focus .fhero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:center}
+.focus .ftimer{display:flex;align-items:center;gap:28px;min-width:0}
+.focus .ftimer .flamp{flex:none;width:clamp(150px,20vw,220px)}
+.focus .ftimer .flampsvg{max-width:100%}
+.focus .ftimer .finfo{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;text-align:left}
+.focus .fmeta{margin:0}
+.focus .fctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.focus .fctl .fadj{display:inline-flex;gap:2px;margin-left:2px}
+.focus .fctl .fadj button{min-width:0;min-height:36px;padding:0 10px;border:1px solid var(--line);background:transparent;color:var(--mute);font-size:13px;border-radius:10px}
+.focus .fctl .fadj button:hover{color:var(--ink)}
+.focus .fdonebox{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 8px}
+.focus .fdonebox .fchk{width:104px;height:104px;min-height:104px;border-width:3px}
+.focus .fdonebox .fchk svg{width:52px;height:52px}
+.focus .fdonebox .fchkl{font-size:15px;color:var(--mute);font-weight:500}
+.focus .fdonebox .fall{margin-top:2px}
+@media (max-width:720px){
+ .focus .fhead{text-align:center}.focus .fhead .ftitle{text-align:center}
+ .focus .fhero{grid-template-columns:1fr;gap:22px;justify-items:center}
+ .focus .ftimer{flex-direction:column;gap:10px}
+ .focus .ftimer .finfo{align-items:center;text-align:center}
+ .focus .fctl{justify-content:center}
+ .focus .fdonebox .fchk{width:84px;height:84px;min-height:84px}
+}
+@media (pointer:coarse){.focus .fctl .fadj button{min-height:44px}}
+.focus .fctl .fadj{flex-direction:row}
+@media (max-width:720px){.focus .fhead,.focus .fhead .ftitle{text-align:left}}
