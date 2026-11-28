@@ -16,6 +16,8 @@ Réponds toujours en **français**.
 - Démos : données fictives uniquement.
 - Proposer des plugins quand une mission sort de tes attributions.
 
+- Un réglage d’ergonomie demandé s’applique partout où c’est pertinent (unité d’action) : mêmes options, même disposition dans tous les menus.
+
 ## Branches
 
 - `dev` : tout le travail. `main` : le site en ligne. Jamais de commit direct sur `main` hors mise en ligne.

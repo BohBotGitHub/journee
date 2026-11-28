@@ -765,7 +765,7 @@ body.sidecollapse #side{opacity:.35}body.sidecollapse .sidegrip{background:var(-
 #mselbar .mselprio{display:inline-flex;border-left:1px solid color-mix(in srgb,var(--bg) 25%,transparent);border-right:1px solid color-mix(in srgb,var(--bg) 25%,transparent);margin:0 4px;padding:0 4px}
 #mselbar .mselprio button{padding:0 7px}
 #mselbar .mselx{font-size:20px;padding:0 10px}
-@media (max-width:760px){#mselbar{bottom:76px}#mselbar span:not(.mselprio){display:none}}
+@media (max-width:760px){#mselbar{bottom:76px}#mselbar .ml,#mselbar .mlw,#mselbar b small{display:none}}
 /* journée entière (Mvision…) : bloc hachuré, distinct des rendez-vous à horaires connus */
 .ev.allday{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--adc,var(--mute)) 16%,var(--panel)) 0 8px,color-mix(in srgb,var(--adc,var(--mute)) 6%,var(--panel)) 8px 16px);border:1.5px dashed color-mix(in srgb,var(--adc,var(--mute)) 55%,var(--line));border-left-width:1.5px;color:var(--ink);padding:6px 8px;display:flex;flex-direction:column;gap:2px;cursor:default}
 .ev.allday b{font-size:13px;font-weight:700}.ev.allday small{font-size:11.5px;color:var(--mute)}
@@ -1450,3 +1450,32 @@ body.hidenav #nav button.navkeys .ll,body.hidenav #nav button.navkeys kbd{displa
 .card .nowlbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--acc-strong,var(--acc));margin-bottom:2px}
 #minifocus .mfchk{margin:0 2px 0 8px;align-self:center;border-color:currentColor}
 .runbox{position:relative}.runbox .runchk{position:absolute;right:8px;top:8px;width:18px;height:18px;min-height:18px}
+/* v3.1 : pauses automatiques et zoom de l'agenda */
+.brk{position:absolute;left:2px;right:2px;border-radius:6px;pointer-events:none;background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--mute) 14%,transparent) 6px 12px);border:1px dashed color-mix(in srgb,var(--mute) 35%,transparent);color:var(--mute);font-size:11px;line-height:1;display:flex;align-items:center;padding:0 8px;letter-spacing:.02em;z-index:0}
+.tlin .ev,.tlin .blk{z-index:1}
+.zoom{display:inline-flex;gap:2px;margin-right:6px}
+.zoom button{min-width:32px;font-weight:600;font-size:15px;line-height:1}
+.zoom button:disabled{opacity:.35;cursor:default}
+/* v3.1 : cibles plus grandes sans grossir le visuel — 32 px à la souris / trackpad, 44 px au doigt */
+.chk,.play,.est,.bchk,.chip.pc,.cmore,.sugno,.dnav button,.zoom button{position:relative}
+@media (pointer:fine){
+ .chk::after,.play::after,.est::after,.bchk::after,.cmore::after,.sugno::after,.dnav button::after{content:"";position:absolute;inset:-6px}
+ .play::after{inset:-2px}.cmore::after{inset:-4px}.est::after{inset:-5px -2px}.bchk::after{inset:-8px}.sugno::after{inset:-1px -5px}.dnav button::after{inset:-1px -3px}
+}
+@media (pointer:coarse){
+ .cmore::after,.sugno::after,.bchk::after{content:"";position:absolute;inset:-10px}
+ .zoom button{min-height:44px;min-width:44px}
+}
+/* une ligne de destinations, partout la même */
+.menu .dayrow{display:flex;gap:6px;flex-wrap:wrap}
+.menu .dayrow button{flex:1 1 0;min-width:max-content;justify-content:center;text-align:center;padding-inline:10px}
+/* barre de sélection : rien ne se chevauche ; en plus étroit, icônes seules et destinations en texte court */
+#mselbar button{flex:none}
+#mselbar .ms{display:none}
+@media (max-width:1240px){#mselbar .ml{display:none}#mselbar .ms{display:inline}#mselbar button{padding:0 8px}}
+
+#mselbar b{flex:none}
+/* la tâche « maintenant » : gros bouton focus, comme l'ancienne carte */
+.card.isnow .play{opacity:1!important;width:44px;height:44px;min-height:44px;background:var(--acc-strong);border-color:var(--acc-strong);color:var(--on-acc);font-size:14px;align-self:center}
+.card.isnow .play svg{width:18px;height:18px}
+.card.isnow .play:hover{filter:brightness(1.08)}

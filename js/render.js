@@ -135,7 +135,7 @@ function shell(body,next){const st=RIT[ritual.type],i=ritual.step;return `<div c
 const durBtns=t=>`<div class="durs">${durSelect(t)}</div>`;
 // zones où glisser une tâche pour la repousser (rituel du matin)
 function pushZones(d){
- const z=[[addDays(d,1),'Demain'],[addDays(d,3),'Dans 3 jours'],[addDays(monday(d),7),'Semaine prochaine'],['backlog','Backlog']];
+ const z=DAYMOVES(d).slice(1);
  return `<div class="pzones" aria-label="Glisse une tâche ici pour la repousser">${z.map(([to,l])=>`<div class="pzone" data-drop="push" data-pz="${to}"><b>${l}</b>${to!=='backlog'?`<small>${fmtDay(to,{weekday:'short',day:'numeric',month:'short'})}</small>`:'<small>sans date</small>'}</div>`).join('')}</div>`;
 }
 function renderRitual(){try{renderRitual0()}catch(e){console.error(e);showModal(`<div class="rit"><h2>Le rituel n’a pas pu s’afficher</h2><p class="lead">Une erreur l’a bloqué : <code>${esc(e.message||String(e))}</code></p><p class="mute">Envoie ce message à Claude pour qu’il corrige.</p><div class="row" style="justify-content:flex-end"><button data-act="close">Fermer</button></div></div>`)}}

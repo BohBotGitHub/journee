@@ -130,6 +130,7 @@ document.addEventListener('click',async e=>{
   case'inbox':{const t=T(id);if(t){t.inbox=false;moveTask(t.id,b.dataset.to);toast(b.dataset.to==='backlog'?'Rangée au backlog':'Planifiée')}break}
   case'keys':showKeys();break;
   case'layout':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();toggleLayout();break;
+  case'zoom':calZoom(+b.dataset.z);break;
   case'span':calSpan=+b.dataset.n;lsSet('journee.span',String(calSpan));render();break;
   case'focussub':{const t=T(b.dataset.tid);if(t){if(focusOn!==t.id)openFocus(t.id,b.dataset.s);else{focusSub=b.dataset.s;renderFocus()}}break}
   case'focussubdone':{const t=T(focusOn),x=t&&t.subtasks.find(z=>z.id===focusSub);if(x){x.d=true;chime(780);genieWish();const nx=t.subtasks.find(z=>!z.d);focusSub=nx?nx.id:null;save();render();renderFocus();toast(nx?'Suivante : '+nx.t:'Toutes les sous-tâches sont faites')}break}
@@ -164,7 +165,7 @@ document.addEventListener('click',async e=>{
    location.reload();break}
   case'hoursreset':{const i=S.days[today()];if(i){delete i.hs;delete i.he}save();closeModal();render();break}
   case'rollmenu':rollMenu(id);break;
-  case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();const to=nextFreeDay(t);moveTask(id,to,true);putFront([id],T(id).day);save();render();toast(to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
+  case'rolltomorrow':{const t=T(id);if(!t)break;t.roll=0;closeModal();const to=nextFreeDay(t);moveTask(id,to,true);putFront([id],T(id).day);save();render();toast(to===addDays(today(),1)?'Reportée à demain':asked===addDays(today(),1)?'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}):'Déplacée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));break}
   case'rolldrop':deleteTask(id);closeModal();render();toast('Tâche supprimée');break;
   case'energy':{const dd=ritual?ritual.day:cur;S.days[dd]=Object.assign(S.days[dd]||{},{energy:b.dataset.v||''});save();if(ritual)renderRitual();break}
   case'setjob':{const dd=b.dataset.d;S.days[dd]=S.days[dd]||{};if(b.dataset.v==='auto'){delete S.days[dd].job;delete S.days[dd].js;delete S.days[dd].je}else{const j0=jobOf(dd);S.days[dd].job=b.dataset.v||'';if(b.dataset.v&&j0&&j0.auto){S.days[dd].js=j0.s;S.days[dd].je=j0.e}}save();render();queueFlow();if(ritual)renderRitual();break}
@@ -197,7 +198,7 @@ document.addEventListener('click',async e=>{
   case'sheetsel':closeModal();lpMode=true;msel.add(id);mselAnchor=id;renderMsel();toast('Touche d’autres tâches pour les ajouter à la sélection');break;
   case'mvdown':closeModal();swapTask(id,1);break;
   case'tobacklog':{const t=T(id);if(t&&t.day){moveTask(id,'backlog');toast('Renvoyée au backlog');if(modalTask===id)openTask(id)}break}
-  case'sheetmv':{closeModal();const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0;let to=b.dataset.to;if(t&&to===addDays(today(),1))to=nextFreeDay(t);moveTask(id,to,true);if(to!=='backlog'&&to>today())putFront([id],T(id).day);save();render();toast(to==='backlog'?'Renvoyée au backlog':to===today()?'Pour aujourd’hui':to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
+  case'sheetmv':{closeModal();const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0;let to=b.dataset.to;const asked=to;if(t&&to===addDays(today(),1))to=nextFreeDay(t);moveTask(id,to,true);if(to!=='backlog'&&to>today())putFront([id],T(id).day);save();render();toast(to==='backlog'?'Renvoyée au backlog':to===today()?'Pour aujourd’hui':to===addDays(today(),1)?'Reportée à demain':asked===addDays(today(),1)?'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}):'Déplacée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));break}
   case'sum':if(b.closest('#modal'))closeModal();uiOpen=uiOpen===b.dataset.k?'':b.dataset.k;render();break;
   case'freeze':{const d=cur;S.days[d]=Object.assign(S.days[d]||{},{frozen:!(S.days[d]||{}).frozen});save();if(!$('#modal').classList.contains('hidden'))closeModal();render();toast(S.days[d].frozen?'Journée figée : les créneaux ne bougent plus avec l’heure':'Les créneaux suivent à nouveau l’heure');break}
   case'daymenu':dayMenu();break;
@@ -659,9 +660,9 @@ function renderMsel(){
  msel.forEach(id=>{const c=document.querySelector(`#main .card[data-id="${id}"]`);if(c)c.classList.add('msel')});
  let bar=$('#mselbar');if(!bar){bar=document.createElement('div');bar.id='mselbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Actions sur la sélection');document.body.appendChild(bar)}
  if(!msel.size){bar.className='hidden';bar.innerHTML='';return}
- const B=(v,i,l)=>`<button data-act="mselact" data-v="${v}" title="${l}" aria-label="${l}">${ico(i)}<span>${l}</span></button>`;
+ const B=(v,i,l,sh)=>`<button data-act="mselact" data-v="${v}" title="${l}" aria-label="${l}">${sh?'':ico(i)}<span class="ml">${l}</span>${sh?`<span class="ms">${sh}</span>`:''}</button>`;
  bar.className='';
- const tot=[...msel].map(T).filter(Boolean).reduce((x,t)=>x+(t.done?0:(t.est||0)),0);bar.innerHTML=`<b>${msel.size} sélectionnée${msel.size>1?'s':''}${tot?` <small>· ${fmtMin(tot)}</small>`:''}</b>${B('done','check','Cocher')}${B('today','sunrise','Aujourd’hui')}${B('tomorrow','next','Demain')}${B('backlog','tray','Backlog')}${B('top','addtop','En haut')}${B('bottom','addbottom','En bas')}<span class="mselprio">${PRIOS.map(([v,l])=>`<button data-act="mselact" data-v="p:${v}" title="Priorité ${l.toLowerCase()}" aria-label="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>${B('del','trash','Supprimer')}<button class="mselx" data-act="mselact" data-v="clear" title="Tout désélectionner (Échap)" aria-label="Tout désélectionner">×</button>`}
+ const tot=[...msel].map(T).filter(Boolean).reduce((x,t)=>x+(t.done?0:(t.est||0)),0);bar.innerHTML=`<b>${msel.size}<span class="mlw"> sélectionnée${msel.size>1?'s':''}</span>${tot?` <small>· ${fmtMin(tot)}</small>`:''}</b>${B('done','check','Cocher')}${B('today','sunrise','Aujourd’hui','Auj.')}${B('tomorrow','next','Demain','Demain')}${B('d3','next','Dans 3 jours','+3 j')}${B('nextw','calendar','Semaine prochaine','Sem. pro.')}${B('backlog','tray','Backlog','Backlog')}${B('top','addtop','En haut')}${B('bottom','addbottom','En bas')}<span class="mselprio">${PRIOS.map(([v,l])=>`<button data-act="mselact" data-v="p:${v}" title="Priorité ${l.toLowerCase()}" aria-label="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</span>${B('del','trash','Supprimer')}<button class="mselx" data-act="mselact" data-v="clear" title="Tout désélectionner (Échap)" aria-label="Tout désélectionner">×</button>`}
 function mselOrdered(ids){const pos=[...document.querySelectorAll('#main .card[data-id]')].map(c=>c.dataset.id);return ids.filter(id=>T(id)).sort((a,b)=>{const x=pos.indexOf(a),y=pos.indexOf(b);return (x<0?1e9:x)-(y<0?1e9:y)||(T(a).order||0)-(T(b).order||0)})}
 function mselMove(ids,top){
  const days=new Set(ids.map(id=>T(id).day));
@@ -676,6 +677,7 @@ function mselAct(v){
  if(v==='done'){ids.forEach(id=>{const t=T(id);if(!t.done){t.done=true;t.doneAt=Date.now()}});msg=n+' cochée'+(n>1?'s':'')}
  else if(v==='today'){ids.forEach(id=>moveTask(id,today(),true));msg='Pour aujourd’hui'}
  else if(v==='tomorrow'){ids.forEach(id=>moveTask(id,nextFreeDay(T(id)),true));const by={};ids.forEach(id=>{const t=T(id);if(t&&t.day)(by[t.day]=by[t.day]||[]).push(id)});Object.entries(by).forEach(([dd,xs])=>putFront(xs,dd));msg='Reportées'}
+ else if(v==='d3'||v==='nextw'){const to=DAYMOVES().find(x=>x[1]===(v==='d3'?'Dans 3 jours':'Semaine prochaine'))[0];ids.forEach(id=>moveTask(id,to,true));msg=v==='d3'?'Dans 3 jours':'Semaine prochaine'}
  else if(v==='backlog'){ids.forEach(id=>{T(id).roll=0;moveTask(id,'backlog',true)});msg='Au backlog'}
  else if(v==='top'||v==='bottom'){mselMove(ids,v==='top');save();render();renderMsel();toast((v==='top'?'En haut':'En bas')+' · ⌘/Ctrl Z pour annuler');return}
  else if(v.startsWith('p:')){ids.forEach(id=>{T(id).prio=v.slice(2)});msg='Priorité changée'}
@@ -736,3 +738,6 @@ function srtEnd(e){if(!SRT||(e&&e.pointerId!==SRT.pid))return;const {box,it}=SRT
  else if(k==='tpl'){const m=new Map((S.templates||[]).map(t=>[t.id,t]));S.templates=[...ids.map(id=>m.get(id)).filter(Boolean),...(S.templates||[]).filter(t=>!ids.includes(t.id))]}
  undoCommit(pre,'sort');save();render()}
 document.addEventListener('pointerup',srtEnd);document.addEventListener('pointercancel',srtEnd);
+
+// zoom de l'agenda : ⌘/Ctrl + molette, ou pincer sur le trackpad (qui envoie une molette avec Ctrl)
+{let zAcc=0,zT=0;document.addEventListener('wheel',e=>{if(!(e.ctrlKey||e.metaKey))return;const z=e.target.closest&&e.target.closest('.tlin,.bigcal,.tl');if(!z)return;e.preventDefault();zAcc+=e.deltaY;const now=Date.now();if(Math.abs(zAcc)<(e.deltaMode?1:40)||now-zT<120)return;zT=now;calZoom(zAcc<0?1:-1,e.clientY);zAcc=0},{passive:false})}
