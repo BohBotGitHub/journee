@@ -2043,6 +2043,38 @@ def _(c):
     assert pg.locator('#modal .tsheet').count() == 1 and st(pg, "msel.size") == 0, (pg.locator('#modal .tsheet').count(), st(pg, 'msel.size'), pg.evaluate('()=>document.getElementById("modal").className'), x, y, pg.evaluate('()=>document.getElementById("sheet").innerHTML.slice(0,300)'))
     assert not errs, errs; ctx.close()
 
+@test('v3.1 : pause automatique après 90 min de travail d’affilée, zoom de l’agenda, blocs côte à côte élargis')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("""()=>{S.tasks=S.tasks.filter(t=>t.day!==today());const d=today();S.days[d]=Object.assign(S.days[d]||{},{hs:9,he:20});
+      ['A','B','C'].forEach((x,i)=>S.tasks.push(mk({id:'p'+x,title:'Tâche '+x,day:d,est:60,order:i+1})));save();runFlow();render()}""")
+    tick(pg, 300)
+    b = st(pg, "['pA','pB','pC'].map(i=>{const t=T(i);return [+new Date(t.block.start),+new Date(t.block.end)]})")
+    assert b[1][0] == b[0][1], b
+    assert b[2][0] - b[1][1] == 10*60000, b
+    assert st(pg, "(flowBreaks[today()]||[]).length") == 1
+    pg.evaluate("()=>{sideTab='cal';render()}"); tick(pg, 150)
+    assert pg.locator('#sidebody .brk').count() == 1
+    h0 = pg.locator('#sidebody .blk[data-id="pA"]').bounding_box()['height']
+    pg.click('#sidebody [data-act="zoom"][data-z="1"]'); tick(pg, 150)
+    h1 = pg.locator('#sidebody .blk[data-id="pA"]').bounding_box()['height']
+    assert h1 > h0, (h0, h1)
+    pg.evaluate("()=>{S.settings.breakEvery=0;save();runFlow();render()}"); tick(pg, 300)
+    assert st(pg, "+new Date(T('pC').block.start)-+new Date(T('pB').block.end)") == 0
+    # deux blocs qui se chevauchent puis un seul : le dernier reprend toute la largeur
+    pg.evaluate("""()=>{const d=today(),b=+parseYmd(d);S.settings.liveShift=false;
+      setRange(T('pA'),new Date(b+14*3600e3),new Date(b+15*3600e3),true);setRange(T('pB'),new Date(b+14.5*3600e3),new Date(b+15.5*3600e3),true);setRange(T('pC'),new Date(b+15.5*3600e3),new Date(b+16*3600e3),true);save();render()}""")
+    tick(pg, 200)
+    wa = pg.locator('#sidebody .blk[data-id="pA"]').bounding_box()['width']; wc = pg.locator('#sidebody .blk[data-id="pC"]').bounding_box()['width']
+    assert wc > wa * 1.6, (wa, wc)
+    pg.evaluate("()=>localStorage.removeItem('journee.zoom')")
+    # cibles : 32 px de zone cliquable autour de la case, du ⋯ et du bouton focus
+    pg.evaluate("()=>{sideTab='cal';go('today')}"); tick(pg, 150)
+    hit = pg.evaluate("""()=>['.card .chk','.card .cmore','.card .play'].map(q=>{const e=document.querySelector('#main '+q),b=e.getBoundingClientRect();const x=document.elementFromPoint(b.left+b.width/2-15,b.top+b.height/2);return !!(x&&x.closest(q))})""")
+    assert all(hit), hit
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

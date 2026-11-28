@@ -48,15 +48,16 @@ function mobileTimeline(d){
  <p class="mute" style="font-size:12.5px;margin-top:10px">Astuce : appui long sur une tâche pour la déplacer, la reporter ou fixer son heure.</p>`;
 }
 let sheetTid=null;
+// même jeu de destinations partout (menu d'une tâche, tâche reportée, sélection, rituel) : une seule ligne
+const DAYMOVES=(d=today())=>[[today(),'Aujourd’hui'],[addDays(d,1),'Demain'],[addDays(d,3),'Dans 3 jours'],[addDays(monday(d),7),'Semaine prochaine'],['backlog','Backlog']];
+const dayMovesRow=(t,roll)=>`<div class="dayrow" role="group" aria-label="Déplacer vers">${DAYMOVES().filter(([to])=>to!==(t.day||'backlog')).map(([to,l])=>`<button data-act="${roll&&to===addDays(today(),1)?'rolltomorrow':'sheetmv'}" data-id="${t.id}" data-to="${to}" title="${to==='backlog'?'Sans date':cap1(fmtDay(to,{weekday:'long',day:'numeric',month:'short'}))}">${l}</button>`).join('')}</div>`;
 function taskSheet(id){
  const t=T(id);if(!t)return;sheetTid=id;const d=t.day||cur,ts=dayTasks(d).filter(x=>!x.done),i=ts.indexOf(t);
  showModal(`<div class="rit tsheet"><button class="sheetx" data-act="close" aria-label="Fermer" title="Fermer (Échap)">×</button><h2>${esc(t.title)}</h2><div class="menu">
   ${i>=0&&ts.length>1?`<div class="mvrow"><button class="mvico" data-act="mvtop" data-id="${t.id}" aria-label="Tout en haut" title="Tout en haut (⌘⇧↑)" ${i>0?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14M12 20V9M6 14l6-6 6 6"/></svg></button><button class="mvico" data-act="mvup" data-id="${t.id}" aria-label="Monter d’un cran" title="Monter d’un cran (⌘↑)" ${i>0?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><button class="mvico" data-act="mvdown" data-id="${t.id}" aria-label="Descendre d’un cran" title="Descendre d’un cran" ${i<ts.length-1?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button><button class="mvico" data-act="mvbottom" data-id="${t.id}" aria-label="Tout en bas" title="Tout en bas (⌘⇧↓)" ${i<ts.length-1?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20h14M12 4v11M6 10l6 6 6-6"/></svg></button></div>`:''}
   <div class="mvrow">${PRIOS.map(([v,l])=>`<button class="mvico pbtn${(t.prio||'')===v?' on':''}" data-act="setprio" data-id="${t.id}" data-p="${v}" aria-label="Priorité ${l.toLowerCase()}" title="Priorité ${l.toLowerCase()}">${flagSvg(v)}</button>`).join('')}</div>
   <button data-act="play" data-id="${t.id}">Focus<kbd>Espace</kbd></button>
-  ${t.day!==today()?`<button data-act="sheetmv" data-id="${t.id}" data-to="${today()}">Aujourd’hui</button>`:''}
-  <button data-act="sheetmv" data-id="${t.id}" data-to="${addDays(today(),1)}">Demain</button>
-  <button data-act="sheetmv" data-id="${t.id}" data-to="backlog">Backlog</button>
+  ${dayMovesRow(t)}
   <label class="full">Fixer l’heure<input type="time" step="900" data-sheettime="${t.id}" value="${t.block?hm(new Date(t.block.start)):''}"></label>
   <button data-act="open" data-id="${t.id}">Détail</button>
   ${['today','week','backlog','projects'].includes(view)&&!t.done?`<button data-act="sheetsel" data-id="${t.id}">Sélectionner plusieurs</button>`:''}
@@ -123,8 +124,7 @@ function rollMenu(id){
  const t=T(id);if(!t)return;
  showModal(`<div class="rit"><h2>${esc(t.title)}</h2><p class="lead">Reportée ${t.roll} fois.</p><div class="menu">
   <button data-act="play" data-id="${t.id}">Focus</button>
-  <button data-act="rolltomorrow" data-id="${t.id}">Demain</button>
-  <button data-act="sheetmv" data-id="${t.id}" data-to="backlog">Backlog</button>
+  ${dayMovesRow(t,1)}
   <button class="danger" data-act="rolldrop" data-id="${t.id}">Supprimer</button>
  </div></div>`);
 }
@@ -305,12 +305,12 @@ function viewReview(){
 /* ---------- vue Réglages ---------- */
 let advOpen=false,aiKeyOpen=false;
 function viewSettings(){
- const s=S.settings,num=(k,l,min,max)=>`<label>${l}<input type="number" min="${min}" max="${max}" data-set="${k}" value="${esc(s[k])}"></label>`;
+ const s=S.settings,num=(k,l,min,max)=>`<label>${l}<input type="number" min="${min}" max="${max}" data-set="${k}" value="${esc(s[k]??({breakEvery:90,breakLen:10})[k])}"></label>`;
  return `<div class="head"><div><h1>Réglages</h1><div class="sub">L’essentiel ici ; le reste dans « Réglages avancés » en bas.</div></div></div>
  <div class="set">
  <section><h2>Apparence</h2><div class="grid2"><label>Mode<select data-set="mode"><option value="auto" ${(s.mode||'auto')==='auto'?'selected':''}>Comme l’appareil</option><option value="light" ${s.mode==='light'?'selected':''}>Clair</option><option value="dark" ${s.mode==='dark'?'selected':''}>Sombre</option></select></label><label>Sons<select data-set="sounds"><option value="1" ${s.sounds!==false?'selected':''}>Cristal (tâche cochée, focus)</option><option value="" ${s.sounds===false?'selected':''}>Silence</option></select></label></div>
   <p class="mute" style="margin:10px 0 6px">Couleur d’accent</p><div class="swatches">${ACCENTS.map(a=>`<button class="swatch${(s.accent||'or')===a.k?' on':''}" data-act="accent" data-v="${a.k}" style="--sl:${a.l};--sd:${a.d}" aria-pressed="${(s.accent||'or')===a.k}"><i></i>${a.n}</button>`).join('')}</div></section>
- <section><h2>Journée type</h2><div class="grid2">${num('workStart','Ma journée : début (h)',0,23)}${num('workEnd','Ma journée : fin (h)',1,24)}${num('jobStart','Boulot : début habituel (h)',0,23)}${num('jobEnd','Boulot : fin habituelle (h)',1,24)}${num('travel','Trajet boulot (min)',0,180)}<label>Agenda vivant<select data-set="liveShift"><option value="1" ${s.liveShift!==false?'selected':''}>Vivant : suit la liste et l’heure</option><option value="" ${s.liveShift===false?'selected':''}>Manuel : je place mes créneaux</option></select></label></div></section>
+ <section><h2>Journée type</h2><div class="grid2">${num('workStart','Ma journée : début (h)',0,23)}${num('workEnd','Ma journée : fin (h)',1,24)}${num('jobStart','Boulot : début habituel (h)',0,23)}${num('jobEnd','Boulot : fin habituelle (h)',1,24)}${num('travel','Trajet boulot (min)',0,180)}${num('breakEvery','Pause après (min de travail, 0 = jamais)',0,240)}${num('breakLen','Durée de la pause (min)',0,60)}<label>Agenda vivant<select data-set="liveShift"><option value="1" ${s.liveShift!==false?'selected':''}>Vivant : suit la liste et l’heure</option><option value="" ${s.liveShift===false?'selected':''}>Manuel : je place mes créneaux</option></select></label></div></section>
  <section><h2>Indisponibilités récurrentes</h2><p>Des créneaux qui reviennent chaque semaine (cours, sport, enfants…) : Diem ne place rien dessus et les montre dans l’agenda, sans rien écrire dans Google.</p>
   <div class="ualist">${(S.unavail||[]).map(u=>`<div class="uarow" data-uaid="${esc(u.id)}"><input data-ua="label" value="${esc(u.label||'')}" placeholder="ex. Cours de piano" aria-label="Nom"><div class="uadays" role="group" aria-label="Jours">${UA_DAYS.map(([v,l])=>`<button class="${(u.days||[]).includes(v)?'on':''}" data-act="uaday" data-id="${esc(u.id)}" data-v="${v}" aria-pressed="${(u.days||[]).includes(v)}" title="${['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][+v]}">${l}</button>`).join('')}</div><input type="time" data-ua="s" value="${esc(u.s||'')}" aria-label="Début"><span class="mute">→</span><input type="time" data-ua="e" value="${esc(u.e||'')}" aria-label="Fin"><button class="ghost sm" data-act="uadel" data-id="${esc(u.id)}" aria-label="Supprimer ce créneau" title="Supprimer">${ico('trash')}</button></div>`).join('')||'<p class="mute" style="font-size:13px">Aucun pour l’instant.</p>'}</div>
   <button class="sm" data-act="uaadd">${ico('plus')} Ajouter un créneau</button></section>
@@ -358,7 +358,18 @@ function viewSettings(){
 }
 
 /* ---------- panneau latéral : agenda ---------- */
-const PX=76;
+// zoom de l'agenda (boutons − + ou ⌘/Ctrl + molette, pincer sur trackpad)
+const ZOOMS=[36,50,64,76,96,120,150];
+let PX=ZOOMS.includes(+lsGet('journee.zoom'))?+lsGet('journee.zoom'):76;
+const calScroller=()=>document.querySelector('.bigcal')||(typeof sideTab!=='undefined'&&sideTab==='cal'?document.getElementById('sidebody'):null);
+function calZoom(dir,clientY){
+ const i=ZOOMS.indexOf(PX),j=Math.max(0,Math.min(ZOOMS.length-1,i+dir));if(j===i)return;
+ const sc=calScroller(),tl=sc&&sc.querySelector('.tlin'),r=ZOOMS[j]/PX;
+ const o=tl?tl.getBoundingClientRect().top-sc.getBoundingClientRect().top+sc.scrollTop:0,vy=sc?(clientY!=null?clientY-sc.getBoundingClientRect().top:sc.clientHeight/2):0,top=sc?sc.scrollTop:0;
+ PX=ZOOMS[j];lsSet('journee.zoom',String(PX));render();
+ const s2=calScroller();if(s2)s2.scrollTop=Math.max(0,o+(top+vy-o)*r-vy);
+}
+const zoomBtns=()=>`<span class="zoom" role="group" aria-label="Zoom de l’agenda"><button class="sm ghost" data-act="zoom" data-z="-1" aria-label="Dézoomer" title="Dézoomer (⌘ molette)"${PX===ZOOMS[0]?' disabled':''}>−</button><button class="sm ghost" data-act="zoom" data-z="1" aria-label="Zoomer" title="Zoomer (⌘ molette)"${PX===ZOOMS[ZOOMS.length-1]?' disabled':''}>+</button></span>`;
 // l'agenda va jusqu'à minuit : la fin de journée réglée ne sert qu'au placement automatique
 function calGeom(){const st=0,en=24;return{st,en,H:(en-st)*PX}}
 function calCol(d){
@@ -367,27 +378,30 @@ function calCol(d){
  const base=+parseYmd(d),ads=(typeof jobSegs==='function'?jobSegs(d,true):[]).filter(x=>x.allday);
  const items=[...ads.map(x=>({k:'ad',s:new Date(base+x.s*3600e3),e:new Date(base+x.e*3600e3),x})),...timed.map(e=>({k:'ev',s:new Date(e.start.dateTime),e:new Date(e.end.dateTime),e0:e})),...blocks.map(t=>({k:'b',s:new Date(t.block.start),e:new Date(t.block.end),t}))].sort((a,b)=>a.s-b.s||b.e-a.e);
  let cl=[],cend=0;const out=[];
- const flush=()=>{const cols=[];cl.forEach(it=>{let c=cols.findIndex(e=>e<=it.s);if(c<0){c=cols.length;cols.push(0)}cols[c]=it.e;it.col=c});cl.forEach(it=>it.n=cols.length);out.push(...cl);cl=[]};
+ const flush=()=>{const cols=[];cl.forEach(it=>{let c=cols.findIndex(e=>e<=it.s);if(c<0){c=cols.length;cols.push(0)}cols[c]=it.e;it.col=c});
+  // un bloc s'élargit vers la droite tant qu'aucun bloc ne le chevauche dans les colonnes suivantes (comme Google Agenda et Sunsama)
+  cl.forEach(it=>{it.n=cols.length;let sp=1;while(it.col+sp<cols.length&&!cl.some(o=>o!==it&&o.col===it.col+sp&&o.s<it.e&&o.e>it.s))sp++;it.sp=sp});out.push(...cl);cl=[]};
  items.forEach(it=>{if(cl.length&&it.s>=cend)flush();cl.push(it);cend=Math.max(cend,+it.e)});flush();
  const y=dt=>((dt.getHours()-st)*60+dt.getMinutes()+(ymd(dt)!==d?(dt>parseYmd(d)?1440:-1440):0))/60*PX;
  const hrs=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
  const blocksHtml=out.map(it=>{
   const top=Math.max(0,y(it.s)),h=Math.max(14,Math.min(H,y(it.e))-top),w=100/it.n,l=it.col*w;
-  const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px)`,sh=h<40?(h<24?' short tiny':' short'):'';
+  const pos=`top:${top}px;height:${h}px;left:calc(${l}% + 2px);width:calc(${w*(it.sp||1)}% - 4px)`,sh=h<40?(h<24?' short tiny':' short'):'';
   if(it.k==='ad'){const x=it.x;return `<div class="ev allday${sh}${x.free?' free':''}" style="${pos};${x.col?'--adc:'+esc(x.col):''}" title="Journée entière dans ton agenda : glisse-la, ou tire le haut ou le bas pour ajuster ce jour-là ; « Libérer » pour y placer des tâches (double-clic pour revenir à ${hShort(S.settings.allDayStart??8)}–${hShort(S.settings.allDayEnd??18)})" data-adday="${d}"><i class="adrz top" data-adrz="s" data-day="${d}" aria-label="Ajuster le début"></i><button class="adfree" data-act="adfree" data-day="${d}" title="${x.free?'Repasser en occupé':'Libérer : les tâches du jour peuvent s’y placer'}">${x.free?'Occupé':'Libérer'}</button><b>${esc(x.t)}</b><small>journée entière · ${hShort(x.s)}–${hShort(x.e)}${x.free?' · disponible':x.custom?' · ajusté':''}</small><i class="adrz bot" data-adrz="e" data-day="${d}" aria-label="Ajuster la fin"></i></div>`}
   if(it.k==='ev'){const e=it.e0,f=evFree(e);return `<div class="ev${sh}${f?' free':''}${e._ua?' ua':''}" style="${pos};${e._col?'border-left-color:'+esc(e._col):''}" data-act="evtoggle" data-k="${esc(evKey(e))}" title="${f?'Tu peux travailler pendant ce rendez-vous':'Occupé'} — clique pour changer">${/^https:/.test(e.htmlLink||'')?`<a href="${esc(e.htmlLink)}" target="_blank" rel="noopener" aria-label="Ouvrir dans Google Agenda">↗</a>`:''}${e._ua||!e.id?'':`<button class="ev2t" data-act="ev2task" data-eid="${esc(e.id)}" title="Ajouter ce rendez-vous comme tâche" aria-label="Ajouter comme tâche">${ico('plus')}</button>`}<b>${esc(e.summary||'(sans titre)')}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}${f?' · dispo':''}</small></div>`}
   const t=it.t,c=ch(t.channel),act=S.running&&S.running.taskId===t.id;return `<div class="blk${t.done?' done':''}${act?' active':''}${sh}" style="${pos};--c:${esc(c?c.color:'var(--acc)')}" draggable="true" data-drag="blk|${t.id}" data-act="open" data-id="${t.id}"><button class="bchk" data-act="toggle" data-id="${t.id}" aria-label="${t.done?'Rouvrir':'Terminer'}">${t.done?'✓':''}</button><b>${t.pinned?'📌 ':''}${esc(t.title)}</b><small>${hm(it.s)}${sh?'':'–'+hm(it.e)}</small><i class="rz" data-rz="${t.id}" title="Étirer pour changer la durée"></i></div>`;
  }).join('');
+ const brkHtml=(flowOn()&&d>=today()?(flowBreaks[d]||[]):[]).map(([a,b])=>{const t0=y(new Date(a)),hh=Math.max(8,y(new Date(b))-t0);return `<div class="brk" style="top:${t0}px;height:${hh}px" title="Pause de ${Math.round((b-a)/60000)} min">${hh>=14?'Pause':''}</div>`}).join('');
  const nowTop=d===today()?y(new Date()):-1;
  return `<div class="tlin" data-drop="cal" data-day="${d}" style="height:${H}px">${hrs}
  <div class="work" style="top:${(dayHours(d).s-st)*PX}px;height:${Math.max(0,(dayHours(d).e-dayHours(d).s)*PX)}px"></div>
- ${blocksHtml}${nowTop>=0&&nowTop<=H?`<div class="now" data-live="now" style="top:${nowTop}px"></div>`:''}<div class="ghostblk hidden"></div></div>`;
+ ${brkHtml}${blocksHtml}${nowTop>=0&&nowTop<=H?`<div class="now" data-live="now" style="top:${nowTop}px"></div>`:''}<div class="ghostblk hidden"></div></div>`;
 }
 const alldayHtml=d=>{const a=(gEvents[d]||[]).filter(e=>e.start.date);return a.length?`<div class="allday">${a.map(e=>`<a href="${/^https:/.test(e.htmlLink||'')?esc(e.htmlLink):'#'}" target="_blank" rel="noopener">${esc(e.summary||'(sans titre)')}</a>`).join('')}</div>`:''};
 function gStateHtml(d){return gTok()?(gErr?`<div class="pill">${esc(gErr)} — reconnecte Google et coche toutes les cases<button class="sm pri" data-act="gin">Reconnecter</button></div>`:(gScope()&&!/calendar/.test(gScope())?`<div class="pill">Google connecté sans l’accès Agenda<button class="sm pri" data-act="gin">Reconnecter</button></div>`:'')):gWas()?`<div class="pill">Session Google expirée<button class="sm pri" data-act="gin">Reconnecter</button></div>`:`<div class="pill">Connecte Google Agenda pour voir tes rendez-vous<button class="sm" data-act="gin">Connecter</button></div>`}
 function viewCal(){
  const d=cur;
- return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span>${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
+ return `<div class="calhead"><span>${cap1(fmtDay(d,{weekday:'long',day:'numeric',month:'short'}))}</span><span class="sp"></span>${zoomBtns()}${gTok()?'<button class="sm ghost" data-act="refresh">Actualiser</button>':''}</div>
  ${gStateHtml(d)}${alldayHtml(d)}
  <div class="tl">${calCol(d)}</div>
  <div class="sinfo" style="padding-top:0"><span>${flowOn()?'Agenda vivant : les tâches suivent l’ordre de la liste. Glisse une tâche ici pour fixer son heure.':'Glisse une tâche sur l’agenda pour lui réserver un créneau.'}</span>${flowOn()?'':'<button class="sm" data-act="autobox">Placer les tâches</button>'}</div>`;
@@ -399,7 +413,7 @@ function viewBigCal(){
  const days=bigDays(),{st,en,H}=calGeom();
  const axis=[...Array(en-st+1)].map((_,i)=>`<div class="hr" style="top:${i*PX}px"><span>${pad(st+i)}:00</span></div>`).join('');
  return `<div class="head tight"><div class="htitle"><h1>${days.length===1?cap1(fmtDay(days[0],{weekday:'long',day:'numeric',month:'long'})):cap1(fmtDay(days[0],{day:'numeric',month:'short'}))+' – '+fmtDay(days[days.length-1],{day:'numeric',month:'short'})}</h1><div class="sub kicker dline"><span class="dnav"><button data-act="${days.length===7?'prevw':'prev'}" aria-label="Précédent" title="Précédent">‹</button><button data-act="${days.length===7?'nextw':'next'}" aria-label="Suivant" title="Suivant">›</button></span><span class="dtxt">Grand agenda · tes tâches sont à droite</span>${days.includes(today())?'':'<button class="dtoday" data-act="gotoday">Revenir à aujourd’hui</button>'}</div></div>
- <div class="acts"><div class="seg">${[1,3,7].map(n=>`<button class="sm${calSpan===n?' on':''}" data-act="span" data-n="${n}">${n===1?'Jour':n===3?'3 jours':'Semaine'}</button>`).join('')}</div>${layoutBtn()}</div></div>
+ <div class="acts">${zoomBtns()}<div class="seg">${[1,3,7].map(n=>`<button class="sm${calSpan===n?' on':''}" data-act="span" data-n="${n}">${n===1?'Jour':n===3?'3 jours':'Semaine'}</button>`).join('')}</div>${layoutBtn()}</div></div>
  ${gStateHtml(cur)}
  <div class="bigcal" style="--n:${days.length}">
   <div class="bchead"><div></div>${days.map(d=>`<div class="bcday${d===today()?' today':''}" data-act="openday" data-day="${d}"><b>${cap1(fmtDay(d,{weekday:'short',day:'numeric'}))}</b><small>${fmtMin(loadInfo(d).task)} de tâches</small>${alldayHtml(d)}</div>`).join('')}</div>

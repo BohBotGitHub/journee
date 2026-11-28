@@ -35,7 +35,7 @@ function cascade(d){
  return n;
 }
 function flowOn(){return S.settings.liveShift!==false}
-var flowQ=null,inFlow=false;
+var flowQ=null,inFlow=false,flowBreaks={};
 // les tâches non faites des jours passés reviennent aujourd'hui, sans bruit ; on compte seulement les reports
 function rollOver(){
  // un appareil resté hors ligne ne reporte rien avant d'avoir reçu les changements des autres appareils
@@ -62,11 +62,17 @@ function simFlow(d){
  const D=t=>Math.max(10,(t.est||30)-(t.actual?Math.floor(t.actual/60):0))*60000;
  const fit=(t,cur,loc)=>{const dur=D(t),bz=loc?busy.concat(lb[whereOf(t)]=lb[whereOf(t)]||locBusy(d,whereOf(t))):busy;let ns=cur;for(let g=0;g<80;g++){const hit=bz.find(([a,b])=>ns<b&&ns+dur>a);if(!hit)break;ns=ceil5(hit[1])}return ns};
  // dans l'ordre de la liste ; une tâche qui attend d'être chez toi laisse passer celles qui peuvent se faire avant
+ // pauses automatiques (comme Sunsama) : après « breakEvery » min de travail d'affilée, « breakLen » min de pause avant la tâche suivante
+ const BE=(S.settings.breakEvery??90)*60000,BL=(S.settings.breakLen??10)*60000,brks=[];
+ let chain=null,lastEnd=null;if(r&&r.day===d&&r.block){chain=+new Date(r.block.start);lastEnd=+new Date(r.block.end)}
  while(pend.length){
   let k=0,ns=fit(pend[0],cursor,true);
   if(ns!==fit(pend[0],cursor,false))for(let i=1;i<pend.length;i++){const x=fit(pend[i],cursor,true);if(x<ns){ns=x;k=i}}
-  const t=pend.splice(k,1)[0],ne=ns+D(t);out.push([t,ns,ne]);busy.push([ns,ne]);if(k===0)cursor=ne;
+  const t=pend.splice(k,1)[0];
+  if(BE>0&&BL>0){if(lastEnd!=null&&ns-lastEnd<BL){if(lastEnd-chain>=BE){brks.push([lastEnd,lastEnd+BL]);ns=fit(t,Math.max(ns,lastEnd+BL),true);chain=ns}}else chain=ns}
+  const ne=ns+D(t);out.push([t,ns,ne]);busy.push([ns,ne]);if(k===0)cursor=ne;lastEnd=Math.max(lastEnd??0,ne);
  }
+ flowBreaks[d]=brks;
  out.sort((a,b)=>a[1]-b[1]);
  return out;
 }
