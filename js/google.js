@@ -1,6 +1,9 @@
 // Diem — Google Agenda : connexion, lecture des agendas, créneaux
 /* ---------- Google Agenda (OAuth implicite, côté navigateur) ---------- */
-const REDIRECT=location.origin+location.pathname;
+// adresse de retour OAuth : toujours la forme canonique (sans index.html, avec la barre finale),
+// pour qu'une appli installée ouverte sur une variante de l'adresse reste acceptée par Google et Microsoft
+const REDIRECT=(()=>{let p=location.pathname.replace(/index\.html$/i,'');if(!p.endsWith('/'))p+='/';
+ if(/(^|\.)github\.io$/i.test(location.hostname))p=p.toLowerCase();return location.origin+p})();
 const calId=()=>encodeURIComponent(S.settings.calendarId||'primary');
 // agenda cible d'une tâche : celui de sa catégorie, sinon celui de son contexte, sinon l'agenda par défaut
 function taskCal(t){const c=ch(t.channel);if(c&&c.lvl!==undefined)return nodeCal(c.id)||S.settings.calendarId||'primary';return (c&&c.cal)||(c&&c.ctx&&(S.settings.ctxCal||{})[c.ctx])||S.settings.calendarId||'primary'}
