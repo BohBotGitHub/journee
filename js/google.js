@@ -82,7 +82,7 @@ function evToTask(id){
  const st=new Date(e.start.dateTime),en=new Date(e.end.dateTime),title=(e.summary||'Rendez-vous').trim(),d=ymd(st);
  const t=mk({title,est:Math.max(5,Math.round((en-st)/60000)),day:d,order:nextOrder(d),channel:(typeof hasTree==='function'&&hasTree()&&typeof ruleFor==='function')?ruleFor(title):null,notes:'Rendez-vous de ton agenda Google'+(e._cal?' ('+e._cal+')':'')});
  t.evId=e.id;t.evCal=e._cid||null;t.pinned=true;t.block={start:st.toISOString(),end:en.toISOString(),gcalId:null,cal:null,title};
- S.tasks.push(t);save();render();if(typeof emit==='function')emit('task:add',{task:t});return t;
+ S.tasks.push(t);if(typeof syncOrder==='function')syncOrder(d);save();render();if(typeof queueFlow==='function')queueFlow();if(typeof emit==='function')emit('task:add',{task:t});return t;
 }
 const timedEvents=d=>{const L=evTaskIds();return [...(gEvents[d]||[]).filter(e=>e.start.dateTime&&!isMine(e)&&!L.has(e.id)),...uaEvents(d)].sort((a,b)=>a.start.dateTime<b.start.dateTime?-1:1)};
 function meetingMin(d){return timedEvents(d).filter(e=>!evFree(e)).reduce((a,e)=>a+Math.max(0,(new Date(e.end.dateTime)-new Date(e.start.dateTime))/60000),0)}

@@ -23,9 +23,9 @@ Réponds toujours en **français**.
 
 ## Commandes
 
-- Tests (Playwright, ~5 min) : `python3 tests/e2e.py` ; un seul test : `ONLY="mot du titre" python3 tests/e2e.py`. Tous doivent passer (94 au 28/11).
+- Tests (Playwright, ~5 min) : `python3 tests/e2e.py` ; un seul test : `ONLY="mot du titre" python3 tests/e2e.py`. Tous doivent passer (95 au 28/11).
 - Démo : `python3 dev/tools/build_demo.py` (écrit dans `/tmp/diem-demo`) puis `cp about.html /tmp/diem-demo/`.
-- À chaque version : monter `?v=NN` dans `index.html` et `CACHE = 'mydaybot-vNN'` dans `sw.js` (v99 au 28/11), et l'étiquette `<b>vX.Y · JJ/MM</b>` du menu.
+- À chaque version : monter `?v=NN` dans `index.html` et `CACHE = 'mydaybot-vNN'` dans `sw.js` (v100 au 28/11), et l'étiquette `<b>vX.Y · JJ/MM</b>` du menu.
 - Mise en ligne (sur « mets en ligne ») :
   ```
   git fetch && [ "$(git rev-parse main)" = "$(git ls-remote origin refs/heads/main | cut -f1)" ]
@@ -40,10 +40,10 @@ core (état `S`, tâches, récurrence, `parseQuick`), sync (Drive appData, fusio
 ## Lien avec Claude (v2.5)
 
 - Dans claude.ai, la compétence de compte **diem** dépose un fichier JSON par demande dans le dossier Drive « Diem · boîte de réception » (id `1Bvr297YET366-SwwZqmdPaqJveV93-ot`). `js/inbox.js` les lit (scope `drive.readonly`, ajouté dans la console Google Cloud du projet `journee-515708`) : `kind:add` ajouté directement, `kind:suggest` présenté par le Génie (onglet Génie + section « Le Génie propose » à l'étape Choisir du rituel du matin).
-- Tâche programmée claude.ai « Diem · suggestions du matin » (5 h 43, Paris) : relit les conversations et dépose des suggestions. Pas encore confirmé qu'elle a accès aux conversations.
+- Suggestions tirées des conversations : à la demande dans une conversation (« Génie, regarde mes conversations ») ; la tâche programmée a été supprimée (pas d'accès aux conversations).
 
-## Où en est le plan (27/11)
+## Où en est le plan (28/11)
 
-- En ligne : v2.5.1 (Habitudes, focus Lampe, lampe ronde partout, Génie sans réponse vide, lien Claude).
+- En ligne : v3.0.3 : zone d'ajout unique (A, ⌘K), Génie à chaque endroit (boutons ✦, touche G, aucun appel automatique, contexte limité, cache), raccourcis Sunsama (?), menu court, suggestions locales (tâches, routines, habitudes, projets), langage naturel.
 - Restent au plan : identité du Génie (au-delà de la lampe), citations de Camus (paraphrases publiées ou retrait), APK Android, Microsoft To Do (bloqué par l'authentification du compte de travail), colonnes de la Semaine étroites.
 - Le plan détaillé est un doc Claude (claude.ai), pas dans le dépôt ; `ROADMAP.md` et `dev/STATE.md` donnent un historique plus ancien.

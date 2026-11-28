@@ -1414,3 +1414,39 @@ textarea.adt{resize:none;min-height:46px;font:inherit;line-height:1.45}
 .sugchip button:hover{background:color-mix(in srgb,var(--acc) 12%,transparent)}
 .sugchip .sugno{padding:4px 9px 4px 4px;color:var(--mute)}
 .sugchip.skind-project,.sugchip.skind-routine,.sugchip.skind-habit{border-style:solid;border-color:color-mix(in srgb,var(--acc) 30%,var(--line));background:color-mix(in srgb,var(--acc) 9%,var(--panel))}
+/* v3.0.3 · ⋯ sur chaque tâche : le même menu que le clic droit */
+.card .cmore{border:0;background:transparent;color:var(--mute);width:26px;height:26px;min-height:26px;padding:0;border-radius:50%;font-size:16px;line-height:1;opacity:0;transition:opacity .15s;flex:none}
+.card:hover .cmore,.card:focus-within .cmore,.card.kbsel .cmore{opacity:1}
+.card .cmore:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
+@media (hover:none){.card .cmore{opacity:.7}}
+/* v3.0.3 · raccourcis toujours accessibles en bas à gauche */
+#nav button.navkeys{border:0;background:transparent;text-align:left;font-weight:500;display:flex;align-items:center;gap:10px;min-height:0;padding:8px 12px;color:var(--mute);margin-top:auto}
+#nav button.navkeys svg{width:18px;height:18px;flex:none;opacity:.7}
+#nav button.navkeys kbd{margin-left:auto;font-size:11px}
+#nav button.navkeys:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 5%,transparent)}
+body.hidenav #nav button.navkeys .ll,body.hidenav #nav button.navkeys kbd{display:none}
+@media (max-width:720px){#nav button.navkeys{display:none!important}}
+/* v3.0 · focus : une grande case à cocher à la place de « Terminer » */
+.fbtns{align-items:center}
+.fchk{width:52px;height:52px;min-height:52px;border-radius:50%;padding:0;border:2.5px solid var(--gold,var(--acc));background:transparent;color:transparent;display:inline-flex;align-items:center;justify-content:center;transition:background .2s,color .2s,transform .15s}
+.fchk svg{width:28px;height:28px}
+.fchk:hover{background:color-mix(in srgb,var(--gold,var(--acc)) 18%,transparent);color:var(--gold,var(--acc))}
+.fchk:active{transform:scale(.92);background:var(--gold,var(--acc));color:#141418}
+.fchkl{color:var(--mute);font-size:14px;margin-left:-4px}
+/* surprise : le Génie sort de la lampe */
+.gwish{position:fixed;left:50%;bottom:12vh;width:min(260px,60vw);transform:translateX(-50%);z-index:9999;pointer-events:none}
+.gwish svg{width:100%;height:auto;overflow:visible}
+.gwsmoke{fill:none;stroke:#D4B05A;stroke-width:9;stroke-linecap:round;stroke-dasharray:520;stroke-dashoffset:520;opacity:.85;animation:gwdraw 1.1s cubic-bezier(.3,.7,.2,1) forwards,gwfade .6s 1.2s forwards}
+.gwfig{fill:#F3DFA4;opacity:0;transform-box:fill-box;transform-origin:center;animation:gwpop .5s .8s cubic-bezier(.3,1.6,.5,1) forwards,gwfly .7s 1.2s ease-in forwards}
+.gweye{fill:#141418}.gwmouth{fill:none;stroke:#141418;stroke-width:2;stroke-linecap:round}
+.gwstar{fill:#F3DFA4;opacity:0;animation:gwtw 1.1s calc(.3s + var(--i)*.08s) ease-out forwards}
+@keyframes gwdraw{to{stroke-dashoffset:0}}
+@keyframes gwfade{to{opacity:0}}
+@keyframes gwpop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
+@keyframes gwfly{to{opacity:0;transform:translate(40px,-140px) scale(.6)}}
+@keyframes gwtw{0%{opacity:0;transform:scale(.3)}40%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(1.2)}}
+/* v3.0.3 · la tâche « maintenant » est marquée dans la liste (plus de carte en double) */
+.card.isnow{border-color:color-mix(in srgb,var(--acc) 55%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 30%,transparent),var(--sh)}
+.card .nowlbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--acc-strong,var(--acc));margin-bottom:2px}
+#minifocus .mfchk{margin:0 2px 0 8px;align-self:center;border-color:currentColor}
+.runbox{position:relative}.runbox .runchk{position:absolute;right:8px;top:8px;width:18px;height:18px;min-height:18px}

@@ -269,6 +269,11 @@ def _(c):
     pg.click('[data-act="ritai"]'); pg.wait_for_timeout(500)
     assert pg.locator('.aibox .pitem').count() >= 1, 'pas de suggestion Claude'
     pg.reload(); pg.wait_for_timeout(1500)
+    # v3.0.3 : plus de réouverture automatique au rechargement ; « Reprendre » rouvre le rituel (au premier onglet, comme demandé), réponses gardées
+    assert pg.locator('#modal:not(.hidden) .rsteps').count() == 0
+    pg.click('#main .head [data-act="plan"]'); pg.wait_for_timeout(300)
+    assert pg.inner_text('.rsteps .on') == 'Heures'
+    for _ in range(4): pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(250)
     assert pg.inner_text('.rsteps .on') == 'Estimer'
     pg.click('[data-act="ritapplyall"]'); pg.wait_for_timeout(200)
     for _ in range(2): pg.click('[data-act="ritnext"]'); pg.wait_for_timeout(300)
@@ -433,8 +438,8 @@ def _(c):
     pg.keyboard.press('?'); pg.wait_for_timeout(200)
     assert 'Raccourcis clavier' in pg.inner_text('#sheet')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
-    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-4).map(e=>e.id||e.className.split(' ')[0])")
-    assert order == ['runchip', 'navrefresh', 'navset', 'navver'], order
+    order = pg.evaluate("[...document.querySelectorAll('#nav > *')].slice(-5).map(e=>e.id||e.className.split(' ')[0])")
+    assert order == ['runchip', 'navrefresh', 'navkeys', 'navset', 'navver'], order
     ic = [round(pg.locator(s).first.bounding_box()['x']) for s in ('#nav [data-view="today"] svg', '#nav .navset svg', '#nav .navrefresh svg', '#nav .navver .vlogo')]
     assert round(pg.locator('#nav .navver b').bounding_box()['x']) == round(pg.locator('#nav .navrefresh .ll').bounding_box()['x'])
     assert len(set(ic)) == 1, ic
@@ -930,7 +935,7 @@ def _(c):
 @test('Soirée : Maintenant/Ensuite, temps restant, saisie rapide, durée apprise, clavier, volet redimensionnable')
 def _(c):
     ctx, pg, errs = new_page(c['b'])
-    assert pg.locator('#main .nownext .nowc .nowt').count() == 1
+    assert pg.locator('#main .card.isnow .nowlbl').count() == 1 and pg.locator('#main .card.isnow .chk').count() == 1 and pg.locator('#main .nownext').count() == 0
     assert 'prévues' in pg.inner_text('#main .summary')
     # durée apprise + saisie rapide
     pg.evaluate("()=>{const S=window.journee.state;S.archive=(S.archive||[]).concat([{id:'a1',t:'Tonte barbe',a:14*60,d:'2026-11-01'},{id:'a2',t:'Tonte barbe',a:11*60,d:'2026-11-08'},{id:'a3',t:'tonte  barbe',a:13*60,d:'2026-11-15'}]);window.journee.save()}")
@@ -1173,9 +1178,8 @@ def _(c):
     pg.keyboard.press('Control+z'); tick(pg, 150)
     assert st(pg, "T('k4').title") == 'Clavier 4'
     # appui long (toucher)
-    pg.evaluate("()=>{const c=document.querySelector('#main .card[data-id=\"k2\"] .ctitle'),r=c.getBoundingClientRect();c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerType:'touch',clientX:r.left+5,clientY:r.top+5}))}")
-    tick(pg, 650)
-    pg.evaluate("()=>document.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerType:'touch'}))")
+    # v3.0.3 : au toucher, l'appui long ouvre le menu ; « Sélectionner plusieurs » y lance la sélection
+    pg.evaluate("()=>taskSheet('k2')"); tick(pg, 100); pg.click('#modal [data-act="sheetsel"]'); tick(pg, 100)
     assert st(pg, "[...msel]") == ['k2'] and st(pg, "lpMode")
     pg.wait_for_timeout(950); pg.click('#main .card[data-id="k3"] .ctitle'); tick(pg, 100)
     assert set(st(pg, "[...msel]")) == {'k2', 'k3'} and pg.locator('#modal:not(.hidden)').count() == 0
@@ -1778,7 +1782,7 @@ def _(c):
     src = cards.nth(2).bounding_box(); dst = cards.nth(0).bounding_box()
     pg.mouse.move(src['x'] + 60, src['y'] + 12); pg.mouse.down()
     pg.mouse.move(src['x'] + 60, src['y'] - 20, steps=3)
-    pg.mouse.move(dst['x'] + 30, dst['y'] + 6, steps=8); pg.wait_for_timeout(250)
+    pg.mouse.move(dst['x'] + 30, dst['y'] + 6, steps=8); pg.wait_for_timeout(250); pg.mouse.move(dst['x'] + 31, dst['y'] + 7); pg.wait_for_timeout(80)
     live = pg.evaluate("()=>({live:!!document.querySelector('#main .list.lvlive'),moved:[...document.querySelectorAll('#main .list .card[data-id]')].filter(k=>k.style.transform.includes('translateY')).length,col:!!document.querySelector('.card.lvcol'),mark:document.querySelector('.card.dropbefore')&&document.querySelector('.card.dropbefore').dataset.id})")
     assert live['live'] and live['moved'] >= 1 and live['col'], live
     pg.mouse.up(); tick(pg, 300)
@@ -2010,6 +2014,33 @@ def _(c):
     pg.click('#main [data-act="ssugadd"][data-k="p:salon"]'); tick(pg, 150)
     pid = st(pg, "S.projects.find(p=>p.name==='Salon').id"); assert st(pg, f"S.tasks.filter(t=>t.proj==='{pid}').length") == 3
     assert st(pg, "S.chat.length") == 0
+    assert not errs, errs; ctx.close()
+
+@test('v3.0.3 : menu d’une tâche (clic droit, ⋯, appui long au téléphone) avec tout en haut / tout en bas')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    ids = st(pg, "dayTasks(today()).filter(t=>!t.done).map(t=>t.id)")
+    last = ids[-1]
+    pg.click(f'#main .card[data-id="{last}"] .ctitle', button='right'); tick(pg, 150)
+    pg.click('#modal [data-act="mvtop"]'); tick(pg, 150)
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done)[0].id") == last
+    pg.hover(f'#main .card[data-id="{last}"]'); pg.click(f'#main .card[data-id="{last}"] [data-act="tsheet"]'); tick(pg, 150)
+    pg.click('#modal [data-act="mvbottom"]'); tick(pg, 150)
+    assert st(pg, "dayTasks(today()).filter(t=>!t.done).at(-1).id") == last
+    pg.click(f'#main .card[data-id="{last}"] .ctitle', button='right'); tick(pg, 150)
+    pg.click('#modal [data-act="sheetsel"]'); tick(pg, 150)
+    assert st(pg, "msel.size") == 1
+    assert not errs, errs; ctx.close()
+    # téléphone : appui long = le menu, sans sélection en même temps
+    ctx, pg, errs = new_page(c['b'], 390, 844, clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    cdp = ctx.new_cdp_session(pg); cdp.send('Emulation.setTouchEmulationEnabled', {'enabled': True, 'maxTouchPoints': 1})
+    bb = pg.locator('#main .card[data-id]:not(.done) .ctitle').first.bounding_box()
+    x, y = bb['x'] + 20, bb['y'] + 6
+    cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y}]}); pg.wait_for_timeout(700)
+    cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); tick(pg, 150)
+    assert pg.locator('#modal .tsheet').count() == 1 and st(pg, "msel.size") == 0, (pg.locator('#modal .tsheet').count(), st(pg, 'msel.size'), pg.evaluate('()=>document.getElementById("modal").className'), x, y, pg.evaluate('()=>document.getElementById("sheet").innerHTML.slice(0,300)'))
     assert not errs, errs; ctx.close()
 
 def main():

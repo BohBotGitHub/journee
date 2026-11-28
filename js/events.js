@@ -23,7 +23,7 @@ document.addEventListener('click',async e=>{
   case'focusclose':focusOn=null;focusSub=null;focusMin=null;renderFocus();render();break;
   case'focusmin':{focusMin=focusOn;focusOn=null;renderFocus();render();break}
   case'focusmax':{const fid=id||focusMin;focusMin=null;if(fid)openFocus(fid);break}
-  case'focusdone':{await toggleDone(id);const nx=dayTasks(cur).find(t=>!t.done);focusOn=null;renderFocus();toast(nx?'Bravo ! Prochaine : '+nx.title:'Bravo ! Tout est fait.');break}
+  case'focusdone':{genieWish();await toggleDone(id);const nx=dayTasks(cur).find(t=>!t.done);focusOn=null;renderFocus();toast(nx?'Bravo ! Prochaine : '+nx.title:'Bravo ! Tout est fait.');break}
   case'timer':if(S.running&&S.running.taskId===id){stopTimer();render()}else{startTimer(id);const tt=T(id);if(tt)activate(tt)}renderFocus();break;
   case'prev':cur=addDays(cur,-1);render();daySlide(-1);break;
   case'next':cur=addDays(cur,1);render();daySlide(1);break;
@@ -132,7 +132,7 @@ document.addEventListener('click',async e=>{
   case'layout':if(!$('#modal').classList.contains('hidden')&&!ritual)closeModal();toggleLayout();break;
   case'span':calSpan=+b.dataset.n;lsSet('journee.span',String(calSpan));render();break;
   case'focussub':{const t=T(b.dataset.tid);if(t){if(focusOn!==t.id)openFocus(t.id,b.dataset.s);else{focusSub=b.dataset.s;renderFocus()}}break}
-  case'focussubdone':{const t=T(focusOn),x=t&&t.subtasks.find(z=>z.id===focusSub);if(x){x.d=true;chime(780);const nx=t.subtasks.find(z=>!z.d);focusSub=nx?nx.id:null;save();render();renderFocus();toast(nx?'Suivante : '+nx.t:'Toutes les sous-tâches sont faites')}break}
+  case'focussubdone':{const t=T(focusOn),x=t&&t.subtasks.find(z=>z.id===focusSub);if(x){x.d=true;chime(780);genieWish();const nx=t.subtasks.find(z=>!z.d);focusSub=nx?nx.id:null;save();render();renderFocus();toast(nx?'Suivante : '+nx.t:'Toutes les sous-tâches sont faites')}break}
   case'nodue':{const t=T(modalTask);if(t){t.due=null;save();openTask(t.id)}break}
   case'tplnew':editTpl('');break;
   case'tpledit':editTpl(id);break;
@@ -192,6 +192,9 @@ document.addEventListener('click',async e=>{
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
   case'mvup':closeModal();swapTask(id,-1);break;
+  case'mvtop':case'mvbottom':{closeModal();const t=T(id);if(!t||!t.day)break;const ts=dayTasks(t.day).filter(x=>!x.done&&x!==t);if(!ts.length)break;t.order=a==='mvtop'?ts[0].order-1:ts[ts.length-1].order+1;renorm(t.day);recLearn(t);if(!flowOn())reflow(t.day);save();render();toast(a==='mvtop'?'Tout en haut':'Tout en bas');break}
+  case'tsheet':taskSheet(id);break;
+  case'sheetsel':closeModal();lpMode=true;msel.add(id);mselAnchor=id;renderMsel();toast('Touche d’autres tâches pour les ajouter à la sélection');break;
   case'mvdown':closeModal();swapTask(id,1);break;
   case'tobacklog':{const t=T(id);if(t&&t.day){moveTask(id,'backlog');toast('Renvoyée au backlog');if(modalTask===id)openTask(id)}break}
   case'sheetmv':{closeModal();const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0;let to=b.dataset.to;if(t&&to===addDays(today(),1))to=nextFreeDay(t);moveTask(id,to,true);if(to!=='backlog'&&to>today())putFront([id],T(id).day);save();render();toast(to==='backlog'?'Renvoyée au backlog':to===today()?'Pour aujourd’hui':to===addDays(today(),1)?'Reportée à demain':'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}));break}
@@ -584,7 +587,7 @@ function keepUnder(b){
 }
 
 // ---------- annuler partout : Ctrl/⌘ Z revient avant la dernière action sur les tâches ----------
-const UNDO_ACTS=new Set(['ssugadd','sugadd','dumptotasks','mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
+const UNDO_ACTS=new Set(['mvtop','mvbottom','ssugadd','sugadd','dumptotasks','mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
 let undoStack=[];
 const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[],unavail:S.unavail||[]});
 function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}
@@ -639,7 +642,7 @@ let downOnBackdrop=false;document.addEventListener('mousedown',e=>{downOnBackdro
 let msel=new Set(),mselAnchor=null,lpMode=false,lpFired=false;
 // téléphone : appui long sur une tâche = sélection ; ensuite un simple toucher ajoute ou retire
 (function(){let tm=null,st=null;
- document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&(e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey))return;const c=e.target.closest('#main .card[data-id]');if(!c||e.target.closest('.chk,button,input,textarea,select,[data-tgrip]'))return;st={x:e.clientX,y:e.clientY};clearTimeout(tm);tm=setTimeout(()=>{tm=null;lpMode=true;lpFired=true;setTimeout(()=>{lpFired=false},900);msel.add(c.dataset.id);mselAnchor=c.dataset.id;renderMsel();try{navigator.vibrate&&navigator.vibrate(15)}catch(err){}},480)},{passive:true});
+ document.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey)return;const c=e.target.closest('#main .card[data-id]');if(!c||e.target.closest('.chk,button,input,textarea,select,[data-tgrip]'))return;st={x:e.clientX,y:e.clientY};clearTimeout(tm);tm=setTimeout(()=>{tm=null;lpMode=true;lpFired=true;setTimeout(()=>{lpFired=false},900);msel.add(c.dataset.id);mselAnchor=c.dataset.id;renderMsel();try{navigator.vibrate&&navigator.vibrate(15)}catch(err){}},480)},{passive:true});
  document.addEventListener('pointermove',e=>{if(tm&&st&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>6){clearTimeout(tm);tm=null}},{passive:true});
  document.addEventListener('dragstart',()=>{clearTimeout(tm);tm=null},true);
  ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(tm);tm=null},{passive:true}));

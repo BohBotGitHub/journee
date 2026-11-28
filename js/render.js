@@ -29,11 +29,11 @@ function renderMini(){let el=$('#minifocus');if(!el){el=document.createElement('
  const id=focusMin||(S.running&&!focusOn?S.running.taskId:null),t=id&&T(id);
  if(!t||t.done||focusOn){el.className='hidden';el.innerHTML='';return}
  const run=S.running&&S.running.taskId===t.id;el.className=run?'on':'';
- el.innerHTML=`<button class="mfexp" data-act="focusmax" data-id="${t.id}" title="Agrandir le focus">${ico('maximize')}<span class="mft">${esc(t.title)}</span><span class="mfc" data-live="mini">${clock(actualSec(t))}</span></button><button class="mfplay" data-act="timer" data-id="${t.id}" aria-label="${run?'Pause':'Reprendre'}" title="${run?'Pause':'Reprendre'}">${run?ico('pause'):ico('play')}</button>`}
+ el.innerHTML=`<button class="chk mfchk" data-act="toggle" data-id="${t.id}" aria-label="Cocher : terminée" title="Cocher : terminée"></button><button class="mfexp" data-act="focusmax" data-id="${t.id}" title="Agrandir le focus">${ico('maximize')}<span class="mft">${esc(t.title)}</span><span class="mfc" data-live="mini">${clock(actualSec(t))}</span></button><button class="mfplay" data-act="timer" data-id="${t.id}" aria-label="${run?'Pause':'Reprendre'}" title="${run?'Pause':'Reprendre'}">${run?ico('pause'):ico('play')}</button>`}
 function renderRun(){
  renderMini();
  const r=S.running,t=r&&T(r.taskId);
- $('#runchip').innerHTML=t?`<div class="runbox" data-act="openfocus" data-id="${t.id}"><span>En cours</span><b>${esc(t.title)}</b><span class="t" data-live="run">${clock(actualSec(t))}</span></div>`:'';
+ $('#runchip').innerHTML=t?`<div class="runbox" data-act="openfocus" data-id="${t.id}"><button class="chk runchk" data-act="toggle" data-id="${t.id}" aria-label="Cocher : terminée" title="Cocher : terminée"></button><span>En cours</span><b>${esc(t.title)}</b><span class="t" data-live="run">${clock(actualSec(t))}</span></div>`:'';
 }
 function go(v){
  if(v&&v.startsWith('rit-')){const d=cur<today()?today():cur,w=new Date().getDay();if(innerWidth<=760)document.body.classList.remove('side-open');if(v==='rit-plan')startRitual('plan',d);else if(v==='rit-shutdown')startRitual('shutdown',d>today()?today():d);else startRitual(w===0||w>=5?'weekreview':'weekplan',d);return}
@@ -240,6 +240,11 @@ function openFocus(id,sub){
 }
 // mode focus « Lampe » : la lampe du Génie ; l'anneau doré se remplit avec le temps prévu, une volute de fumée par sous-tâche faite
 const RING_C=2*Math.PI*104;
+const FCHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+// surprise (v3.0) : en cochant, le Génie sort de la lampe dans une volute d'or, puis s'envole
+function genieWish(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const el=document.createElement('div');el.className='gwish';el.setAttribute('aria-hidden','true');
+ el.innerHTML=`<svg viewBox="0 0 200 220"><path class="gwsmoke" d="M100 200c-30-20 30-40 0-70s-35-45 5-70c25-16 35-30 22-48"/><g class="gwfig"><circle cx="128" cy="20" r="14"/><circle cx="123" cy="18" r="2.2" class="gweye"/><circle cx="133" cy="18" r="2.2" class="gweye"/><path d="M122 25q6 5 12 0" class="gwmouth"/></g>${[...Array(9)].map((_,i)=>`<circle class="gwstar" style="--i:${i}" cx="${100+Math.cos(i*0.7)*70}" cy="${110+Math.sin(i*1.3)*80}" r="${2+i%3}"/>`).join('')}</svg>`;
+ document.body.appendChild(el);setTimeout(()=>el.remove(),1900)}
 function ringFrac(t){const a=actualSec(t);return t.est?Math.min(1,a/(t.est*60)):(a%3600)/3600}
 function lampSvg(t,run){
  const f=ringFrac(t),over=!!(t.est&&actualSec(t)>=t.est*60),nd=Math.min(5,(t.subtasks||[]).filter(x=>x.d).length);
@@ -266,7 +271,7 @@ function renderFocus(){
  ${sb?`<div class="fsub">${esc(t.title)} · sous-tâche ${t.subtasks.indexOf(sb)+1}/${t.subtasks.length}</div><h1 class="ftitle">${esc(sb.t)}</h1>`:`<h1 class="ftitle">${esc(t.title)}</h1>`}
  <div class="fclockrow">${focusEdit===t.id?`<input class="fclock fedit" data-fedit="${t.id}" value="${Math.floor(actualSec(t)/60)}" inputmode="numeric" aria-label="Temps passé en minutes (ou 1h20)" title="Minutes, ou 1h20">`:`<button class="fclock${t.est&&actualSec(t)>=t.est*60?' over':''}" data-live="focus" data-act="timeredit" data-id="${t.id}" title="Cliquer pour corriger le temps">${clock(actualSec(t))}</button>`}<div class="fadj"><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="-5" aria-label="Retirer 5 minutes">−5 min</button><button class="sm" data-act="timeradj" data-id="${t.id}" data-v="5" aria-label="Ajouter 5 minutes">+5 min</button></div><button class="freset" data-act="timerreset" data-id="${t.id}" aria-label="Remettre à zéro (met en pause)" title="Remettre à zéro (met en pause)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></div>
  <div class="fmeta">${t.est?'sur '+fmtMin(t.est):'pas de durée prévue · un tour = 1 h'}${(t.subtasks||[]).length?` · ${nd}/${t.subtasks.length} sous-tâche${t.subtasks.length>1?'s':''}`:''}</div>
- <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button>${focusSub?`<button class="ok big" data-act="focussubdone">Sous-tâche faite</button><button class="ghost big" data-act="focusdone" data-id="${t.id}">Tout terminer</button>`:`<button class="ok big" data-act="focusdone" data-id="${t.id}">Terminer</button>`}</div>
+ <div class="fbtns"><button class="${run?'ghost':'pri'} big" data-act="timer" data-id="${t.id}">${run?'Pause':'Reprendre'}</button>${focusSub?`<button class="fchk" data-act="focussubdone" aria-label="Cocher la sous-tâche" title="Cocher la sous-tâche">${FCHK}</button><span class="fchkl">Sous-tâche faite</span><button class="ghost big" data-act="focusdone" data-id="${t.id}">Tout terminer</button>`:`<button class="fchk" data-act="focusdone" data-id="${t.id}" aria-label="Cocher : tâche terminée" title="Cocher : tâche terminée">${FCHK}</button><span class="fchkl">Terminée</span>`}</div>
  </div></div>
  <div class="subs"><h4>Sous-tâches</h4><div>${subsHtml(t)}</div><form data-form="sub" data-tid="${t.id}"><input name="t" data-keep="fsub" placeholder="Ajouter une sous-tâche" autocomplete="off"></form></div>
  <textarea class="fnotes" data-fnotes="${t.id}" placeholder="Notes…">${esc(t.notes)}</textarea></div>`;

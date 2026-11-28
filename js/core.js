@@ -201,7 +201,7 @@ function addTask(text,day){
  const t=mk({title:q.title,est:q.est||le,channel:q.channel,day,order:nextOrder(day),due:q.due||null,proj:q.proj||null,prio:q.prio||'',where:q.where||''});if(le)t.estLearn=1;
  if(q.subtasks&&q.subtasks.length){t.subtasks=q.subtasks.map(x=>({id:uid(),t:x,d:false}));if(typeof subShow==='function')subShow(t.id)}if(q.notes)t.notes=q.notes;
  S.tasks.push(t);placeNew(t);
- if(q.at!=null&&t.day&&typeof setBlock==='function'){const dt=parseYmd(t.day);dt.setMinutes(q.at);t.pinned=true;setBlock(t,dt,true)}
+ if(q.at!=null&&t.day&&typeof setBlock==='function'){const dt=parseYmd(t.day);dt.setMinutes(q.at);t.pinned=true;setBlock(t,dt,true);if(typeof syncOrder==='function')syncOrder(t.day)}
  if(q.repeat){if(!t.day)t.day=today();setRecur(t,q.repeat)}
  save();render();aiWatch(t);emit('task:add',{task:t});return t;
 }
