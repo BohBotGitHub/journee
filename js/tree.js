@@ -216,6 +216,17 @@ function applyRefine(skip){
 }
 /* ---------- projets : étiquettes transversales ---------- */
 const proj=id=>(S.projects||[]).find(p=>p.id===id);
+// projet = suite ordonnée de tâches (t.po) ; couleur et marque communes partout
+const projCmp=(a,b)=>(a.po??1e9)-(b.po??1e9)||(a.created||0)-(b.created||0);
+const projTasks=(id,open=true)=>S.tasks.filter(t=>t.proj===id&&(!open||!t.done)).sort(projCmp);
+const projColor=p=>{const c=p&&p.channel&&typeof ch==='function'&&ch(p.channel);return c?c.color:'var(--acc)'};
+const PROJ_MARK='<span class="pmark" aria-hidden="true">◆</span>';
+function projRenorm(id){projTasks(id,false).forEach((t,i)=>t.po=i)}
+function projMove(t,how){const xs=projTasks(t.proj).filter(x=>x!==t);let i=projTasks(t.proj).indexOf(t);i=how==='top'?0:how==='bottom'?xs.length:Math.max(0,Math.min(xs.length,i+(how==='up'?-1:1)));xs.splice(i,0,t);xs.forEach((x,k)=>x.po=k)}
+function taskToProject(t){S.projects=S.projects||[];const p={id:uid(),name:t.title,end:t.due||null,done:false,channel:t.channel||null,order:-1};S.projects.push(p);
+ (t.subtasks||[]).forEach((x,i)=>S.tasks.push(mk({title:x.t,done:!!x.d,doneAt:x.d?Date.now():null,day:x.d?t.day||today():null,channel:t.channel,proj:p.id,po:i,created:Date.now()+i})));
+ deleteTask(t.id);return p}
+function projDelete(id,withTasks){const p=proj(id);if(!p)return;S.tasks.filter(t=>t.proj===id).forEach(t=>{if(withTasks&&!t.done)deleteTask(t.id);else{t.proj=null;delete t.po}});S.projects=S.projects.filter(x=>x.id!==id)}
 const activeProjects=()=>(S.projects||[]).filter(p=>!p.done);
 function findProject(q){q=norm(q).replace(/[^a-z0-9]/g,'');if(!q)return null;return activeProjects().find(p=>norm(p.name).replace(/[^a-z0-9]/g,'').startsWith(q))||null}
 function projProgress(id){const ts=S.tasks.filter(t=>t.proj===id);return{n:ts.length,done:ts.filter(t=>t.done).length}}

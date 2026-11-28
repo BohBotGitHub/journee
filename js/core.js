@@ -200,7 +200,8 @@ function addTask(text,day){
  const le=q.est?0:learnedEst(q.title);
  const t=mk({title:q.title,est:q.est||le,channel:q.channel,day,order:nextOrder(day),due:q.due||null,proj:q.proj||null,prio:q.prio||'',where:q.where||''});if(le)t.estLearn=1;
  if(q.subtasks&&q.subtasks.length){t.subtasks=q.subtasks.map(x=>({id:uid(),t:x,d:false}));if(typeof subShow==='function')subShow(t.id)}if(q.notes)t.notes=q.notes;
- S.tasks.push(t);placeNew(t);
+ if(t.proj&&!t.channel&&proj(t.proj)&&proj(t.proj).channel)t.channel=proj(t.proj).channel;
+ if(t.proj&&t.po==null)t.po=Math.max(-1,...S.tasks.filter(x=>x.proj===t.proj&&x.po!=null).map(x=>x.po))+1;S.tasks.push(t);placeNew(t);
  if(q.at!=null&&t.day&&typeof setBlock==='function'){const dt=parseYmd(t.day);dt.setMinutes(q.at);t.pinned=true;setBlock(t,dt,true);if(typeof syncOrder==='function')syncOrder(t.day)}
  if(q.repeat){if(!t.day)t.day=today();setRecur(t,q.repeat)}
  save();render();aiWatch(t);emit('task:add',{task:t});return t;
@@ -214,6 +215,8 @@ async function toggleDone(id){
  if(t.done){const now=Date.now(),later=t.day!==today()||(t.block&&+new Date(t.block.start)>now);
   if(later&&typeof setRange==='function'){const mins=t.actual>=60?Math.round(t.actual/60):(t.est||15);t.pinned=true;setRange(t,new Date(now-mins*60000),new Date(now),true)}else finishBlock(t)}
  save();render();if(t.done)chime(660);emit(t.done?'task:done':'task:undone',{task:t});
+ // projet : la tâche suivante est proposée pour aujourd'hui
+ if(t.done&&t.proj&&typeof projTasks==='function'&&proj(t.proj)){const nx=projTasks(t.proj).find(x=>x.day!==today());if(nx&&!projTasks(t.proj).some(x=>x.day===today()))setTimeout(()=>toast('Suite de « '+proj(t.proj).name+' » : '+nx.title,'Aujourd’hui',()=>{moveTask(nx.id,today(),true);save();render();toast('Pour aujourd’hui')}),400)}
  if(t.block&&t.block.gcalId&&gTok())gFetch(`/calendars/${blkCal(t)}/events/${encodeURIComponent(t.block.gcalId)}`,{method:'PATCH',body:JSON.stringify({summary:(t.done?'✓ ':'')+t.title})}).catch(()=>{});
  if(t.src&&msOn()){
   try{await graph(`/me/todo/lists/${encodeURIComponent(t.src.listId)}/tasks/${encodeURIComponent(t.src.taskId)}`,{method:'PATCH',body:JSON.stringify({status:t.done?'completed':'notStarted'})});delete todo.tasks[t.src.listId];renderSide()}
@@ -233,6 +236,8 @@ function allowedDay(t,day){
 function moveTask(id,to,noRender){
  const t=T(id);if(!t)return;
  let day=to==='backlog'?null:to;day=allowedDay(t,day);
+ // une tâche en focus qui quitte aujourd'hui : le focus s'arrête (le temps passé est gardé)
+ if(day!==today()&&S.running&&S.running.taskId===id){stopTimer();if(typeof focusOn!=="undefined"&&focusOn===id){focusOn=null;focusSub=null}if(typeof focusMin!=="undefined"&&focusMin===id)focusMin=null;if(typeof renderFocus==="function")renderFocus()}
  if(t.block&&ymd(new Date(t.block.start))!==day)clearBlock(t,true);
  t.day=day;if(day)t.inbox=false;t.order=nextOrder(day);save();if(!noRender)render();
 }

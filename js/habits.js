@@ -49,11 +49,11 @@ function genHabitTasks(){
  for(const h of S.habits||[]){if(!live(h))continue;
   if(h.freq==='week'){
    if(wkOpen(h)&&!hbDone(h,t0)&&!(h.skip||[]).includes(t0)&&!S.tasks.some(t=>t.habitId===h.id&&t.day===t0)){
-    S.tasks.push(mk({title:h.name,est:h.est,channel:h.channel||null,day:t0,habitId:h.id,done:false,order:nextOrder(t0)}));ch=true}
+    S.tasks.push(mk({title:h.name,est:h.est,channel:h.channel||null,day:t0,habitId:h.id,subtasks:(h.subs||[]).map(x=>({id:uid(),t:x,d:false})),done:false,order:nextOrder(t0)}));ch=true}
    continue}
   for(let i=0;i<7;i++){const d=addDays(t0,i);if(!hbDue(h,d)||(h.skip||[]).includes(d))continue;
    if(S.tasks.some(t=>t.habitId===h.id&&t.day===d))continue;
-   S.tasks.push(mk({title:h.name,est:h.est,channel:h.channel||null,day:d,habitId:h.id,done:hbDone(h,d),order:nextOrder(d)}));ch=true}}
+   S.tasks.push(mk({title:h.name,est:h.est,channel:h.channel||null,day:d,habitId:h.id,subtasks:(h.subs||[]).map(x=>({id:uid(),t:x,d:false})),done:hbDone(h,d),order:nextOrder(d)}));ch=true}}
  // une habitude qu'on ne place plus dans la journée : ses tâches à venir (non faites) disparaissent
  const keep=t=>{if(!t.habitId)return true;if(t.done||(t.day&&t.day<t0))return true;const h=H(t.habitId);if(!live(h))return false;
   return h.freq==='week'?(t.day===t0&&wkOpen(h)):hbDue(h,t.day)};
@@ -85,7 +85,7 @@ function viewHabits(){
  ${recListHtml()}
  <div style="margin-top:26px">${tplHtml()}</div>`}
 // routines (tâches qui reviennent) : liste, avec leur rythme et leur place dans la journée
-function recListHtml(){const rs=S.recurring||[];if(!rs.length)return '';return `<h2 class="prsec" style="margin-top:28px">Routines</h2><div class="reclist" data-sort="rec">${rs.map(r=>`<div class="recrow" data-sid="${r.id}">${SGRIP}<b>${esc(r.title)}</b><span class="mute">${esc((RULES[r.rule]||'').toLowerCase())}${r.rule==='weekly'?' · '+['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'][r.dow||0]:''}${r.est?' · '+fmtMin(r.est):''} · ${esc((RECPOS[r.pos||'bottom']||'').split(' :')[0].toLowerCase())}</span></div>`).join('')}</div>`}
+function recListHtml(){const rs=S.recurring||[];if(!rs.length)return '';return `<h2 class="prsec" style="margin-top:28px">Routines</h2><div class="reclist" data-sort="rec">${rs.map(r=>`<div class="recrow" data-sid="${r.id}" data-act="recsheet" data-id="${r.id}" role="button" tabindex="0" title="Modifier la routine">${SGRIP}<b>${esc(r.title)}</b><span class="mute">${esc((RULES[r.rule]||'').toLowerCase())}${r.rule==='weekly'?' · '+['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'][r.dow||0]:''}${r.est?' · '+fmtMin(r.est):''} · ${esc((RECPOS[r.pos||'bottom']||'').split(' :')[0].toLowerCase())}</span></div>`).join('')}</div>`}
 
 // pastilles en haut d'Aujourd'hui (6 au plus)
 function hbPills(d){
@@ -150,3 +150,29 @@ function hbStatsHtml(){
  return `<h2 style="font-size:18px;margin:28px 0 6px">Habitudes : force sur 3 mois</h2><div class="hbstat">${hs.map(h=>{const s=hbForceSeries(h,92);if(!s.length)return '';
   const n=s.length,pts=s.map(([,v],i)=>`${(n>1?i/(n-1):1)*W},${Hh-v/100*Hh}`).join(' ');
   return `<div class="hbsrow" style="--hc:${esc(hbColor(h))}">${hbIcon(h.icon)}<span class="hbsn">${esc(h.name)}</span><svg viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}" preserveAspectRatio="none" aria-label="Force de ${esc(h.name)}"><polyline points="0,${Hh} ${pts} ${W},${Hh}" class="area"/><polyline points="${pts}" class="ln"/></svg><b>${hbForce(h)} %</b><small>série ${hbStreakLabel(h)}</small></div>`}).join('')}</div>`}
+
+// routine : modifier, en faire une habitude (tâche avec sous-tâches), supprimer
+function recSheet(id){const r=(S.recurring||[]).find(x=>x.id===id);if(!r)return;
+ showModal(`<div class="rit recsheet"><button class="sheetx" data-act="close" aria-label="Fermer">×</button><h2>Routine</h2>
+ <label>Titre<input data-rf="title" data-rid="${r.id}" value="${esc(r.title)}"></label>
+ <div class="grid2"><label>Répéter<select data-rf="rule" data-rid="${r.id}">${Object.entries(RULES).map(([k,v])=>`<option value="${k}" ${r.rule===k?'selected':''}>${v}</option>`).join('')}</select></label>
+ ${r.rule==='weekly'?`<label>Le<select data-rf="dow" data-rid="${r.id}">${DOWS.map((d,i)=>`<option value="${i}" ${(r.dow||0)===i?'selected':''}>${d}</option>`).join('')}</select></label>`:''}
+ <label>Durée (min)<input type="number" min="0" max="600" step="5" data-rf="est" data-rid="${r.id}" value="${r.est||0}"></label>
+ <label>Place dans la journée<select data-rf="pos" data-rid="${r.id}">${Object.entries(RECPOS).map(([k,v])=>`<option value="${k}" ${(r.pos||'bottom')===k?'selected':''}>${v}</option>`).join('')}</select></label></div>
+ <label>Sous-tâches (une par ligne)<textarea rows="3" data-rf="subs" data-rid="${r.id}">${esc((r.subs||[]).join('\n'))}</textarea></label>
+ <div class="menu"><button data-act="rectohab" data-id="${r.id}">En faire une habitude <small class="mute">suivie dans tes habitudes, avec ses sous-tâches</small></button><button class="danger" data-act="recdel" data-id="${r.id}">Supprimer la routine</button></div></div>`)}
+function recUpdate(r,k,v){
+ if(k==='title')r.title=v.trim()||r.title;else if(k==='est')r.est=Math.max(0,+v||0);else if(k==='dow')r.dow=+v;else if(k==='pos')r.pos=v;else if(k==='subs')r.subs=v.split('\n').map(x=>x.trim()).filter(Boolean);else if(k==='rule'){r.rule=v;if(v==='weekly'&&r.dow==null)r.dow=parseYmd(today()).getDay()}
+ // les occurrences à venir suivent la routine
+ const t0=today();S.tasks=S.tasks.filter(t=>!(t.recurId===r.id&&!t.done&&t.day&&t.day>t0&&!matches(r,t.day)));
+ S.tasks.filter(t=>t.recurId===r.id&&!t.done&&t.day&&t.day>=t0).forEach(t=>{t.title=r.title;t.est=r.est;if(k==='subs')t.subtasks=(r.subs||[]).map(x=>({id:uid(),t:x,d:false}))});
+ genRecurring();
+}
+function recToHabit(r){
+ S.habits=S.habits||[];const days=r.rule==='weekdays'?[1,2,3,4,5]:r.rule==='weekly'?[r.dow||0]:[0,1,2,3,4,5,6];
+ const h={id:uid(),name:r.title,kind:'build',freq:r.rule==='daily'?'daily':'days',days,n:1,channel:r.channel||null,icon:'spark',est:r.est||15,toDay:true,subs:r.subs||[],paused:false,log:{},skip:[],created:Date.now(),order:Math.max(0,...S.habits.map(x=>x.order||0))+1};
+ S.habits.push(h);const t0=today();
+ S.tasks.filter(t=>t.recurId===r.id&&!t.done&&t.day&&t.day>=t0).forEach(t=>{t.recurId=null;t.habitId=h.id});
+ S.tasks=S.tasks.filter(t=>!(t.habitId===h.id&&!t.done&&t.day>t0));
+ S.recurring=S.recurring.filter(x=>x!==r);genRecurring();return h;
+}

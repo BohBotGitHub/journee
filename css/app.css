@@ -1479,3 +1479,27 @@ body.hidenav #nav button.navkeys .ll,body.hidenav #nav button.navkeys kbd{displa
 .card.isnow .play{opacity:1!important;width:44px;height:44px;min-height:44px;background:var(--acc-strong);border-color:var(--acc-strong);color:var(--on-acc);font-size:14px;align-self:center}
 .card.isnow .play svg{width:18px;height:18px}
 .card.isnow .play:hover{filter:brightness(1.08)}
+/* v3.2 : projets — marque ◆ à la couleur du projet, partout la même */
+.pmark{color:var(--pc,var(--c,var(--acc)));margin-right:4px;font-size:.9em}
+.pchip{cursor:pointer;border-radius:6px;padding:0 2px}
+.pchip:hover{color:var(--ink)}
+.proj{border-left:4px solid var(--pc,var(--acc))}
+.proj.flash{animation:projflash 1.2s ease}
+@keyframes projflash{0%,40%{box-shadow:0 0 0 3px color-mix(in srgb,var(--pc,var(--acc)) 45%,transparent)}100%{box-shadow:none}}
+.projdel{margin-left:2px;color:var(--mute)}
+.projdel:hover{color:var(--danger,#c0392b)}
+.plist .pti{display:flex;align-items:center;gap:2px}
+.plist .pti>.card{flex:1;min-width:0}
+.plist .pti.sorting{z-index:5;position:relative}
+.pgroup h3{display:flex;align-items:baseline;gap:8px}
+.pgroup h3 small{color:var(--mute);font-weight:500;font-size:12px}
+.projtag{background:transparent;border:0;padding:0;min-height:0;font:inherit;font-weight:600;color:var(--ink);cursor:pointer;--pc:var(--c)}
+.projtag:hover{text-decoration:underline}
+.blrest{font-size:14px;color:var(--mute);margin:18px 2px 6px;font-weight:600}
+.projdel{display:inline-flex;align-items:center;justify-content:center;min-width:32px;padding:0 6px}.projdel svg{width:17px;height:17px;flex:none}
+.projmeta .chip.nocat{opacity:1}
+.recsheet>label,.recsheet .grid2 label{display:flex;flex-direction:column;gap:4px;margin-top:10px}.recsheet .menu{margin-top:16px}
+/* volet de gauche : Actualiser rejoint le groupe du bas (Raccourcis, Réglages) */
+#nav button.navrefresh{margin-top:auto!important}
+#nav button.navrefresh~button.navkeys{margin-top:0}
+#nav button.navrefresh,#nav button.navkeys{padding:8px 12px}

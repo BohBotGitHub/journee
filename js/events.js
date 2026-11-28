@@ -192,11 +192,19 @@ document.addEventListener('click',async e=>{
   case'phare':{const dd=ritual?ritual.day:cur,info=S.days[dd]=S.days[dd]||{},t=T(id);if(!t)break;if(info.phare===id){info.phare=null}else{info.phare=id;t.prio='high';t.order=0;renorm(dd)}save();render();if(ritual)renderRitual();break}
   case'home':document.body.classList.remove('side-open');closeModal();cur=today();go('today');break;
   case'go':document.body.classList.remove('side-open');go(b.dataset.v);break;
-  case'mvup':closeModal();swapTask(id,-1);break;
-  case'mvtop':case'mvbottom':{closeModal();const t=T(id);if(!t||!t.day)break;const ts=dayTasks(t.day).filter(x=>!x.done&&x!==t);if(!ts.length)break;t.order=a==='mvtop'?ts[0].order-1:ts[ts.length-1].order+1;renorm(t.day);recLearn(t);if(!flowOn())reflow(t.day);save();render();toast(a==='mvtop'?'Tout en haut':'Tout en bas');break}
+  case'goproj':{closeModal();go('projects');setTimeout(()=>{const x=document.getElementById('proj-'+b.dataset.id);if(x){x.scrollIntoView({block:'start',behavior:'smooth'});x.classList.add('flash');setTimeout(()=>x.classList.remove('flash'),1200)}},60);break}
+  case'projdel':{const p=proj(b.dataset.id);if(!p)break;const n=projTasks(p.id).length;showModal(`<div class="rit"><h2>Supprimer « ${esc(p.name)} » ?</h2><p class="lead">${n?`${n} tâche${n>1?'s':''} à faire dans ce projet.`:'Aucune tâche à faire dans ce projet.'}</p><div class="menu">${n?`<button data-act="projdelgo" data-id="${p.id}" data-w="">Garder les tâches, sans projet</button><button class="danger" data-act="projdelgo" data-id="${p.id}" data-w="1">Supprimer aussi les tâches</button>`:`<button class="danger" data-act="projdelgo" data-id="${p.id}" data-w="">Supprimer le projet</button>`}<button data-act="close">Annuler</button></div></div>`);break}
+  case'projcat':{const p=proj(b.dataset.id);if(!p)break;openPicker({title:'Catégorie du projet « '+p.name+' »',current:p.channel,suggest:[],noneLabel:'Sans catégorie',onPick:to=>{p.channel=to;projTasks(p.id).forEach(t=>{if(!t.channel)t.channel=to});save();render()}});break}
+  case'toproj':{const t=T(id);closeModal();if(!t)break;const p=taskToProject(t);save();go('projects');toast('Projet « '+p.name+' » créé · ⌘/Ctrl Z pour annuler');break}
+  case'recsheet':if(!e.target.closest('[data-sgrip]'))recSheet(b.dataset.id);break;
+  case'rectohab':{const r=S.recurring.find(x=>x.id===b.dataset.id);closeModal();if(!r)break;const h=recToHabit(r);save();render();toast('« '+h.name+' » est maintenant une habitude · ⌘/Ctrl Z pour annuler');break}
+  case'recdel':{const r=S.recurring.find(x=>x.id===b.dataset.id);closeModal();if(!r)break;const t0=today();S.recurring=S.recurring.filter(x=>x!==r);S.tasks=S.tasks.filter(t=>!(t.recurId===r.id&&!t.done&&t.day&&t.day>t0));S.tasks.filter(t=>t.recurId===r.id).forEach(t=>t.recurId=null);save();render();toast('Routine supprimée · ⌘/Ctrl Z pour annuler');break}
+  case'projdelgo':{const p=proj(b.dataset.id);closeModal();if(!p)break;projDelete(p.id,!!b.dataset.w);save();render();toast('Projet supprimé · ⌘/Ctrl Z pour annuler');break}
+  case'mvup':closeModal();if(view==='projects'&&T(id)&&T(id).proj){projMove(T(id),'up');save();render();break}swapTask(id,-1);break;
+  case'mvtop':case'mvbottom':{closeModal();const t=T(id);if(t&&view==='projects'&&t.proj){projMove(t,a==='mvtop'?'top':'bottom');save();render();toast(a==='mvtop'?'Tout en haut':'Tout en bas');break}if(!t||!t.day)break;const ts=dayTasks(t.day).filter(x=>!x.done&&x!==t);if(!ts.length)break;t.order=a==='mvtop'?ts[0].order-1:ts[ts.length-1].order+1;renorm(t.day);recLearn(t);if(!flowOn())reflow(t.day);save();render();toast(a==='mvtop'?'Tout en haut':'Tout en bas');break}
   case'tsheet':taskSheet(id);break;
   case'sheetsel':closeModal();lpMode=true;msel.add(id);mselAnchor=id;renderMsel();toast('Touche d’autres tâches pour les ajouter à la sélection');break;
-  case'mvdown':closeModal();swapTask(id,1);break;
+  case'mvdown':closeModal();if(view==='projects'&&T(id)&&T(id).proj){projMove(T(id),'down');save();render();break}swapTask(id,1);break;
   case'tobacklog':{const t=T(id);if(t&&t.day){moveTask(id,'backlog');toast('Renvoyée au backlog');if(modalTask===id)openTask(id)}break}
   case'sheetmv':{closeModal();const t=T(id);if(t&&b.dataset.to==='backlog')t.roll=0;let to=b.dataset.to;const asked=to;if(t&&to===addDays(today(),1))to=nextFreeDay(t);moveTask(id,to,true);if(to!=='backlog'&&to>today())putFront([id],T(id).day);save();render();toast(to==='backlog'?'Renvoyée au backlog':to===today()?'Pour aujourd’hui':to===addDays(today(),1)?'Reportée à demain':asked===addDays(today(),1)?'Demain est plein : reportée au '+fmtDay(to,{weekday:'long',day:'numeric'}):'Déplacée au '+fmtDay(to,{weekday:'long',day:'numeric',month:'short'}));break}
   case'sum':if(b.closest('#modal'))closeModal();uiOpen=uiOpen===b.dataset.k?'':b.dataset.k;render();break;
@@ -261,7 +269,7 @@ document.addEventListener('change',async e=>{
  if(f&&modalTask){const t=T(modalTask);if(!t)return;const r=t.recurId&&S.recurring.find(x=>x.id===t.recurId);
   switch(f){
    case'channel':t.channel=el.value||null;t.aiCat=false;if(r)r.channel=t.channel;if(t.block)pushBlock(t);break;
-   case'proj':t.proj=el.value||null;break;
+   case'proj':if(el.value&&t.habitId){toast('Une habitude ne va pas dans un projet');break}t.proj=el.value||null;if(t.proj&&t.po==null)t.po=Math.max(-1,...S.tasks.filter(x=>x.proj===t.proj&&x.po!=null).map(x=>x.po))+1;break;
    case'est':setEst(t,+el.value);break;
    case'day':{const nd=allowedDay(t,el.value||null);if(t.block&&ymd(new Date(t.block.start))!==nd)clearBlock(t,true);t.day=nd;if(nd)t.order=nextOrder(nd);break}
    case'time':if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day)}else{t.pinned=false;if(!flowOn())clearBlock(t,true)}break;
@@ -276,6 +284,7 @@ document.addEventListener('change',async e=>{
   save();render();if(['day','time','recur','est','due'].includes(f))openTask(t.id);return;
  }
  if(el.dataset.ritime){const t=T(el.dataset.ritime);if(t){if(el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(ritual.day);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(ritual.day)}else clearBlock(t,true);save();render();renderRitual()}return}
+ if(el.dataset.rf){const r=(S.recurring||[]).find(x=>x.id===el.dataset.rid);if(r){recUpdate(r,el.dataset.rf,el.value);save();render();if(el.dataset.rf==='rule')recSheet(r.id)}return}
  if(el.dataset.set){const k=el.dataset.set;if(k==='aiKey'){const v=el.value.trim();aiKeyOpen=false;if(v){S.settings.aiKey=v;save();toast('Clé Claude enregistrée')}render();return}S.settings[k]=(k==='aiAuto'||k==='liveShift'||k==='sounds')?!!el.value:el.type==='number'?+el.value:el.value.trim();if(k==='aiBudget'){const c=document.querySelector('[data-live="aicost"]');if(c)c.textContent=costTxt()}save();if(el.type==='number'||k==='aiKey'||k==='mode')render();return}
  if(el.hasAttribute('data-tips')){lsSet('journee.tips',el.checked?'on':'off');renderTip();return}
  if(el.dataset.sheettime){const t=T(el.dataset.sheettime);if(t&&el.value){const[hh,mm]=el.value.split(':').map(Number),dt=parseYmd(t.day||cur);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true);syncOrder(t.day);save();closeModal();render();toast('Heure fixée à '+el.value)}return}
@@ -588,7 +597,7 @@ function keepUnder(b){
 }
 
 // ---------- annuler partout : Ctrl/⌘ Z revient avant la dernière action sur les tâches ----------
-const UNDO_ACTS=new Set(['mvtop','mvbottom','ssugadd','sugadd','dumptotasks','mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
+const UNDO_ACTS=new Set(['rectohab','recdel','projdelgo','toproj','projcat','mvtop','mvbottom','ssugadd','sugadd','dumptotasks','mselact','rmsheet','toggle','ritdone','rm','mv','sheetmv','rolltomorrow','rolldrop','tobacklog','setprio','setwhere','keep','phare','rollover','dur','setjob','focusdone','focussubdone','subt','subd','projadd','aiapplyall','aiok','refineok']);
 let undoStack=[];
 const undoSnap=()=>JSON.stringify({tasks:S.tasks,days:S.days,projects:S.projects||[],unavail:S.unavail||[]});
 function undoCommit(pre,a){if(undoSnap()===pre)return;undoStack.push({s:pre,a});if(undoStack.length>30)undoStack.shift()}
@@ -733,6 +742,7 @@ document.addEventListener('pointermove',e=>{if(!SRT||e.pointerId!==SRT.pid)retur
 function srtEnd(e){if(!SRT||(e&&e.pointerId!==SRT.pid))return;const {box,it}=SRT;SRT=null;it.classList.remove('sorting');document.body.classList.remove('sortingnow');it.style.transform='';
  const ids=[...box.children].map(x=>x.dataset.sid).filter(Boolean),k=box.dataset.sort,pre=undoSnap();
  if(k==='proj')ids.forEach((id,i)=>{const p=(S.projects||[]).find(x=>x.id===id);if(p)p.order=i});
+ else if(k==='ptask')ids.forEach((id,i)=>{const t=T(id);if(t)t.po=i});
  else if(k==='hab')ids.forEach((id,i)=>{const h=(S.habits||[]).find(x=>x.id===id);if(h)h.order=i+1});
  else if(k==='rec'){const m=new Map(S.recurring.map(r=>[r.id,r]));S.recurring=[...ids.map(id=>m.get(id)).filter(Boolean),...S.recurring.filter(r=>!ids.includes(r.id))]}
  else if(k==='tpl'){const m=new Map((S.templates||[]).map(t=>[t.id,t]));S.templates=[...ids.map(id=>m.get(id)).filter(Boolean),...(S.templates||[]).filter(t=>!ids.includes(t.id))]}

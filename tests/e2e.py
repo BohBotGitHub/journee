@@ -2075,6 +2075,87 @@ def _(c):
     assert all(hit), hit
     assert not errs, errs; ctx.close()
 
+@test('v3.2 : projets — ordre des tâches, suppression, marque, Plus tard groupé par projet dans tous les tris')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("""()=>{S.projects=S.projects||[];S.projects.push({id:'PX',name:'Atelier',end:null,done:false});
+      ['Vider','Peindre','Ranger'].forEach((x,i)=>{addTask(x+' l’atelier +atelier',null)});
+      S.tasks.push(mk({id:'solo',title:'Idée hors projet',day:null,due:'2026-01-01'}));save();go('projects')}""")
+    tick(pg, 200)
+    ids = st(pg, "projTasks('PX').map(t=>t.title)"); assert ids == ['Vider l’atelier','Peindre l’atelier','Ranger l’atelier'], ids
+    last = st(pg, "projTasks('PX')[2].id")
+    pg.click(f'#main .pti[data-sid="{last}"] .ctitle', button='right'); tick(pg, 150)
+    pg.click('#modal [data-act="mvtop"]'); tick(pg, 150)
+    assert st(pg, "projTasks('PX')[0].id") == last
+    # poignée : le premier redescend en dernier
+    g = pg.locator(f'#main .pti[data-sid="{last}"] [data-sgrip]').bounding_box(); dst = pg.locator('#main #proj-PX .pti').nth(2).bounding_box()
+    pg.mouse.move(g['x']+4, g['y']+8); pg.mouse.down(); pg.mouse.move(g['x']+4, dst['y']+dst['height']-4, steps=10); pg.mouse.up(); tick(pg, 150)
+    assert st(pg, "projTasks('PX')[2].id") == last, st(pg, "projTasks('PX').map(t=>t.title)")
+    # Plus tard : le projet reste groupé, même trié par échéance
+    pg.evaluate("()=>{lsSet('journee.blsort','due');go('backlog')}"); tick(pg, 150)
+    assert pg.locator('#main .pgroup').count() == 1 and pg.locator('#main .pgroup .card').count() == 3
+    assert 'Hors projet' in pg.inner_text('#main')
+    # la marque du projet ouvre le projet
+    pg.click('#main .pgroup .card .pchip >> nth=0'); tick(pg, 200)
+    assert st(pg, "view") == 'projects'
+    # suppression : garder les tâches
+    pg.click('#main #proj-PX [data-act="projdel"]'); tick(pg, 100)
+    pg.click('#modal [data-act="projdelgo"][data-w=""]'); tick(pg, 150)
+    assert st(pg, "!proj('PX')") and st(pg, "S.tasks.filter(t=>/atelier/.test(t.title)&&!t.proj).length") == 3
+    # pas de suggestion de projet sous « Ajouter une tâche »
+    assert st(pg, "!sugHtml(today()).includes('Projet :')")
+    # tâche avec sous-tâches → projet ; la suite est proposée quand une tâche est faite
+    pg.evaluate("""()=>{S.tasks.push(mk({id:'big',title:'Monter le décor',day:today(),channel:null,subtasks:[{id:'s1',t:'Plans',d:false},{id:'s2',t:'Achats',d:false}]}));save();go('today')}"""); tick(pg, 150)
+    pg.click('#main .card[data-id="big"] .ctitle', button='right'); tick(pg, 150)
+    pg.click('#modal [data-act="toproj"]'); tick(pg, 200)
+    pid = st(pg, "S.projects.find(p=>p.name==='Monter le décor').id")
+    assert st(pg, f"projTasks('{pid}').map(t=>t.title).join(',')") == 'Plans,Achats' and st(pg, "!T('big')")
+    first = st(pg, f"projTasks('{pid}')[0].id")
+    pg.click(f'#main #proj-{pid} [data-act="totoday"][data-id="{first}"]'); tick(pg, 150)
+    assert st(pg, f"T('{first}').day===today()")
+    pg.evaluate(f"()=>toggleDone('{first}')"); tick(pg, 700)
+    assert 'Achats' in pg.inner_text('#toast'), pg.inner_text('#toast')
+    pg.click('#toast [data-act="toastact"]'); tick(pg, 150)
+    assert st(pg, f"projTasks('{pid}')[0].day===today()")
+    pg.evaluate("()=>lsDel('journee.blsort')")
+    assert not errs, errs; ctx.close()
+
+@test('v3.2 : routine modifiable (fiche), devient une habitude avec sous-tâches, suppression')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    pg.evaluate("""()=>{S.recurring.push({id:'RR',title:'Arroser',rule:'daily',from:today(),skip:[],est:10});genRecurring();save();go('habits')}""")
+    tick(pg, 200)
+    pg.click('#main .recrow[data-sid="RR"] b'); tick(pg, 150)
+    assert pg.locator('#modal .recsheet').count() == 1
+    pg.fill('#modal [data-rf="subs"]', 'Balcon\nSalon'); pg.locator('#modal [data-rf="subs"]').blur(); tick(pg, 150)
+    assert st(pg, "S.recurring.find(r=>r.id==='RR').subs.join(',')") == 'Balcon,Salon'
+    assert st(pg, "S.tasks.find(t=>t.recurId==='RR'&&t.day===today()).subtasks.map(x=>x.t).join(',')") == 'Balcon,Salon'
+    pg.keyboard.press('Escape'); tick(pg, 150)
+    pg.click('#main .recrow[data-sid="RR"] b'); tick(pg, 150)
+    pg.click('#modal [data-act="rectohab"]'); tick(pg, 200)
+    h = st(pg, "S.habits.find(h=>h.name==='Arroser')"); assert h and h['subs'] == ['Balcon','Salon'], h
+    assert st(pg, "!S.recurring.some(r=>r.id==='RR')")
+    t = st(pg, f"S.tasks.find(t=>t.habitId==='{h['id']}'&&t.day===today())"); assert t and len(t['subtasks']) == 2, t
+    # une tâche d'habitude n'a pas de choix de projet
+    pg.evaluate(f"()=>openTask('{t['id']}')"); tick(pg, 150)
+    assert pg.locator('#modal [data-f="proj"]').count() == 0
+    assert not errs, errs; ctx.close()
+
+@test('v3.2 : une tâche en focus envoyée à demain ou en Plus tard arrête le focus ; Actualiser en bas du volet')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    if pg.is_visible('#modal:not(.hidden)'): pg.keyboard.press('Escape')
+    id = st(pg, "dayTasks(today()).filter(t=>!t.done)[0].id")
+    pg.evaluate(f"()=>openFocus('{id}')"); tick(pg, 200)
+    assert st(pg, "!!S.running")
+    pg.evaluate(f"()=>{{moveTask('{id}',addDays(today(),1));render()}}"); tick(pg, 200)
+    assert st(pg, "!S.running") and st(pg, "!focusOn"), st(pg, "S.running")
+    r = pg.locator('#nav .navrefresh').bounding_box(); k = pg.locator('#nav .navkeys').bounding_box()
+    assert 0 <= k['y'] - (r['y'] + r['height']) < 12, (r, k)
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')
