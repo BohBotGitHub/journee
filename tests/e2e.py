@@ -1821,6 +1821,51 @@ def _(c):
     pg.keyboard.press('Escape'); tick(pg, 150)
     assert not errs, errs; ctx.close()
 
+@test('v2.7 : tâche d’habitude repérable ; routine placée en haut / en bas / là où je la mets (Génie)')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2))
+    # habitude placée comme tâche : pastille + contour
+    pg.evaluate("()=>{S.habits.push({id:'hz',name:'Lire',kind:'build',freq:'daily',icon:'book',est:10,toDay:true,log:{},skip:[],created:Date.now()});genRecurring();render()}"); tick(pg, 150)
+    hid = st(pg, "S.tasks.find(t=>t.habitId==='hz'&&t.day===today()).id")
+    assert pg.locator(f'#main .card[data-id="{hid}"].fromhab .hbmark').count() == 1
+    # routine en haut
+    pg.evaluate("()=>{S.recurring.push({id:'rt',title:'Courrier',rule:'daily',from:today(),skip:[],pos:'top',est:5});S.tasks=S.tasks.filter(t=>t.recurId!=='rt');genRecurring()}")
+    first = st(pg, "dayTasks(today()).filter(t=>!t.done)[0].title"); assert first == 'Courrier', first
+    # routine « Génie » : apprend la place après un déplacement
+    pg.evaluate("()=>{const r=S.recurring.find(x=>x.id==='rt');r.pos='genie';const ts=dayTasks(today()).filter(t=>!t.done),t=ts.find(x=>x.recurId==='rt');t.order=ts[ts.length-1].order+1;renorm(today());recLearn(t)}")
+    assert st(pg, "S.recurring.find(x=>x.id==='rt').rank") == 1
+    pg.evaluate("()=>{const d=addDays(today(),1);S.tasks=S.tasks.filter(t=>!(t.recurId==='rt'&&t.day===d));genRecurring()}")
+    last = st(pg, "(()=>{const ts=S.tasks.filter(t=>t.day===addDays(today(),1)&&!t.done).sort((a,b)=>a.order-b.order);return ts[ts.length-1].title})()")
+    assert last == 'Courrier', last
+    # choix dans la fiche de la tâche
+    tid = st(pg, "S.tasks.find(t=>t.recurId==='rt'&&t.day===today()).id")
+    pg.evaluate(f"()=>openTask('{tid}')"); tick(pg, 150)
+    pg.select_option('#modal [data-f="recpos"]', 'bottom'); tick(pg, 100)
+    assert st(pg, "S.recurring.find(x=>x.id==='rt').pos") == 'bottom'
+    assert not errs, errs; ctx.close()
+
+@test('v2.7 : le Génie peut tout proposer sauf réglages et suppressions')
+def _(c):
+    ctx, pg, errs = new_page(c['b'], clock=at(9, 2), storage="localStorage.setItem('journee.v1',JSON.stringify({settings:{aiKey:'k',aiAuto:false}}))")
+    pg.evaluate("()=>{S.habits.push({id:'hp',name:'Piano',kind:'build',freq:'daily',icon:'piano',log:{},skip:[],created:Date.now()});S.tasks.push(mk({id:'ta',title:'Vieux truc',day:today(),order:99}),mk({id:'tb',title:'Mail',day:today(),order:98}));save();render()}")
+    inp = {'message': 'Voilà.', 'updates': [{'id': 'ta', 'day': 'backlog', 'drop': True}, {'id': 'tb', 'title': 'Répondre au mail', 'prio': 'high', 'at': '15:00', 'repeat': 'weekly', 'notes': 'avant midi'}],
+           'new_items': [{'type': 'routine', 'title': 'Arroser', 'rule': 'weekly', 'dow': 'samedi'}, {'type': 'habit', 'name': 'Marche', 'icon': 'run'}, {'type': 'project', 'name': 'Vacances', 'tasks': ['Réserver le train']}],
+           'habit_checks': [{'habit': 'piano', 'done': True}], 'objectives': ['Finir le devis'], 'day_hours': {'start': '10:00', 'end': '19:00'}}
+    def route(r):
+        r.fulfill(status=200, content_type='application/json', body=json.dumps({'content': [{'type': 'tool_use', 'name': 'proposer', 'id': 't', 'input': inp}], 'stop_reason': 'tool_use', 'usage': {'input_tokens': 10, 'output_tokens': 10}}))
+    pg.route('https://api.anthropic.com/**', route)
+    pg.click('.stabs [data-side="ai"]'); pg.fill('[data-keep="ai"]', 'Organise tout'); pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
+    side = pg.inner_text('#side')
+    assert 'Au backlog : Vieux truc' in side and 'Abandonner' not in side and 'Routine : Arroser' in side and 'Cocher l’habitude : Piano' in side, side
+    pg.locator('[data-act="aiapplyall"]').last.click(); pg.wait_for_timeout(300)
+    assert st(pg, "T('ta')&&T('ta').day===null"), 'jamais supprimée, au backlog'
+    tb = st(pg, "T('tb')"); assert tb['title'] == 'Répondre au mail' and tb['prio'] == 'high' and tb['pinned'] and tb['recurId'] and 'avant midi' in tb['notes'], tb
+    assert st(pg, "S.recurring.some(r=>r.title==='Arroser'&&r.dow===6)") and st(pg, "S.habits.some(h=>h.name==='Marche')") and st(pg, "S.projects.some(p=>p.name==='Vacances')")
+    assert st(pg, "hbDone(S.habits.find(h=>h.id==='hp'),today())")
+    assert st(pg, "S.objectives.some(o=>o.title==='Finir le devis')")
+    assert st(pg, "dayHours(today()).s") == 10 and st(pg, "dayHours(today()).end") == 19
+    assert not errs, errs; ctx.close()
+
 def main():
     srv = serve()
     only = os.environ.get('ONLY')

@@ -5,7 +5,12 @@ const aiOn=()=>!!(S.settings.aiKey||'').trim();
 const AI_TOOL={name:'proposer',description:'Propose des changements concrets au planning de l’utilisateur. Utilise uniquement des ids de tâches existants pour order et updates.',input_schema:{type:'object',properties:{
  message:{type:'string',description:'Réponse courte à l’utilisateur, en français, au tutoiement.'},
  order:{type:'array',items:{type:'string'},description:'Ids des tâches non terminées du jour, dans l’ordre conseillé.'},
- updates:{type:'array',items:{type:'object',properties:{id:{type:'string'},channel:{type:'string',description:'Catégorie existante, au format « Domaine › Catégorie »'},est:{type:'integer',description:'Durée estimée en minutes'},day:{type:'string',description:'YYYY-MM-DD, ou backlog'},drop:{type:'boolean',description:'true pour proposer d’abandonner une tâche obsolète'},subtasks:{type:'array',items:{type:'string'},description:'Sous-tâches à ajouter'},reason:{type:'string'}},required:['id']}},
+ updates:{type:'array',items:{type:'object',properties:{id:{type:'string'},title:{type:'string',description:'Nouveau titre'},channel:{type:'string',description:'Catégorie existante, au format « Domaine › Catégorie »'},est:{type:'integer',description:'Durée estimée en minutes'},day:{type:'string',description:'YYYY-MM-DD, ou backlog (aussi pour écarter une tâche obsolète : tu ne supprimes jamais rien)'},at:{type:'string',description:'HH:MM : heure fixe ce jour-là'},prio:{type:'string',enum:['high','low','none']},due:{type:'string',description:'YYYY-MM-DD, ou none'},done:{type:'boolean',description:'Cocher (true) ou rouvrir (false)'},project:{type:'string',description:'Nom d’un projet existant ou créé dans la même réponse, ou none'},where:{type:'string',enum:['home','out','any']},notes:{type:'string',description:'Texte ajouté aux notes'},repeat:{type:'string',enum:['daily','weekdays','weekly','monthly','none'],description:'En faire une routine (ou l’arrêter)'},phare:{type:'boolean',description:'En faire la tâche phare de son jour'},subtasks:{type:'array',items:{type:'string'},description:'Sous-tâches à ajouter'},reason:{type:'string'}},required:['id']}},
+ new_items:{type:'array',items:{type:'object',properties:{type:{type:'string',enum:['task','project','routine','habit']},title:{type:'string'},name:{type:'string'},quick:{type:'string',description:'Tâche en syntaxe rapide Diem'},est:{type:'integer'},day:{type:'string'},at:{type:'string'},due:{type:'string'},cat:{type:'string'},project:{type:'string'},prio:{type:'string'},notes:{type:'string'},subtasks:{type:'array',items:{type:'string'}},end:{type:'string'},tasks:{type:'array',items:{type:'string'}},rule:{type:'string',enum:['daily','weekdays','weekly','monthly']},dow:{type:'string'},kind:{type:'string',enum:['build','quit']},freq:{type:'string',enum:['daily','days','week']},days:{type:'array',items:{type:'string'}},n:{type:'integer'},icon:{type:'string'},toDay:{type:'boolean'},reason:{type:'string'}},required:['type']},description:'Créer des tâches détaillées, projets, routines (tâches qui reviennent) ou habitudes'},
+ habit_checks:{type:'array',items:{type:'object',properties:{habit:{type:'string',description:'Nom de l’habitude'},day:{type:'string'},done:{type:'boolean'}},required:['habit']},description:'Cocher ou décocher une habitude un jour donné'},
+ objectives:{type:'array',items:{type:'string'},description:'Objectifs de la semaine à ajouter'},
+ day_hours:{type:'object',properties:{start:{type:'string'},end:{type:'string'}},description:'Heures de début et de fin du jour affiché (HH:MM)'},
+ focus:{type:'string',description:'Id d’une tâche dont lancer le focus maintenant'},
  pick:{type:'array',items:{type:'string'},description:'Ids de tâches existantes (backlog, autres jours) à ajouter au jour affiché'},
  blocks:{type:'array',items:{type:'object',properties:{id:{type:'string'},start:{type:'string',description:'HH:MM'}},required:['id','start']},description:'Créneaux horaires proposés pour des tâches du jour'},
  intent:{type:'string',description:'Intention courte pour la journée'},
@@ -25,7 +30,7 @@ Tâches du jour :\n${dayTasks(d).map(line).join('\n')||'- aucune'}
 En retard (jours précédents) :\n${pastUndone().slice(0,15).map(t=>line(t)+' | prévue le '+t.day).join('\n')||'- rien'}
 Reste de la semaine :\n${days.filter(x=>x!==d&&x>=t0).map(x=>dayTasks(x).filter(t=>!t.done).map(t=>line(t)+' | '+x).join('\n')).filter(Boolean).join('\n')||'- rien'}
 Backlog :\n${S.tasks.filter(t=>!t.day&&!t.done).slice(0,40).map(line).join('\n')||'- vide'}
-Historique estimé/réel :\n${hist.join('\n')||'- pas encore de données'}
+Habitudes :\n${(S.habits||[]).filter(h=>!h.paused).map(h=>'- '+h.name+(h.kind==='quit'?' (à arrêter)':'')+(hbDone(h,d)?' | faite ce jour':'')).join('\n')||'- aucune'}\nRoutines :\n${S.recurring.map(r=>'- '+r.title+' ('+(RULES[r.rule]||r.rule||'').toLowerCase()+')').join('\n')||'- aucune'}\nHistorique estimé/réel :\n${hist.join('\n')||'- pas encore de données'}
 Habitudes passées (archive, durée réelle moyenne) :\n${archivePatterns()||'- aucune'}`;
 }
 const AI_SYS=`Tu es Claude, l'assistant de planification intégré à l'appli « Diem » (équivalent de Sunsama). Tu aides l'utilisateur à organiser son temps : ordre des tâches, catégorie, durée réaliste, répartition dans la semaine, et nouvelles tâches utiles (préparer une rendez-vous, un suivi, une étape vers un objectif de la semaine).
@@ -38,6 +43,7 @@ Règles :
 - Catégories : uniquement des noms de la liste fournie.
 - Échéances : une tâche doit être planifiée avant sa date d’échéance ; signale celles qui sont menacées.
 - Nouvelles tâches : maximum 3, seulement si vraiment utiles, avec une raison courte.
+- Tu peux proposer toutes les actions de l’appli sauf les réglages et les suppressions : créer (new_items : tâches détaillées, projets, routines, habitudes), modifier une tâche (titre, jour, heure fixe, durée, catégorie, priorité, échéance, projet, lieu, notes, sous-tâches, routine, tâche phare, cocher), réordonner, cocher une habitude, objectifs de la semaine, heures du jour, lancer un focus. Tu ne supprimes jamais rien : pour écarter une tâche, envoie-la au backlog.
 - Dès que tu suggères un changement concret, utilise l'outil « proposer » : l'utilisateur validera chaque élément. Ne prétends jamais avoir modifié quelque chose toi-même.`;
 // coût en dollars par million de jetons (tarifs publics Anthropic ; Haiku : prompts ≤ 100 000 jetons)
 const PRICES={'claude-haiku-5-5':[0.10,0.50],'claude-sonnet-5-5':[2,10]};
@@ -74,17 +80,22 @@ function propItems(p){
  if(!p)return[];const out=[];
  const tt=id=>{const t=T(id);return t?t.title:null};
  if(p.order&&p.order.filter(tt).length>1)out.push({k:'order',label:'Réordonner : '+p.order.filter(tt).map(tt).join(' → ')});
- (p.updates||[]).forEach((u,i)=>{const t=T(u.id);if(!t)return;if(u.drop){out.push({k:'u'+i,label:'Abandonner : '+t.title,reason:u.reason});return}const parts=[];if(u.subtasks&&u.subtasks.length)parts.push('sous-tâches : '+u.subtasks.join(', '));if(u.channel)parts.push('catégorie '+u.channel);if(u.est)parts.push(fmtMin(u.est));if(u.day)parts.push(u.day==='backlog'?'au backlog':'le '+fmtDay(u.day,{weekday:'long',day:'numeric'}));if(parts.length)out.push({k:'u'+i,label:t.title+' : '+parts.join(', '),reason:u.reason})});
+ (p.updates||[]).forEach((u,i)=>{const t=T(u.id);if(!t)return;if(u.drop){out.push({k:'u'+i,label:'Au backlog : '+t.title,reason:u.reason});return}const parts=[];if(u.title&&u.title!==t.title)parts.push('renommer en « '+u.title+' »');if(u.done===true)parts.push('cocher');if(u.done===false)parts.push('rouvrir');if(u.at)parts.push('à '+u.at);if(u.prio)parts.push(u.prio==='none'?'priorité normale':'priorité '+(u.prio==='high'?'haute':'basse'));if(u.due)parts.push(u.due==='none'?'sans échéance':'échéance '+fmtDay(u.due,{day:'numeric',month:'short'}));if(u.project)parts.push(u.project==='none'?'hors projet':'projet '+u.project);if(u.where)parts.push({home:'chez moi',out:'dehors',any:'partout'}[u.where]||'');if(u.repeat)parts.push(u.repeat==='none'?'ne plus répéter':'répéter : '+(RULES[u.repeat]||u.repeat).toLowerCase());if(u.phare)parts.push('tâche phare');if(u.notes)parts.push('note');if(u.subtasks&&u.subtasks.length)parts.push('sous-tâches : '+u.subtasks.join(', '));if(u.channel)parts.push('catégorie '+u.channel);if(u.est)parts.push(fmtMin(u.est));if(u.day)parts.push(u.day==='backlog'?'au backlog':'le '+fmtDay(u.day,{weekday:'long',day:'numeric'}));if(parts.length)out.push({k:'u'+i,label:t.title+' : '+parts.join(', '),reason:u.reason})});
  (p.pick||[]).forEach((id,i)=>{const t=T(id);if(t&&t.day!==cur&&!t.done)out.push({k:'p'+i,label:'Ajouter au jour : '+t.title+(t.est?' ('+fmtMin(t.est)+')':'')})});
  (p.blocks||[]).forEach((b,i)=>{const t=T(b.id);if(t&&/^\d{1,2}:\d{2}$/.test(b.start||''))out.push({k:'b'+i,label:'Créneau '+b.start+' : '+t.title})});
  if(p.intent)out.push({k:'i',label:'Intention : '+p.intent});
  (p.objectives||[]).forEach((o,i)=>{if(o)out.push({k:'o'+i,label:'Objectif : '+o})});
  (p.new_projects||[]).forEach((n,i)=>{if(n.name)out.push({k:'j'+i,label:'Nouveau projet : '+n.name+(n.end?' (fin '+fmtDay(n.end,{day:'numeric',month:'short'})+')':'')+(n.tasks&&n.tasks.length?' · '+n.tasks.length+' tâche'+(n.tasks.length>1?'s':''):'')})});
  (p.cx||[]).forEach((it,i)=>out.push({k:'x'+i,label:ixLabel(it),reason:it.reason}));
+ (p.new_items||[]).forEach((it,i)=>{if(it&&(it.title||it.name||it.quick))out.push({k:'y'+i,label:ixLabel(it),reason:it.reason})});
+ (p.habit_checks||[]).forEach((c,i)=>{const h=hbByName(c.habit);if(h)out.push({k:'h'+i,label:(c.done===false?'Décocher':'Cocher')+' l’habitude : '+h.name+(c.day&&c.day!==today()?' ('+fmtDay(c.day,{weekday:'short',day:'numeric'})+')':'')})});
+ if(p.day_hours&&(p.day_hours.start||p.day_hours.end))out.push({k:'dh',label:'Heures du jour : '+(p.day_hours.start||hhmm(dayHours(cur).s))+' → '+(p.day_hours.end||hhmm(dayHours(cur).end))});
+ if(p.focus&&T(p.focus))out.push({k:'f',label:'Lancer le focus : '+T(p.focus).title});
  (p.new_tasks||[]).forEach((n,i)=>{if(n.title)out.push({k:'n'+i,label:'Nouvelle tâche : '+n.title+(n.est?' ('+fmtMin(n.est)+')':''),reason:n.reason})});
  return out;
 }
 const chByName=n=>n?nodeByName(n):null;
+const hbByName=n=>{if(!n)return null;const q=norm(String(n));return (S.habits||[]).find(h=>h.id===n||norm(h.name)===q)||(S.habits||[]).find(h=>norm(h.name).includes(q))||null};
 function applyItem(m,k){
  const p=m.prop;if(!p)return;m.applied=m.applied||{};if(m.applied[k])return;
  if(k==='order'){const ids=p.order.filter(id=>T(id));ids.forEach((id,i)=>{T(id).order=i+1});const rest=dayTasks(cur).filter(t=>!ids.includes(t.id));rest.forEach((t,i)=>t.order=ids.length+i+1);reflow(cur)}
@@ -92,9 +103,19 @@ function applyItem(m,k){
  else if(k[0]==='b'){const b=p.blocks[+k.slice(1)],t=b&&T(b.id);if(t){const[hh,mm]=b.start.split(':').map(Number),dt=parseYmd(cur);dt.setHours(hh,mm,0,0);if(t.day!==cur)moveTask(t.id,cur,true);t.pinned=true;setBlock(t,dt,true)}}
  else if(k==='i'){S.days[cur]=Object.assign(S.days[cur]||{},{intent:p.intent})}
  else if(k[0]==='o'){const o=p.objectives[+k.slice(1)];if(o)S.objectives.push({id:uid(),week:monday(cur),title:o,done:false})}
- else if(k[0]==='u'&&p.updates[+k.slice(1)]&&p.updates[+k.slice(1)].drop){const t=T(p.updates[+k.slice(1)].id);if(t)deleteTask(t.id)}
- else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){if(u.subtasks)u.subtasks.forEach(x=>t.subtasks.push({id:uid(),t:x,d:false}));subShow(t.id);const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}t.aiSug=null}}
+ else if(k[0]==='u'&&p.updates[+k.slice(1)]&&p.updates[+k.slice(1)].drop){const t=T(p.updates[+k.slice(1)].id);if(t)moveTask(t.id,'backlog',true)}
+ else if(k[0]==='u'){const u=p.updates[+k.slice(1)],t=u&&T(u.id);if(t){if(u.subtasks)u.subtasks.forEach(x=>t.subtasks.push({id:uid(),t:x,d:false}));subShow(t.id);const c=chByName(u.channel);if(c)t.channel=c.id;if(u.est)t.est=u.est;if(u.day){moveTask(t.id,u.day==='backlog'?'backlog':u.day,true)}
+  if(u.title)t.title=u.title;if(u.prio)t.prio=u.prio==='none'?'':u.prio;if(u.due)t.due=u.due==='none'?null:(/^\d{4}-\d{2}-\d{2}$/.test(u.due)?u.due:t.due);
+  if(u.project){const pj=u.project==='none'?null:findProject(u.project);t.proj=pj?pj.id:null}if(u.where)t.where=u.where;if(u.notes)t.notes=(t.notes?t.notes+'\n':'')+u.notes;
+  if(u.repeat){setRecur(t,u.repeat==='none'?'':u.repeat)}if(u.phare&&t.day)S.days[t.day]=Object.assign(S.days[t.day]||{},{phare:t.id});
+  if(u.at&&/^\d{1,2}:\d{2}$/.test(u.at)&&typeof setBlock==='function'){const d=t.day||cur;if(!t.day)moveTask(t.id,d,true);const[hh,mm]=u.at.split(':').map(Number),dt=parseYmd(d);dt.setHours(hh,mm,0,0);t.pinned=true;setBlock(t,dt,true)}
+  if(typeof u.done==='boolean'&&u.done!==!!t.done)toggleDone(t.id);
+  t.aiSug=null}}
  else if(k[0]==='j'){const n=p.new_projects[+k.slice(1)];if(n){S.projects=S.projects||[];const pj={id:uid(),name:n.name,end:/^\d{4}-\d{2}-\d{2}$/.test(n.end||'')?n.end:null,done:false};S.projects.push(pj);(n.tasks||[]).forEach(tt=>{if(tt)S.tasks.push(mk({title:tt,est:0,day:null,order:nextOrder(null),proj:pj.id}))})}}
+ else if(k[0]==='y'){const it=p.new_items[+k.slice(1)];if(it){ixApplyOne(it,uid());genRecurring()}}
+ else if(k[0]==='h'){const c=p.habit_checks[+k.slice(1)],h=c&&hbByName(c.habit);if(h)hbSet(h,/^\d{4}-\d{2}-\d{2}$/.test(c.day||'')?c.day:today(),c.done===false?0:1)}
+ else if(k==='dh'){const v=x=>{const[a,b]=String(x||'').split(':').map(Number);return isNaN(a)?null:a+(b||0)/60},hs=v(p.day_hours.start),he=v(p.day_hours.end);S.days[cur]=Object.assign(S.days[cur]||{},{hs:hs!=null?hs:dayHours(cur).s,he:he!=null?he:dayHours(cur).end});if(flowOn())reflow(cur)}
+ else if(k==='f'){const t=T(p.focus);if(t){m.applied[k]=true;save();openFocus(t.id);return}}
  else if(k[0]==='x'){const it=p.cx[+k.slice(1)];if(it){ixApplyOne(it,(p.cxBase||'cx')+'-'+k.slice(1));genRecurring()}}
  else if(k[0]==='n'){const n=p.new_tasks[+k.slice(1)];if(n){const day=n.day==='backlog'?null:(n.day||cur);const c=chByName(n.channel);S.tasks.push(mk({title:n.title,est:n.est||0,channel:c?c.id:null,day,order:nextOrder(day)}))}}
  m.applied[k]=true;save();render();
